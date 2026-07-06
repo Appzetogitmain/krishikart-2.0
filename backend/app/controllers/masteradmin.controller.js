@@ -1720,15 +1720,31 @@ function buildLegalCmsPayload(docs, opts = {}) {
       ? privacyRaw
       : {};
 
+  const termsRaw = map[LEGAL_CMS_KEYS.terms];
+  const termsObj =
+    termsRaw && typeof termsRaw === "object" && !Array.isArray(termsRaw)
+      ? termsRaw
+      : {};
+
   const privacyEmail = String(privacyObj.email ?? "").trim();
   const privacyPhone = String(privacyObj.phone ?? "").trim();
+  const termsEmail = String(termsObj.email ?? "").trim();
+  const termsPhone = String(termsObj.phone ?? "").trim();
   const contactEmail = String(contactObj.email ?? "").trim();
   const contactPhone = String(contactObj.phone ?? "").trim();
 
   const mergePrivacyContact = Boolean(opts.mergePrivacyContact);
 
   return {
-    terms: { content: textFrom(map[LEGAL_CMS_KEYS.terms]) },
+    terms: {
+      content: textFrom(termsRaw),
+      email: mergePrivacyContact
+        ? termsEmail || contactEmail
+        : termsEmail,
+      phone: mergePrivacyContact
+        ? termsPhone || contactPhone
+        : termsPhone,
+    },
     privacy: {
       content: textFrom(privacyRaw),
       email: mergePrivacyContact
@@ -1800,6 +1816,20 @@ export const getPublicLegalPages = async (req, res) => {
       payload.contact.phone = LEGAL_CMS_DEFAULTS.contact.phone;
     }
 
+    if (!payload.terms.email?.trim()) {
+      payload.terms.email = String(
+        payload.privacy.email || LEGAL_CMS_DEFAULTS.terms.email,
+      ).trim();
+    }
+    if (!payload.terms.phone?.trim()) {
+      payload.terms.phone = String(
+        payload.privacy.phone || LEGAL_CMS_DEFAULTS.terms.phone,
+      ).trim();
+    }
+    if (!payload.terms.content?.trim()) {
+      payload.terms.content = LEGAL_CMS_DEFAULTS.terms.content;
+    }
+
     return handleResponse(res, 200, "Legal pages", payload);
   } catch (err) {
     console.error("getPublicLegalPages error:", err);
@@ -1826,6 +1856,12 @@ export const saveLegalCmsSection = async (req, res) => {
         address: String(data?.address ?? "").trim(),
       };
     } else if (section === "privacy") {
+      value = {
+        content: String(data?.content ?? ""),
+        email: String(data?.email ?? "").trim(),
+        phone: String(data?.phone ?? "").trim(),
+      };
+    } else if (section === "terms") {
       value = {
         content: String(data?.content ?? ""),
         email: String(data?.email ?? "").trim(),

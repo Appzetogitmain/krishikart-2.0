@@ -26,6 +26,8 @@ For privacy-related questions, reach us at support@kisaankart.com or +91 85554 5
       "Our support team is available for order help, returns, and account queries. Email or call us during business hours.",
   },
   terms: {
+    email: "support@kisaankart.com",
+    phone: "+91 85554 54446",
     content: `Welcome to KisaanKart. By using our app and services you agree to these terms.
 
 1. Use of Service
