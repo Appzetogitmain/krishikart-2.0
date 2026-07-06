@@ -37,6 +37,7 @@ import {
   LEGAL_CMS_KEYS,
   LEGAL_CMS_DESCRIPTIONS,
 } from "../constants/legalCmsKeys.js";
+import { LEGAL_CMS_DEFAULTS } from "../constants/legalCmsDefaults.js";
 import { mapAdminNotificationForViewer } from "../utils/adminNotification.js";
 import { emitToDelivery } from "../lib/socket.js";
 
@@ -1695,7 +1696,7 @@ export const getGlobalSettings = async (req, res) => {
   }
 };
 
-function buildLegalCmsPayload(docs) {
+function buildLegalCmsPayload(docs, opts = {}) {
   const map = Object.fromEntries(docs.map((d) => [d.key, d.value]));
 
   const textFrom = (stored) => {
@@ -1713,9 +1714,30 @@ function buildLegalCmsPayload(docs) {
       ? contactRaw
       : {};
 
+  const privacyRaw = map[LEGAL_CMS_KEYS.privacy];
+  const privacyObj =
+    privacyRaw && typeof privacyRaw === "object" && !Array.isArray(privacyRaw)
+      ? privacyRaw
+      : {};
+
+  const privacyEmail = String(privacyObj.email ?? "").trim();
+  const privacyPhone = String(privacyObj.phone ?? "").trim();
+  const contactEmail = String(contactObj.email ?? "").trim();
+  const contactPhone = String(contactObj.phone ?? "").trim();
+
+  const mergePrivacyContact = Boolean(opts.mergePrivacyContact);
+
   return {
     terms: { content: textFrom(map[LEGAL_CMS_KEYS.terms]) },
-    privacy: { content: textFrom(map[LEGAL_CMS_KEYS.privacy]) },
+    privacy: {
+      content: textFrom(privacyRaw),
+      email: mergePrivacyContact
+        ? privacyEmail || contactEmail
+        : privacyEmail,
+      phone: mergePrivacyContact
+        ? privacyPhone || contactPhone
+        : privacyPhone,
+    },
     contact: {
       content: textFrom(contactRaw),
       email: String(contactObj.email ?? ""),
@@ -1747,12 +1769,38 @@ export const getPublicLegalPages = async (req, res) => {
   try {
     const keys = Object.values(LEGAL_CMS_KEYS);
     const docs = await GlobalSetting.find({ key: { $in: keys } }).lean();
-    return handleResponse(
-      res,
-      200,
-      "Legal pages",
-      buildLegalCmsPayload(docs),
-    );
+    const payload = buildLegalCmsPayload(docs, { mergePrivacyContact: true });
+
+    if (!payload.privacy.email || !payload.privacy.phone) {
+      const supportDocs = await GlobalSetting.find({
+        key: { $in: ["support_email", "support_phone"] },
+      }).lean();
+      const supportMap = Object.fromEntries(
+        supportDocs.map((d) => [d.key, d.value]),
+      );
+      if (!payload.privacy.email) {
+        payload.privacy.email = String(
+          supportMap.support_email || LEGAL_CMS_DEFAULTS.privacy.email,
+        ).trim();
+      }
+      if (!payload.privacy.phone) {
+        payload.privacy.phone = String(
+          supportMap.support_phone || LEGAL_CMS_DEFAULTS.privacy.phone,
+        ).trim();
+      }
+    }
+
+    if (!payload.privacy.content?.trim()) {
+      payload.privacy.content = LEGAL_CMS_DEFAULTS.privacy.content;
+    }
+    if (!payload.contact.email?.trim()) {
+      payload.contact.email = LEGAL_CMS_DEFAULTS.contact.email;
+    }
+    if (!payload.contact.phone?.trim()) {
+      payload.contact.phone = LEGAL_CMS_DEFAULTS.contact.phone;
+    }
+
+    return handleResponse(res, 200, "Legal pages", payload);
   } catch (err) {
     console.error("getPublicLegalPages error:", err);
     return handleResponse(res, 500, "Server error");
@@ -1776,6 +1824,12 @@ export const saveLegalCmsSection = async (req, res) => {
         email: String(data?.email ?? "").trim(),
         phone: String(data?.phone ?? "").trim(),
         address: String(data?.address ?? "").trim(),
+      };
+    } else if (section === "privacy") {
+      value = {
+        content: String(data?.content ?? ""),
+        email: String(data?.email ?? "").trim(),
+        phone: String(data?.phone ?? "").trim(),
       };
     } else {
       value = { content: String(data?.content ?? "") };

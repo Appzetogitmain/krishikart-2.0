@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, ChevronLeft, Lock, User, Info } from 'lucide-react'
+import { Shield, ChevronLeft, Lock, User, Info, Mail, Phone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/axios'
 
 export default function PrivacyPolicyScreen() {
     const navigate = useNavigate()
     const [content, setContent] = useState('')
+    const [email, setEmail] = useState('')
+    const [phone, setPhone] = useState('')
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchPrivacyPolicy = async () => {
             try {
                 const { data } = await api.get('/masteradmin/public/legal-pages')
-                if (data?.success && data?.result?.privacy?.content) {
-                    setContent(data.result.privacy.content)
+                if (data?.success && data?.result?.privacy) {
+                    const p = data.result.privacy
+                    if (p.content) setContent(p.content)
+                    if (p.email) setEmail(p.email)
+                    if (p.phone) setPhone(p.phone)
                 }
             } catch (err) {
                 console.error('Failed to fetch privacy policy:', err)
@@ -118,6 +123,24 @@ export default function PrivacyPolicyScreen() {
                 </div>
 
                 {renderContent()}
+
+                {(email || phone) && (
+                    <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm space-y-3">
+                        <h3 className="text-sm font-bold text-slate-900">Privacy contact</h3>
+                        {email && (
+                            <a href={`mailto:${email}`} className="flex items-center gap-2 text-sm text-emerald-700 font-semibold">
+                                <Mail size={16} />
+                                {email}
+                            </a>
+                        )}
+                        {phone && (
+                            <a href={`tel:${phone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-sm text-emerald-700 font-semibold">
+                                <Phone size={16} />
+                                {phone}
+                            </a>
+                        )}
+                    </div>
+                )}
 
                 <div className="p-6 bg-slate-100 rounded-3xl flex items-start gap-4">
                     <Info className="text-slate-400 shrink-0" />

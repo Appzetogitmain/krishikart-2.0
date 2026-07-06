@@ -26,7 +26,7 @@ export default function LegalPagesManagementScreen() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [terms, setTerms] = useState({ content: '' });
-    const [privacy, setPrivacy] = useState({ content: '' });
+    const [privacy, setPrivacy] = useState({ content: '', email: '', phone: '' });
     const [contact, setContact] = useState({
         content: '',
         email: '',
@@ -41,7 +41,11 @@ export default function LegalPagesManagementScreen() {
             if (data?.success && data?.result) {
                 const r = data.result;
                 setTerms({ content: r.terms?.content ?? '' });
-                setPrivacy({ content: r.privacy?.content ?? '' });
+                setPrivacy({
+                    content: r.privacy?.content ?? '',
+                    email: r.privacy?.email ?? '',
+                    phone: r.privacy?.phone ?? '',
+                });
                 setContact({
                     content: r.contact?.content ?? '',
                     email: r.contact?.email ?? '',
@@ -64,7 +68,7 @@ export default function LegalPagesManagementScreen() {
     const saveSection = async (section) => {
         let payload = {};
         if (section === 'terms') payload = { content: terms.content };
-        else if (section === 'privacy') payload = { content: privacy.content };
+        else if (section === 'privacy') payload = { ...privacy };
         else payload = { ...contact };
 
         try {
@@ -164,23 +168,60 @@ export default function LegalPagesManagementScreen() {
                     </div>
 
                     <div className="p-4 space-y-4">
-                        {(activeTab === 'terms' || activeTab === 'privacy') && (
+                        {activeTab === 'terms' && (
                             <label className="block space-y-2">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                     Content (plain text or simple paragraphs)
                                 </span>
                                 <textarea
-                                    value={activeTab === 'terms' ? terms.content : privacy.content}
-                                    onChange={(e) =>
-                                        activeTab === 'terms'
-                                            ? setTerms({ content: e.target.value })
-                                            : setPrivacy({ content: e.target.value })
-                                    }
+                                    value={terms.content}
+                                    onChange={(e) => setTerms({ content: e.target.value })}
                                     rows={18}
                                     className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-800 font-medium leading-relaxed resize-y min-h-[280px] focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-                                    placeholder="Enter policy text…"
+                                    placeholder="Enter terms text…"
                                 />
                             </label>
+                        )}
+
+                        {activeTab === 'privacy' && (
+                            <>
+                                <label className="block space-y-2">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                        <Mail size={12} /> Contact email
+                                    </span>
+                                    <input
+                                        type="email"
+                                        value={privacy.email}
+                                        onChange={(e) => setPrivacy((p) => ({ ...p, email: e.target.value }))}
+                                        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
+                                        placeholder="privacy@example.com"
+                                    />
+                                </label>
+                                <label className="block space-y-2">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                        <Phone size={12} /> Contact phone
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={privacy.phone}
+                                        onChange={(e) => setPrivacy((p) => ({ ...p, phone: e.target.value }))}
+                                        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
+                                        placeholder="+91 …"
+                                    />
+                                </label>
+                                <label className="block space-y-2">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                        Policy content (plain text or simple paragraphs)
+                                    </span>
+                                    <textarea
+                                        value={privacy.content}
+                                        onChange={(e) => setPrivacy((p) => ({ ...p, content: e.target.value }))}
+                                        rows={16}
+                                        className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-800 font-medium leading-relaxed resize-y min-h-[240px] focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                                        placeholder="Enter privacy policy text…"
+                                    />
+                                </label>
+                            </>
                         )}
 
                         {activeTab === 'contact' && (

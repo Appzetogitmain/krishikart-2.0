@@ -1,20 +1,25 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronLeft, Shield, FileText, ScrollText, Info } from 'lucide-react'
+import { ChevronLeft, Shield, FileText, ScrollText, Info, Mail, Phone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/axios'
 
 export default function PrivacyPolicyScreen() {
     const navigate = useNavigate()
     const [content, setContent] = useState('')
+    const [email, setEmail] = useState('')
+    const [phone, setPhone] = useState('')
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchPrivacyPolicy = async () => {
             try {
                 const { data } = await api.get('/masteradmin/public/legal-pages')
-                if (data?.success && data?.result?.privacy?.content) {
-                    setContent(data.result.privacy.content)
+                if (data?.success && data?.result?.privacy) {
+                    const p = data.result.privacy
+                    if (p.content) setContent(p.content)
+                    if (p.email) setEmail(p.email)
+                    if (p.phone) setPhone(p.phone)
                 }
             } catch (err) {
                 console.error('Failed to fetch privacy policy:', err)
@@ -118,6 +123,24 @@ export default function PrivacyPolicyScreen() {
                     <div className="space-y-0.5 bg-slate-200 p-px rounded-sm overflow-hidden border border-slate-200">
                         {renderContent()}
                     </div>
+
+                    {(email || phone) && (
+                        <div className="p-6 bg-white border border-slate-200 rounded-sm space-y-3">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Privacy contact</h4>
+                            {email && (
+                                <a href={`mailto:${email}`} className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                                    <Mail size={16} className="text-emerald-600" />
+                                    {email}
+                                </a>
+                            )}
+                            {phone && (
+                                <a href={`tel:${phone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                                    <Phone size={16} className="text-emerald-600" />
+                                    {phone}
+                                </a>
+                            )}
+                        </div>
+                    )}
 
                     <div className="p-8 bg-slate-900 rounded-sm text-white space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">Acknowledgment</h4>
