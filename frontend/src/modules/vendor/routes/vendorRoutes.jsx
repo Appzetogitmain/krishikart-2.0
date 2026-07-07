@@ -39,7 +39,9 @@ export const vendorRoutes = (
         <Route path="forgot-password" element={<ForgotPasswordScreen />} />
         <Route path="signup" element={<SignupScreen />} />
         <Route path="terms" element={<TermsScreen />} />
-            <Route path="privacy" element={<PrivacyPolicyScreen />} />
+        <Route path="terms-support" element={<TermsScreen />} />
+        <Route path="terms/support" element={<TermsScreen />} />
+        <Route path="privacy" element={<PrivacyPolicyScreen />} />
 
         <Route path="help-support" element={<HelpSupportScreen />} />
         {/* Protected Routes */}

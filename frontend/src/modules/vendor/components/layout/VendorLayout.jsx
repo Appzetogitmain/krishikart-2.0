@@ -42,7 +42,7 @@ export default function VendorLayout() {
     const isAuthPage = location.pathname === '/vendor/login' ||
         location.pathname === '/vendor/signup' ||
         location.pathname === '/vendor/forgot-password' ||
-        location.pathname === '/vendor/terms';
+        location.pathname.startsWith('/vendor/terms');
 
     if (isAuthPage) {
         return (
