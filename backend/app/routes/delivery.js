@@ -8,6 +8,7 @@ import {
   resetDeliveryPassword,
   updateDeliveryProfile,
   submitDocumentUpdate,
+  deleteDeliveryAccount,
 } from "../controllers/delivery.auth.js";
 
 
@@ -45,6 +46,7 @@ router.get("/me", protectDelivery, getDeliveryMe);
 router.post("/forgot-password", forgotDeliveryPassword);
 router.post("/reset-password", resetDeliveryPassword);
 router.put("/profile", protectDelivery, updateDeliveryProfile);
+router.delete("/delete-account", protectDelivery, deleteDeliveryAccount);
 router.put("/profile/documents", protectDelivery, upload.fields([
   { name: "aadharImage", maxCount: 1 },
   { name: "panImage", maxCount: 1 },

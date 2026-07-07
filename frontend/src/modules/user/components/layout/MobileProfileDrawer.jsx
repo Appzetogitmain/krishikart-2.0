@@ -11,9 +11,11 @@ import {
     MessageCircle,
     CircleDot,
     Info,
-    CreditCard
+    CreditCard,
+    Trash2
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import api from '@/lib/axios'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { useWallet } from '../../contexts/WalletContext'
 import { useUserAuth } from '../../contexts/UserAuthContext'
@@ -89,8 +91,22 @@ const MenuItem = ({ icon: Icon, label, path, badge, isNew, hasToggle, isActive, 
 export default function MobileProfileDrawer() {
     const navigate = useNavigate()
     const { balance, creditLimit, availableCredit } = useWallet()
-    const { user } = useUserAuth()
+    const { user, logout } = useUserAuth()
     const [isOpen, setIsOpen] = useState(false)
+
+    const handleDeleteAccount = async () => {
+        if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
+            try {
+                await api.delete('/user/delete-account');
+                alert("Account deleted successfully.");
+                logout();
+                navigate('/login');
+            } catch (error) {
+                console.error("Failed to delete account", error);
+                alert(error.response?.data?.message || "Failed to delete account. Please try again.");
+            }
+        }
+    };
 
     return (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -175,13 +191,24 @@ export default function MobileProfileDrawer() {
                                     </div>
 
                                     {/* Logout Account */}
-                                    <div className="pb-8">
+                                    <div className="pb-8 space-y-3">
                                         <button
-                                            onClick={() => navigate('/login')}
+                                            onClick={() => {
+                                                logout();
+                                                navigate('/login');
+                                            }}
                                             className="w-full h-14 rounded-[20px] flex items-center gap-4 px-6 text-emerald-600 font-bold hover:bg-slate-50 transition-colors bg-white border border-slate-100 shadow-sm group active:scale-[0.98]"
                                         >
                                             <Power size={18} strokeWidth={2.5} />
                                             <span className="text-[15px]">Logout</span>
+                                        </button>
+
+                                        <button
+                                            onClick={handleDeleteAccount}
+                                            className="w-full h-14 rounded-[20px] flex items-center gap-4 px-6 text-red-600 font-bold hover:bg-red-50 transition-colors bg-red-50 border border-red-100 shadow-sm group active:scale-[0.98]"
+                                        >
+                                            <Trash2 size={18} strokeWidth={2.5} />
+                                            <span className="text-[15px]">Delete Account</span>
                                         </button>
                                         <p className="text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-8">Version 2.4.0 (Stable)</p>
                                     </div>

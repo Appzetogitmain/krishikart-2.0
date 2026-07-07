@@ -578,3 +578,20 @@ export const testPushByToken = async (req, res) => {
         });
     }
 };
+
+/**
+ * DELETE VENDOR ACCOUNT
+ */
+export const deleteVendorAccount = async (req, res) => {
+    try {
+        const vendorId = req.vendor?._id;
+        const vendor = await Vendor.findByIdAndDelete(vendorId);
+        if (!vendor) {
+            return handleResponse(res, 404, "Vendor not found");
+        }
+        return handleResponse(res, 200, "Account deleted successfully");
+    } catch (error) {
+        console.error("Delete vendor account error:", error);
+        return handleResponse(res, 500, "Internal server error");
+    }
+};

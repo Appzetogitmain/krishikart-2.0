@@ -10,14 +10,29 @@ import {
     ChevronRight,
     Star,
     Settings,
-    FileText
+    FileText,
+    Trash2
 } from 'lucide-react';
 import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
 import { useNavigate } from 'react-router-dom';
+import api from '@/lib/axios';
 
 const Profile = () => {
     const { delivery, logout } = useDeliveryAuth();
     const navigate = useNavigate();
+
+    const handleDeleteAccount = async () => {
+        if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
+            try {
+                await api.delete('/delivery/delete-account');
+                alert("Account deleted successfully.");
+                logout();
+            } catch (error) {
+                console.error("Failed to delete account", error);
+                alert(error.response?.data?.message || "Failed to delete account. Please try again.");
+            }
+        }
+    };
 
     const menuItems = [
         { label: 'My Documents', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50', path: '/delivery/documents' },
@@ -97,9 +112,16 @@ const Profile = () => {
 
                 <button
                     onClick={logout}
-                    className="w-full mt-10 p-4 rounded-2xl bg-rose-50 text-rose-500 font-bold flex items-center justify-center gap-2 border border-rose-100 mb-20 active:scale-95 transition-all"
+                    className="w-full mt-10 p-4 rounded-2xl bg-rose-50 text-rose-500 font-bold flex items-center justify-center gap-2 border border-rose-100 active:scale-95 transition-all"
                 >
                     <LogOut className="w-5 h-5" /> Logout Session
+                </button>
+
+                <button
+                    onClick={handleDeleteAccount}
+                    className="w-full mt-3 p-4 rounded-2xl bg-red-50 text-red-600 font-bold flex items-center justify-center gap-2 border border-red-100 mb-20 active:scale-95 transition-all"
+                >
+                    <Trash2 className="w-5 h-5" /> Delete Account
                 </button>
             </div>
         </div>

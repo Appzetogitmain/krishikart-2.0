@@ -15,7 +15,8 @@ import {
     redeemLoyaltyPoints,
     saveFCMToken,
     testPushByToken,
-    makeOverdueTest
+    makeOverdueTest,
+    deleteUserAccount
 } from "../controllers/user.auth.js";
 import { getCartRecommendations } from "../controllers/recommendation.controller.js";
 import {
@@ -67,5 +68,6 @@ router.post("/notifications/:id/read", protect, markUserNotificationRead);
 router.post("/fcm-token", protect, saveFCMToken);
 router.post("/test-notification", protect, testPushByToken);
 router.get("/test/make-overdue", protect, makeOverdueTest);
+router.delete("/delete-account", protect, deleteUserAccount);
 
 export default router;

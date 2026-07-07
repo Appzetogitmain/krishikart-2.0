@@ -8,6 +8,7 @@ import {
     LogOut,
     ChevronRight,
     Camera,
+    Trash2,
     Globe,
     Store,
     Smartphone,
@@ -373,6 +374,20 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 export default function ProfileScreen() {
     const { logout } = useVendorAuth();
     const navigate = useNavigate();
+
+    const handleDeleteAccount = async () => {
+        if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
+            try {
+                await api.delete('/vendor/delete-account');
+                alert("Account deleted successfully.");
+                logout();
+            } catch (error) {
+                console.error("Failed to delete account", error);
+                alert(error.response?.data?.message || "Failed to delete account. Please try again.");
+            }
+        }
+    };
+
     const [vendor, setVendor] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -561,6 +576,14 @@ export default function ProfileScreen() {
                     >
                         Logout
                         <LogOut size={18} />
+                    </button>
+
+                    <button
+                        onClick={handleDeleteAccount}
+                        className="w-full bg-red-50 text-red-600 py-6 rounded-[36px] font-black text-sm flex items-center justify-center gap-3 border border-red-100 hover:bg-red-100/50 transition-all active:scale-[0.98] shadow-sm hover:shadow-red-200/50"
+                    >
+                        Delete Account
+                        <Trash2 size={18} />
                     </button>
 
                     <div className="text-center">

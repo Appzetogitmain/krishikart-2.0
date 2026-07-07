@@ -3,12 +3,14 @@ import { motion } from 'framer-motion'
 import {
   User, Package, Wallet,
   ChevronRight, Bell, Heart,
-  Info, Power, CreditCard
+  Info, Power, CreditCard,
+  Trash2
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PageTransition from '../components/layout/PageTransition'
 import { cn } from '@/lib/utils'
 import { useWallet } from '../contexts/WalletContext'
+import api from '@/lib/axios'
 
 export default function ProfileScreen() {
   const navigate = useNavigate()
@@ -22,6 +24,19 @@ export default function ProfileScreen() {
     localStorage.removeItem('userData')
     localStorage.removeItem('token') // Fallback
     navigate('/login')
+  }
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
+      try {
+        await api.delete('/user/delete-account')
+        alert("Account deleted successfully.")
+        handleLogout()
+      } catch (error) {
+        console.error("Failed to delete account", error)
+        alert(error.response?.data?.message || "Failed to delete account. Please try again.")
+      }
+    }
   }
 
   const walletItems = [
@@ -159,6 +174,15 @@ export default function ProfileScreen() {
             <Power size={17} strokeWidth={3} />
             Logout
           </button>
+
+          {/* Delete Account Button */}
+          <button
+            onClick={handleDeleteAccount}
+            className="w-full bg-red-50 rounded-[20px] px-6 py-3.5 flex items-center gap-3 text-red-600 font-extrabold text-[14.5px] shadow-sm active:bg-red-100 transition-all mt-3"
+          >
+            <Trash2 size={17} strokeWidth={3} />
+            Delete Account
+          </button>
         </div>
 
         <p className="text-center text-[10px] font-bold text-slate-300 mt-8 mb-6 uppercase tracking-widest">
@@ -204,6 +228,15 @@ export default function ProfileScreen() {
               >
                 <Power size={24} />
                 Logout from Kisaankart
+              </button>
+
+              {/* Delete Account Button */}
+              <button
+                onClick={handleDeleteAccount}
+                className="w-full bg-red-50 rounded-[32px] p-6 flex items-center justify-center gap-3 text-red-600 font-black border-2 border-dashed border-red-100 hover:bg-red-100/50 transition-all mt-4"
+              >
+                <Trash2 size={24} />
+                Delete Account
               </button>
             </div>
           </div>

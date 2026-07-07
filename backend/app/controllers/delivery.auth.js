@@ -481,3 +481,20 @@ export const submitDocumentUpdate = async (req, res) => {
     return handleResponse(res, 500, "Server error: " + err.message);
   }
 };
+
+/**
+ * DELETE DELIVERY ACCOUNT
+ */
+export const deleteDeliveryAccount = async (req, res) => {
+  try {
+    const deliveryId = req.delivery?._id;
+    const delivery = await Delivery.findByIdAndDelete(deliveryId);
+    if (!delivery) {
+      return handleResponse(res, 404, "Delivery partner not found");
+    }
+    return handleResponse(res, 200, "Account deleted successfully");
+  } catch (error) {
+    console.error("Delete delivery account error:", error);
+    return handleResponse(res, 500, "Internal server error");
+  }
+};

@@ -920,3 +920,20 @@ export const makeOverdueTest = async (req, res) => {
   }
 };
 
+/**
+ * DELETE USER ACCOUNT
+ */
+export const deleteUserAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) {
+      return handleResponse(res, 404, "User not found");
+    }
+    return handleResponse(res, 200, "Account deleted successfully");
+  } catch (error) {
+    console.error("Delete user account error:", error);
+    return handleResponse(res, 500, "Internal server error");
+  }
+};
+
