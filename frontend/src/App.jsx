@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import AppLayout from './modules/user/layouts/AppLayout'
 import LandingPage from './modules/landing/LandingPage'
 import SplashScreen from './modules/user/pages/SplashScreen'
@@ -127,97 +128,104 @@ const DeliveryProviders = () => (
 
 
 function App() {
+  const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
   return (
-    <BrowserRouter>
-      <Toaster position="top-center" richColors />
-      <Suspense fallback={
-        <div className="user-app-theme h-screen w-full flex items-center justify-center bg-slate-50">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      }>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-            <Route path="/splash" element={<SplashScreen />} />
-            <Route path="/terms" element={<TermsScreen />} />
-            <Route path="/privacy" element={<PrivacyPolicyScreen />} />
-          <Route path="/login" element={<UserProviders><LoginScreen /></UserProviders>} />
+    <motion.div
+      initial={isIOS ? { opacity: 1 } : { opacity: 0 }} // iOS par direct dikhao
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <BrowserRouter>
+        <Toaster position="top-center" richColors />
+        <Suspense fallback={
+          <div className="user-app-theme h-screen w-full flex items-center justify-center bg-slate-50">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+              <Route path="/splash" element={<SplashScreen />} />
+              <Route path="/terms" element={<TermsScreen />} />
+              <Route path="/privacy" element={<PrivacyPolicyScreen />} />
+            <Route path="/login" element={<UserProviders><LoginScreen /></UserProviders>} />
 
-          {/* User Module */}
-          <Route element={<UserProviders><Outlet /></UserProviders>}>
-            <Route element={<AppLayout />}>
-              <Route path="/home" element={<HomeScreen />} />
-              <Route path="/offers" element={<HomeScreen />} />
-              <Route path="/categories" element={<CategoriesScreen />} />
-              <Route path="/products/:category" element={<ProductListScreen />} />
-              <Route path="/search" element={<ProductListScreen />} />
-              <Route path="/product/:id" element={<ProductDetailScreen />} />
-              <Route path="/help-support" element={<HelpSupportScreen />} />
-              <Route path="/about" element={<AboutScreen />} />
-              
-              {/* Protected User Routes */}
-              <Route element={<UserAuthGuard />}>
-                <Route path="/cart" element={<CartScreen />} />
-                <Route path="/checkout" element={<CheckoutScreen />} />
-                <Route path="/profile" element={<ProfileScreen />} />
-                <Route path="/orders" element={<OrdersScreen />} />
-                <Route path="/edit-profile" element={<EditProfileScreen />} />
-                <Route path="/address-book" element={<AddressBookScreen />} />
-                <Route path="/track-order/:id" element={<OrderTrackingScreen />} />
-                <Route path="/order-summary/:id" element={<OrderSummaryScreen />} />
-                <Route path="/order-detail/:id" element={<OrderDetailScreen />} />
-                <Route path="/split-order/:orderGroupId" element={<SplitOrderTrackingScreen />} />
-                <Route path="/wallet" element={<WalletScreen />} />
-                <Route path="/credit-info" element={<CreditInfoScreen />} />
-                <Route path="/notifications" element={<NotificationsScreen />} />
-                <Route path="/favorites" element={<FavoritesScreen />} />
-                <Route path="/wishlist" element={<WishlistScreen />} />
-                <Route path="/location-picker" element={<LocationMapPicker />} />
-                <Route path="/verification" element={<VerificationScreen />} />
+            {/* User Module */}
+            <Route element={<UserProviders><Outlet /></UserProviders>}>
+              <Route element={<AppLayout />}>
+                <Route path="/home" element={<HomeScreen />} />
+                <Route path="/offers" element={<HomeScreen />} />
+                <Route path="/categories" element={<CategoriesScreen />} />
+                <Route path="/products/:category" element={<ProductListScreen />} />
+                <Route path="/search" element={<ProductListScreen />} />
+                <Route path="/product/:id" element={<ProductDetailScreen />} />
+                <Route path="/help-support" element={<HelpSupportScreen />} />
+                <Route path="/about" element={<AboutScreen />} />
+                
+                {/* Protected User Routes */}
+                <Route element={<UserAuthGuard />}>
+                  <Route path="/cart" element={<CartScreen />} />
+                  <Route path="/checkout" element={<CheckoutScreen />} />
+                  <Route path="/profile" element={<ProfileScreen />} />
+                  <Route path="/orders" element={<OrdersScreen />} />
+                  <Route path="/edit-profile" element={<EditProfileScreen />} />
+                  <Route path="/address-book" element={<AddressBookScreen />} />
+                  <Route path="/track-order/:id" element={<OrderTrackingScreen />} />
+                  <Route path="/order-summary/:id" element={<OrderSummaryScreen />} />
+                  <Route path="/order-detail/:id" element={<OrderDetailScreen />} />
+                  <Route path="/split-order/:orderGroupId" element={<SplitOrderTrackingScreen />} />
+                  <Route path="/wallet" element={<WalletScreen />} />
+                  <Route path="/credit-info" element={<CreditInfoScreen />} />
+                  <Route path="/notifications" element={<NotificationsScreen />} />
+                  <Route path="/favorites" element={<FavoritesScreen />} />
+                  <Route path="/wishlist" element={<WishlistScreen />} />
+                  <Route path="/location-picker" element={<LocationMapPicker />} />
+                  <Route path="/verification" element={<VerificationScreen />} />
+                </Route>
               </Route>
             </Route>
-          </Route>
 
-          {/* Franchise Module */}
-          <Route path="/franchise" element={<FranchiseProviders><Outlet /></FranchiseProviders>}>
-            <Route index element={<Navigate to="login" replace />} />
-            <Route path="login" element={<FranchiseLogin />} />
-            <Route path="signup" element={<FranchiseSignup />} />
-            <Route path="forgot-password" element={<FranchiseForgotPassword />} />
-            <Route path="terms" element={<FranchiseTerms />} />
-            <Route path="privacy" element={<FranchisePrivacyPolicy />} />
-            <Route path="help-support" element={<FranchiseHelpSupport />} />
-            <Route element={<FranchiseAuthGuard />}>
-              <Route element={<FranchiseVerificationGuard />}>
-              <Route element={<FranchiseLayout />}>
-                <Route path="dashboard" element={<FranchiseDashboard />} />
-                <Route path="orders" element={<FranchiseOrders />} />
-                <Route path="orders/:id" element={<OrderDetail />} />
-                <Route path="reports" element={<FranchiseReports />} />
-                <Route path="inventory" element={<FranchiseInventory />} />
-                <Route path="receiving" element={<ReceivingScreen />} />
-                <Route path="dispatch" element={<FranchiseDelivery />} />
-                <Route path="cash" element={<CODCashScreen />} />
-                <Route path="pos" element={<POSWeighingScreen />} />
-                <Route path="procurement" element={<ProcurementScreen />} />
-                <Route path="returns" element={<FranchiseReturns />} />
-                <Route path="profile" element={<FranchiseProfile />} />
-                <Route path="payment-settings" element={<FranchisePaymentSettings />} />
-                <Route path="documentation" element={<DocumentationScreen />} />
-              </Route>
+            {/* Franchise Module */}
+            <Route path="/franchise" element={<FranchiseProviders><Outlet /></FranchiseProviders>}>
+              <Route index element={<Navigate to="login" replace />} />
+              <Route path="login" element={<FranchiseLogin />} />
+              <Route path="signup" element={<FranchiseSignup />} />
+              <Route path="forgot-password" element={<FranchiseForgotPassword />} />
+              <Route path="terms" element={<FranchiseTerms />} />
+              <Route path="privacy" element={<FranchisePrivacyPolicy />} />
+              <Route path="help-support" element={<FranchiseHelpSupport />} />
+              <Route element={<FranchiseAuthGuard />}>
+                <Route element={<FranchiseVerificationGuard />}>
+                <Route element={<FranchiseLayout />}>
+                  <Route path="dashboard" element={<FranchiseDashboard />} />
+                  <Route path="orders" element={<FranchiseOrders />} />
+                  <Route path="orders/:id" element={<OrderDetail />} />
+                  <Route path="reports" element={<FranchiseReports />} />
+                  <Route path="inventory" element={<FranchiseInventory />} />
+                  <Route path="receiving" element={<ReceivingScreen />} />
+                  <Route path="dispatch" element={<FranchiseDelivery />} />
+                  <Route path="cash" element={<CODCashScreen />} />
+                  <Route path="pos" element={<POSWeighingScreen />} />
+                  <Route path="procurement" element={<ProcurementScreen />} />
+                  <Route path="returns" element={<FranchiseReturns />} />
+                  <Route path="profile" element={<FranchiseProfile />} />
+                  <Route path="payment-settings" element={<FranchisePaymentSettings />} />
+                  <Route path="documentation" element={<DocumentationScreen />} />
+                </Route>
+                </Route>
               </Route>
             </Route>
-          </Route>
 
-          {masterAdminRoutes}
-          {vendorRoutes}
-          <Route element={<DeliveryProviders />}>
-            {deliveryRoutes}
-          </Route>
+            {masterAdminRoutes}
+            {vendorRoutes}
+            <Route element={<DeliveryProviders />}>
+              {deliveryRoutes}
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </motion.div>
   )
 }
 

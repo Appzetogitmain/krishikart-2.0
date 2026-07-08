@@ -50,17 +50,21 @@ export const useFCM = (isAuthenticated, userType) => {
                 // Force Action Center visibility with high priority flags
                 if (typeof window !== 'undefined' && 'Notification' in window && window.Notification && window.Notification.permission === 'granted') {
                     try {
-                        const registration = await navigator.serviceWorker.ready;
-                        registration.showNotification(payload.notification.title || 'Kisaankart', {
-                            body: payload.notification.body || '',
-                            icon: '/favicon.png',
-                            data: payload.data || {},
-                            tag: 'kisaankart-foreground',
-                            badge: '/favicon.png',
-                            requireInteraction: true, // IMPORTANT: Keeps it in the Action Center until dismissed
-                            renotify: true,
-                            silent: false
-                        });
+                        if ('serviceWorker' in navigator) {
+                            const registration = await navigator.serviceWorker.ready;
+                            if (registration) {
+                                registration.showNotification(payload.notification.title || 'Kisaankart', {
+                                    body: payload.notification.body || '',
+                                    icon: '/favicon.png',
+                                    data: payload.data || {},
+                                    tag: 'kisaankart-foreground',
+                                    badge: '/favicon.png',
+                                    requireInteraction: true, // IMPORTANT: Keeps it in the Action Center until dismissed
+                                    renotify: true,
+                                    silent: false
+                                });
+                            }
+                        }
                     } catch (err) {
                         console.error('[useFCM] Failed to trigger native foreground notification:', err);
                     }

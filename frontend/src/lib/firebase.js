@@ -24,31 +24,36 @@ export const requestFCMToken = async () => {
         const permission = await window.Notification.requestPermission();
 
         if (permission === 'granted') {
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-                scope: '/'
-            });
+            if ('serviceWorker' in navigator) {
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                    scope: '/'
+                });
 
-            // Send Firebase config to the service worker so it doesn't need hard-coded keys
-            try {
-                const readyRegistration = await navigator.serviceWorker.ready;
-                const sw = readyRegistration.active || registration.active;
-                if (sw) {
-                    sw.postMessage({
-                        type: 'INIT_FIREBASE',
-                        payload: { firebaseConfig },
-                    });
-                } else {
+                // Send Firebase config to the service worker so it doesn't need hard-coded keys
+                try {
+                    const readyRegistration = await navigator.serviceWorker.ready;
+                    const sw = readyRegistration.active || registration.active;
+                    if (sw) {
+                        sw.postMessage({
+                            type: 'INIT_FIREBASE',
+                            payload: { firebaseConfig },
+                        });
+                    } else {
+                        // non-fatal
+                    }
+                } catch (e) {
                     // non-fatal
                 }
-            } catch (e) {
-                // non-fatal
-            }
 
-            const token = await getToken(messaging, {
-                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                serviceWorkerRegistration: registration
-            });
-            return token;
+                const token = await getToken(messaging, {
+                    vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                    serviceWorkerRegistration: registration
+                });
+                return token;
+            } else {
+                console.warn("[FCM] Service worker registration not supported on this browser");
+                return null;
+            }
         } else {
             // non-fatal
         }
