@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import AppLayout from './modules/user/layouts/AppLayout'
 import LandingPage from './modules/landing/LandingPage'
@@ -135,7 +135,7 @@ function App() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <BrowserRouter>
+      <HashRouter>
         <Toaster position="top-center" richColors />
         <Suspense fallback={
           <div className="user-app-theme h-screen w-full flex items-center justify-center bg-slate-50">
@@ -224,7 +224,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
+      </HashRouter>
     </motion.div>
   )
 }
