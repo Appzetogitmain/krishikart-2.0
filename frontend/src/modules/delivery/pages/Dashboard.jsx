@@ -228,7 +228,7 @@ const Dashboard = () => {
                         <h3 className="text-xl font-black mb-1">Task Feed Ready</h3>
                         <p className="text-white/60 text-xs mb-6">Check and accept incoming delivery requests near you.</p>
                         <button
-                            onClick={() => window.location.href = '/delivery/requests'}
+                            onClick={() => navigate('/delivery/requests')}
                             className="bg-white text-slate-900 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-xl"
                         >
                             Open Task Feed

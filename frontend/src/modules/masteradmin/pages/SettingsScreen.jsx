@@ -61,12 +61,19 @@ export default function SettingsScreen() {
 
     const handleUpdateProfile = async () => {
         try {
-            await api.put('/masteradmin/update', formData);
+            const { data } = await api.put('/masteradmin/update', formData);
             alert("Profile Updated Successfully");
-            // Refresh data to show sync status if needed
+            if (data.result) {
+                setAdminData(data.result);
+                setFormData({
+                    fullName: data.result.fullName || '',
+                    email: data.result.email || '',
+                    mobile: data.result.mobile || ''
+                });
+            }
         } catch (error) {
             console.error("Update failed", error);
-            alert("Failed to update profile");
+            alert(error.response?.data?.message || "Failed to update profile");
         }
     };
 

@@ -45,7 +45,7 @@ export function WalletProvider({ children }) {
 
     const fetchWalletData = useCallback(async () => {
         const token = localStorage.getItem('userToken');
-        const path = window.location.pathname;
+        const path = (window.location.hash ? window.location.hash.replace(/^#/, '') : window.location.pathname).toLowerCase();
 
         if (!token ||
             ['/', '/login', '/verification'].includes(path) ||

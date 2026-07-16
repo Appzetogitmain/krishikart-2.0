@@ -56,7 +56,7 @@ export function FranchiseAuthProvider({ children }) {
                     localStorage.removeItem('franchiseToken');
                     localStorage.removeItem('franchiseData');
                     setToken(null);
-                    window.location.href = '/franchise/login';
+                    window.location.href = '/#/franchise/login';
                     return;
                 }
                 // Non-401 errors (network/server) should NOT force logout.
@@ -112,7 +112,7 @@ export function FranchiseAuthProvider({ children }) {
         localStorage.removeItem('franchiseToken');
         localStorage.removeItem('franchiseData');
         localStorage.removeItem('kk_franchise'); // Cleanup old
-        window.location.href = '/franchise/login';
+        window.location.href = '/#/franchise/login';
     };
 
     return (

@@ -41,7 +41,7 @@ const masterAdminSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["superadmin", "subadmin"],
+      enum: ["superadmin", "subadmin", "masteradmin"],
       default: "superadmin",
     },
     fcmTokens: {

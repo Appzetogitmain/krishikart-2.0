@@ -17,7 +17,7 @@ export function CartProvider({ children }) {
     // Fetch cart on mount if token exists
     const fetchCart = async () => {
         const token = localStorage.getItem('userToken') || localStorage.getItem('token');
-        const path = window.location.pathname;
+        const path = (window.location.hash ? window.location.hash.replace(/^#/, '') : window.location.pathname).toLowerCase();
 
         // Skip if no token or if on auth/separate module pages
         if (!token ||

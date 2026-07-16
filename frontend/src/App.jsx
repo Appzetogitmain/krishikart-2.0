@@ -30,6 +30,7 @@ import CreditInfoScreen from './modules/user/pages/CreditInfoScreen'
 import LocationMapPicker from './modules/user/pages/LocationMapPicker'
 import TermsScreen from './modules/user/pages/TermsScreen'
 import PrivacyPolicyScreen from './modules/user/pages/PrivacyPolicyScreen'
+import SecurityScreen from './modules/user/pages/SecurityScreen'
 import { WishlistProvider } from './modules/user/contexts/WishlistContext'
 import { FilterProvider } from './modules/user/contexts/FilterContext'
 import { LocationProvider } from './modules/user/contexts/LocationContext'
@@ -147,6 +148,7 @@ function App() {
               <Route path="/splash" element={<SplashScreen />} />
               <Route path="/terms" element={<TermsScreen />} />
               <Route path="/privacy" element={<PrivacyPolicyScreen />} />
+              <Route path="/security" element={<SecurityScreen />} />
             <Route path="/login" element={<UserProviders><LoginScreen /></UserProviders>} />
 
             {/* User Module */}

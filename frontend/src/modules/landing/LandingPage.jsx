@@ -200,7 +200,7 @@ export default function LandingPage() {
                 </div>
                 <div className="lp-navbar-search">
                     <Search size={16} color="#999" />
-                    <input type="text" placeholder="Search items or categories" readOnly onClick={() => window.location.href = '/login'} />
+                    <input type="text" placeholder="Search items or categories" readOnly onClick={() => window.location.href = '/#/login'} />
                 </div>
                 <div className="lp-navbar-right">
                     <Link to="/login" className="lp-login-btn">Login / Signup</Link>
@@ -511,7 +511,7 @@ export default function LandingPage() {
                                         <div className="lp-product-card-name">{p.name}</div>
                                         <div className="lp-product-card-price">₹{p.price}</div>
                                         <div className="lp-product-card-unit">{p.unit || 'per kg'}</div>
-                                        <button className="lp-product-card-add" onClick={() => window.location.href = '/login'}>ADD +</button>
+                                        <button className="lp-product-card-add" onClick={() => window.location.href = '/#/login'}>ADD +</button>
                                     </div>
                                 </div>
                             ))}

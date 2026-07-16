@@ -141,6 +141,11 @@ export const verifyOTP = async (req, res) => {
           role: "user",
           onboardingCompleted: user.onboardingCompleted || false,
           businessType: user.businessType || null,
+          walletBalance: user.walletBalance || 0,
+          creditLimit: user.creditLimit || 0,
+          usedCredit: user.usedCredit || 0,
+          loyaltyPoints: user.loyaltyPoints || 0,
+          walletTransactions: user.walletTransactions || [],
         },
       });
     }
@@ -177,6 +182,11 @@ export const verifyOTP = async (req, res) => {
           role: "user",
           onboardingCompleted: user.onboardingCompleted || false,
           businessType: user.businessType || null,
+          walletBalance: user.walletBalance || 0,
+          creditLimit: user.creditLimit || 0,
+          usedCredit: user.usedCredit || 0,
+          loyaltyPoints: user.loyaltyPoints || 0,
+          walletTransactions: user.walletTransactions || [],
         },
       });
     }
@@ -229,6 +239,11 @@ export const verifyOTP = async (req, res) => {
         role: "user",
         onboardingCompleted: user.onboardingCompleted || false,
         businessType: user.businessType || null,
+        walletBalance: user.walletBalance || 0,
+        creditLimit: user.creditLimit || 0,
+        usedCredit: user.usedCredit || 0,
+        loyaltyPoints: user.loyaltyPoints || 0,
+        walletTransactions: user.walletTransactions || [],
       },
     });
   } catch (error) {

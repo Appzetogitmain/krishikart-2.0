@@ -16,7 +16,7 @@ export function WishlistProvider({ children }) {
 
     const fetchWishlist = async () => {
         const token = localStorage.getItem('userToken') || localStorage.getItem('token');
-        const path = window.location.pathname;
+        const path = (window.location.hash ? window.location.hash.replace(/^#/, '') : window.location.pathname).toLowerCase();
 
         if (!token ||
             ['/', '/login', '/verification'].includes(path) ||

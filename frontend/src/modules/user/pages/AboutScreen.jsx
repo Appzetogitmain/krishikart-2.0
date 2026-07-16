@@ -55,8 +55,8 @@ export default function AboutScreen() {
                     {/* Footer Links */}
                     <div className="flex flex-col items-center gap-6 pt-8 border-t border-slate-100">
                         <div className="flex justify-center gap-8">
-                            <button onClick={() => navigate('/help-support')} className="text-slate-400 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-widest">Privacy</button>
-                            <button onClick={() => navigate('/help-support')} className="text-slate-400 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-widest">Terms</button>
+                            <button onClick={() => navigate('/privacy')} className="text-slate-400 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-widest">Privacy</button>
+                            <button onClick={() => navigate('/terms')} className="text-slate-400 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-widest">Terms</button>
                             <a href="https://kisaankart.in" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors text-[10px] font-black uppercase tracking-widest">Website</a>
                         </div>
                         <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">

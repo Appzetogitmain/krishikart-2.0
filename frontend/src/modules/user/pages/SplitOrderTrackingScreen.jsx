@@ -18,7 +18,7 @@ export default function SplitOrderTrackingScreen() {
         try {
             setLoading(true)
             const response = await api.get(`/orders/group/${orderGroupId}`)
-            setGroupDetails(response.data.data)
+            setGroupDetails(response.data.result)
         } catch (error) {
             console.error('Error fetching split order details:', error)
             toast.error('Failed to load order details')

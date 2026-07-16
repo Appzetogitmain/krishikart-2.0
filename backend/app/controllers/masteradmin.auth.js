@@ -111,13 +111,29 @@ export const updateMasterAdminProfile = async (req, res) => {
   try {
     const { fullName, email, mobile, operationalZone, password } = req.body;
 
-    const admin = await MasterAdmin.findById(req.masteradmin._id);
-    if (!admin) return handleResponse(res, 404, "MasterAdmin not found");
+    let admin = await MasterAdmin.findById(req.masteradmin._id);
+    let Model = MasterAdmin;
+    if (!admin) {
+      admin = await SubAdmin.findById(req.masteradmin._id);
+      Model = SubAdmin;
+    }
+
+    if (!admin) return handleResponse(res, 404, "Admin profile not found");
 
     if (fullName) admin.fullName = fullName;
-    if (email) admin.email = email;
+    if (email) {
+      const trimmedEmail = email.trim().toLowerCase();
+      const existingMaster = await MasterAdmin.findOne({ email: trimmedEmail, _id: { $ne: admin._id } });
+      const existingSub = await SubAdmin.findOne({ email: trimmedEmail, _id: { $ne: admin._id } });
+      if (existingMaster || existingSub) {
+        return handleResponse(res, 400, "Email already in use");
+      }
+      admin.email = trimmedEmail;
+    }
     if (mobile) admin.mobile = mobile;
-    if (operationalZone) admin.operationalZone = operationalZone;
+    if (operationalZone && Model === MasterAdmin) {
+      admin.operationalZone = operationalZone;
+    }
 
     if (password) {
       admin.password = await bcrypt.hash(password, 10);
@@ -125,7 +141,14 @@ export const updateMasterAdminProfile = async (req, res) => {
 
     await admin.save();
 
-    return handleResponse(res, 200, "Profile updated successfully", admin);
+    return handleResponse(res, 200, "Profile updated successfully", {
+      id: admin._id,
+      email: admin.email,
+      fullName: admin.fullName,
+      mobile: admin.mobile,
+      role: admin.role,
+      permissions: admin.permissions || [],
+    });
   } catch (err) {
     console.error("Update Error:", err);
     return handleResponse(res, 500, "Server error");
@@ -141,8 +164,12 @@ export const changeMasterAdminPassword = async (req, res) => {
       return handleResponse(res, 400, "Old and new password required");
     }
 
-    const admin = await MasterAdmin.findById(req.masteradmin._id);
-    if (!admin) return handleResponse(res, 404, "MasterAdmin not found");
+    let admin = await MasterAdmin.findById(req.masteradmin._id);
+    if (!admin) {
+      admin = await SubAdmin.findById(req.masteradmin._id);
+    }
+
+    if (!admin) return handleResponse(res, 404, "Admin profile not found");
 
     const match = await bcrypt.compare(oldPassword, admin.password);
     if (!match) return handleResponse(res, 400, "Incorrect old password");

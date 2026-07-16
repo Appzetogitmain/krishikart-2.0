@@ -175,12 +175,22 @@ export default function CheckoutScreen() {
 
     const handlePinCurrentLocation = async () => {
         if (!ctxUpdateDeliveryLocation) {
+            try {
+                sessionStorage.setItem('kk_checkout_prompt_address', '1');
+            } catch (_) { /* ignore */ }
             navigate('/location-picker?type=delivery&returnTo=/checkout');
             return;
         }
         try {
             await ctxUpdateDeliveryLocation(true);
             toast.success('Current location pinned for delivery.');
+            // Already on checkout: open form only if house no. is missing
+            setAddressDetails((current) => {
+                if (!current.flat?.trim()) {
+                    setIsEditingAddress(true);
+                }
+                return current;
+            });
         } catch (error) {
             console.error('Pin current location error:', error);
             toast.error(error?.message || 'Unable to fetch your current location.');
@@ -409,14 +419,12 @@ export default function CheckoutScreen() {
                     state: ctxDeliveryComponents.state || prev.state,
                     colony: streetAddress || ctxDeliveryComponents.area || prev.colony,
                     pincode: ctxDeliveryComponents.pincode || prev.pincode,
+                    // Keep house number if user already saved / entered it
+                    flat: prev.flat || '',
+                    floor: prev.floor || '',
+                    landmark: prev.landmark || '',
                 };
-                
-                // Auto-open editor if location is pinned but house number is missing
-                // This streamlines the "Set Pin -> Fill Details" flow
-                if (ctxHasDeliveryPinned && !newDetails.flat && !isEditingAddress) {
-                    setTimeout(() => setIsEditingAddress(true), 500);
-                }
-                
+
                 return newDetails;
             });
             setIsManualAddress(false);
@@ -432,6 +440,44 @@ export default function CheckoutScreen() {
             setIsManualAddress(false);
         }
     }, [ctxDeliveryAddress, ctxDeliveryComponents, ctxHasDeliveryPinned])
+
+    // Open address editor only after a fresh map/GPS pin when house no. is still missing.
+    // Do NOT open on every checkout visit — that was spamming the Change Address popup.
+    useEffect(() => {
+        let cancelled = false;
+        let timer;
+
+        const maybePrompt = () => {
+            let shouldPrompt = false;
+            try {
+                shouldPrompt = sessionStorage.getItem('kk_checkout_prompt_address') === '1';
+            } catch (_) {
+                shouldPrompt = false;
+            }
+            if (!shouldPrompt || cancelled) return;
+
+            try {
+                sessionStorage.removeItem('kk_checkout_prompt_address');
+            } catch (_) { /* ignore */ }
+
+            // Wait for profile / saved address hydrate so we don't open when flat already exists
+            timer = setTimeout(() => {
+                if (cancelled) return;
+                setAddressDetails((current) => {
+                    if (!current.flat?.trim()) {
+                        setIsEditingAddress(true);
+                    }
+                    return current;
+                });
+            }, 600);
+        };
+
+        maybePrompt();
+        return () => {
+            cancelled = true;
+            if (timer) clearTimeout(timer);
+        };
+    }, [])
 
     const fetchProfile = async () => {
         try {
@@ -838,7 +884,12 @@ export default function CheckoutScreen() {
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => navigate('/location-picker?type=delivery&returnTo=/checkout')}
+                                                onClick={() => {
+                                                    try {
+                                                        sessionStorage.setItem('kk_checkout_prompt_address', '1');
+                                                    } catch (_) { /* ignore */ }
+                                                    navigate('/location-picker?type=delivery&returnTo=/checkout');
+                                                }}
                                                 disabled={isPlacingOrder}
                                                 className={cn(
                                                     "flex items-center gap-1 text-[11px] font-bold uppercase transition-colors",
@@ -883,7 +934,12 @@ export default function CheckoutScreen() {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => navigate('/location-picker?type=delivery&returnTo=/checkout')}
+                                            onClick={() => {
+                                                try {
+                                                    sessionStorage.setItem('kk_checkout_prompt_address', '1');
+                                                } catch (_) { /* ignore */ }
+                                                navigate('/location-picker?type=delivery&returnTo=/checkout');
+                                            }}
                                             disabled={isPlacingOrder}
                                             className={cn(
                                                 "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm active:scale-[0.98] transition-transform",

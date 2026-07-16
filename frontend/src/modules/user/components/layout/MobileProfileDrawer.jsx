@@ -14,7 +14,7 @@ import {
     CreditCard,
     Trash2
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import api from '@/lib/axios'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { useWallet } from '../../contexts/WalletContext'
@@ -37,10 +37,11 @@ const SectionHeader = ({ title }) => (
 )
 
 const MenuItem = ({ icon: Icon, label, path, badge, isNew, hasToggle, isActive, onToggle, isFirst, isLast }) => {
+    const navigate = useNavigate();
     const Tag = hasToggle ? 'div' : 'button';
     return (
         <Tag
-            onClick={() => !hasToggle && path && window.location.assign(path)}
+            onClick={() => !hasToggle && path && navigate(path)}
             className={cn(
                 "w-full flex items-center justify-between py-3.5 px-4 bg-white transition-all group text-left",
                 !isFirst && "border-t border-slate-100",
@@ -90,9 +91,14 @@ const MenuItem = ({ icon: Icon, label, path, badge, isNew, hasToggle, isActive, 
 
 export default function MobileProfileDrawer() {
     const navigate = useNavigate()
+    const location = useLocation()
     const { balance, creditLimit, availableCredit } = useWallet()
     const { user, logout } = useUserAuth()
     const [isOpen, setIsOpen] = useState(false)
+
+    useEffect(() => {
+        setIsOpen(false)
+    }, [location])
 
     const handleDeleteAccount = async () => {
         if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {

@@ -77,7 +77,7 @@ export function VendorAuthProvider({ children }) {
                     description: `You have received a new procurement request #${data.requestId?.toString().slice(-6).toUpperCase()}`,
                     action: {
                         label: 'View Order',
-                        onClick: () => window.location.href = `/vendor/orders/${data.requestId}`
+                        onClick: () => window.location.href = `/#/vendor/orders/${data.requestId}`
                     },
                     duration: 10000
                 });
@@ -111,7 +111,7 @@ export function VendorAuthProvider({ children }) {
         setVendor(null);
         localStorage.removeItem('vendorToken');
         localStorage.removeItem('vendorData');
-        window.location.href = '/vendor/login';
+        window.location.href = '/#/vendor/login';
     };
 
     return (

@@ -39,8 +39,7 @@ export default function EditProfileScreen() {
         address: ''
     })
 
-    // Dynamic Additional Numbers
-    const [additionalNumbers, setAdditionalNumbers] = useState([])
+
 
     const [preferences, setPreferences] = useState({
         whatsapp: false,
@@ -84,17 +83,7 @@ export default function EditProfileScreen() {
                 tax: userData.preferences?.showTaxInclusive || false,
                 paper: userData.preferences?.paperInvoice || false
             })
-            if (Array.isArray(userData.additionalNumbers)) {
-                setAdditionalNumbers(
-                    userData.additionalNumbers.map((item, idx) => ({
-                        id: `${userData.mobile || 'user'}-${idx}`,
-                        phone: item.phone || '',
-                        name: item.name || ''
-                    }))
-                )
-            } else {
-                setAdditionalNumbers([])
-            }
+
         } catch (error) {
             console.error('Failed to fetch profile:', error)
         } finally {
@@ -131,14 +120,6 @@ export default function EditProfileScreen() {
             return;
         }
 
-        // Prepare additional numbers payload for backend (only rows with a phone)
-        const cleanedAdditionalNumbers = additionalNumbers
-            .filter(row => row.phone && row.phone.length === 10)
-            .map(row => ({
-                phone: row.phone,
-                name: row.name || ''
-            }))
-
         setIsSaving(true)
         try {
             const response = await api.put('/user/update-profile', {
@@ -146,8 +127,7 @@ export default function EditProfileScreen() {
                 email: editData.email,
                 panNumber: editData.panNumber,
                 legalEntityName: editData.legalEntityName,
-                address: editData.address,
-                additionalNumbers: cleanedAdditionalNumbers
+                address: editData.address
             })
             const updatedUser = response.data.result
             setUser(updatedUser)
@@ -201,25 +181,7 @@ export default function EditProfileScreen() {
         }
     }
 
-    const addNumberRow = () => {
-        setAdditionalNumbers(prev => [...prev, { id: Date.now(), phone: '', name: '' }])
-    }
 
-    const removeNumberRow = (id) => {
-        setAdditionalNumbers(prev => prev.filter(row => row.id !== id))
-    }
-
-    const updateNumberRow = (id, field, value) => {
-        if (field === 'phone') {
-            const digitsOnly = value.replace(/\D/g, '').slice(0, 10)
-            setAdditionalNumbers(prev => prev.map(row => row.id === id ? { ...row, phone: digitsOnly } : row))
-        } else if (field === 'name') {
-            const lettersAndSpacesOnly = value.replace(/[^a-zA-Z\s]/g, '')
-            setAdditionalNumbers(prev => prev.map(row => row.id === id ? { ...row, name: lettersAndSpacesOnly } : row))
-        } else {
-            setAdditionalNumbers(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row))
-        }
-    }
 
     if (isLoading) {
         return (
@@ -292,49 +254,7 @@ export default function EditProfileScreen() {
                                             />
                                         </div>
 
-                                        {/* Dynamic Additional Numbers */}
-                                        <div className="pt-2">
-                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Additional Contact Numbers</label>
-                                            <AnimatePresence initial={false}>
-                                                {additionalNumbers.map((row) => (
-                                                    <motion.div
-                                                        key={row.id}
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        className="grid grid-cols-[1fr,1fr,auto] gap-3 items-center overflow-hidden mb-3"
-                                                    >
-                                                        <Input
-                                                            placeholder="Phone (10 digits)"
-                                                            value={row.phone}
-                                                            onChange={(e) => updateNumberRow(row.id, 'phone', e.target.value)}
-                                                            maxLength={10}
-                                                            inputMode="numeric"
-                                                            className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4 text-sm font-bold"
-                                                        />
-                                                        <Input
-                                                            placeholder="Name/Label"
-                                                            value={row.name}
-                                                            onChange={(e) => updateNumberRow(row.id, 'name', e.target.value)}
-                                                            className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4 text-sm font-bold"
-                                                        />
-                                                        <button
-                                                            onClick={() => removeNumberRow(row.id)}
-                                                            className="w-10 h-10 flex items-center justify-center text-[#ec5262] hover:bg-red-50 rounded-xl transition-colors shrink-0"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    </motion.div>
-                                                ))}
-                                            </AnimatePresence>
-                                            <button
-                                                onClick={addNumberRow}
-                                                className="flex items-center gap-1.5 text-xs font-black text-emerald-600 hover:text-emerald-700 transition-colors mt-2"
-                                            >
-                                                <Plus size={14} strokeWidth={3} />
-                                                ADD ANOTHER NUMBER
-                                            </button>
-                                        </div>
+
                                     </div>
                                 </div>
 

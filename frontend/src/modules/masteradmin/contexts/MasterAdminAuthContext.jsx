@@ -81,7 +81,7 @@ export function MasterAdminAuthProvider({ children }) {
                     duration: 10000,
                     action: {
                         label: 'View',
-                        onClick: () => window.location.href = '/masteradmin/assignment'
+                        onClick: () => window.location.href = '/#/masteradmin/assignment'
                     }
                 });
             };
@@ -93,7 +93,7 @@ export function MasterAdminAuthProvider({ children }) {
                     duration: 10000,
                     action: {
                         label: 'Review',
-                        onClick: () => window.location.href = '/masteradmin/approvals?type=vendor'
+                        onClick: () => window.location.href = '/#/masteradmin/approvals?type=vendor'
                     }
                 });
             };
@@ -105,7 +105,7 @@ export function MasterAdminAuthProvider({ children }) {
                     duration: 10000,
                     action: {
                         label: 'Review',
-                        onClick: () => window.location.href = '/masteradmin/approvals?type=franchise'
+                        onClick: () => window.location.href = '/#/masteradmin/approvals?type=franchise'
                     }
                 });
             };

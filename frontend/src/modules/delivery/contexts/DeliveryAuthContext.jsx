@@ -43,7 +43,7 @@ export function DeliveryAuthProvider({ children }) {
                         setToken(null);
                         localStorage.removeItem('deliveryToken');
                         localStorage.removeItem('deliveryData');
-                        window.location.href = '/delivery/login';
+                        window.location.href = '/#/delivery/login';
                         return;
                     }
                     // Non-401 errors should NOT force logout; keep token for refresh stability.
@@ -75,7 +75,7 @@ export function DeliveryAuthProvider({ children }) {
         setToken(null);
         localStorage.removeItem('deliveryToken');
         localStorage.removeItem('deliveryData');
-        window.location.href = '/delivery/login';
+        window.location.href = '/#/delivery/login';
     };
 
     return (

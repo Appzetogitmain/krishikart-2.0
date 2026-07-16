@@ -120,7 +120,7 @@ const AccessDenied = () => (
       credentials.
     </p>
     <button
-      onClick={() => (window.location.href = "/masteradmin/login")}
+      onClick={() => (window.location.href = "/#/masteradmin/login")}
       className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-sm hover:bg-slate-800 transition-all active:scale-95">
       Return to Login
     </button>

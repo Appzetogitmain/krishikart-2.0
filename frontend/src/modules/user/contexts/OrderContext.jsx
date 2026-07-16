@@ -95,7 +95,7 @@ export function OrderProvider({ children }) {
                             action: {
                                 label: 'View Order →',
                                 onClick: () => {
-                                    window.location.href = `/order-detail/${orderId}`;
+                                    window.location.href = `/#/order-detail/${orderId}`;
                                 },
                             },
                         });
@@ -147,7 +147,7 @@ export function OrderProvider({ children }) {
                     duration: 6000,
                     action: {
                         label: 'View Order →',
-                        onClick: () => { window.location.href = `/order-detail/${payload.orderId}`; },
+                        onClick: () => { window.location.href = `/#/order-detail/${payload.orderId}`; },
                     },
                 });
             } else if (payload?.action === 'approve') {
@@ -155,7 +155,7 @@ export function OrderProvider({ children }) {
                     duration: 6000,
                     action: {
                         label: 'View Order →',
-                        onClick: () => { window.location.href = `/order-detail/${payload.orderId}`; },
+                        onClick: () => { window.location.href = `/#/order-detail/${payload.orderId}`; },
                     },
                 });
             }
@@ -173,7 +173,7 @@ export function OrderProvider({ children }) {
                 duration: 8000,
                 action: {
                     label: 'View Order →',
-                    onClick: () => { window.location.href = `/order-detail/${payload.orderId}`; },
+                    onClick: () => { window.location.href = `/#/order-detail/${payload.orderId}`; },
                 },
             });
             await syncOrderById(payload.orderId, payload.status);

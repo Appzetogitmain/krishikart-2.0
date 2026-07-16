@@ -392,7 +392,7 @@ export const AdminProvider = ({ children }) => {
                 description: `${data.customerName || 'A customer'} placed an order for ₹${data.amount || '0'}`,
                 action: {
                     label: "View Orders",
-                    onClick: () => window.location.href = '/masteradmin/orders'
+                    onClick: () => window.location.href = '/#/masteradmin/orders'
                 },
                 duration: 5000
             });

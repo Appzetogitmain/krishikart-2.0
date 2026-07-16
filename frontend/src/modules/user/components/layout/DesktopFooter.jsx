@@ -51,9 +51,9 @@ export default function DesktopFooter() {
                         &copy; {new Date().getFullYear()} Kisaan Kart. All rights reserved.
                     </p>
                     <div className="flex gap-8">
-                        <Link to="/help-support" className="text-slate-400 hover:text-slate-600 text-xs">Privacy Policy</Link>
-                        <Link to="/help-support" className="text-slate-400 hover:text-slate-600 text-xs">Terms of Service</Link>
-                        <Link to="/help-support" className="text-slate-400 hover:text-slate-600 text-xs">Security</Link>
+                        <Link to="/privacy" className="text-slate-400 hover:text-slate-600 text-xs">Privacy Policy</Link>
+                        <Link to="/terms" className="text-slate-400 hover:text-slate-600 text-xs">Terms of Service</Link>
+                        <Link to="/security" className="text-slate-400 hover:text-slate-600 text-xs">Security</Link>
                     </div>
                 </div>
             </div>

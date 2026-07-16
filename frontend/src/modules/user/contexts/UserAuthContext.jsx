@@ -52,10 +52,21 @@ export function UserAuthProvider({ children }) {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    const loginSuccess = (userData, token) => {
-        setUser(userData);
+    const loginSuccess = async (userData, token) => {
         localStorage.setItem('userToken', token);
         localStorage.setItem('userData', JSON.stringify(userData));
+        setUser(userData);
+        
+        try {
+            const response = await api.get('/user/me');
+            if (response.data.success) {
+                const fullUser = response.data.result;
+                setUser(fullUser);
+                localStorage.setItem('userData', JSON.stringify(fullUser));
+            }
+        } catch (error) {
+            console.error("Failed to load user profile on login success", error);
+        }
     };
 
     const logout = () => {
@@ -75,7 +86,7 @@ export function UserAuthProvider({ children }) {
         localStorage.removeItem('kk_delivery_location_pinned');
         localStorage.removeItem('kk_location_declined');
 
-        window.location.href = '/login';
+        window.location.href = '/#/login';
     };
 
     return (

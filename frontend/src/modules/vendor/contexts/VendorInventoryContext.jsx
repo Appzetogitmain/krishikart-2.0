@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
+import { useVendorAuth } from './VendorAuthContext';
 
 const VendorInventoryContext = createContext();
 
 export const VendorInventoryProvider = ({ children }) => {
+    const { vendor } = useVendorAuth();
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -37,11 +39,13 @@ export const VendorInventoryProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        const token = localStorage.getItem('vendorToken');
-        if (token) {
+        if (vendor) {
             fetchInventory();
+        } else {
+            setInventory([]);
+            setLoading(false);
         }
-    }, []);
+    }, [vendor]);
 
     const updateStock = async (productId, stock) => {
         try {

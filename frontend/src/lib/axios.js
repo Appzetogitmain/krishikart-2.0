@@ -12,7 +12,7 @@ api.interceptors.request.use((config) => {
     let token = null;
 
     const requestUrl = config.url.toLowerCase();
-    const currentPath = window.location.pathname.toLowerCase();
+    const currentPath = (window.location.hash ? window.location.hash.replace(/^#/, '') : window.location.pathname).toLowerCase();
 
     // Determine context based on URL or current page
     const isAdminRequest = requestUrl.includes('/masteradmin') || requestUrl.includes('/admin') || (requestUrl.includes('/procurement') && !requestUrl.includes('/franchise'));
@@ -76,7 +76,7 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            const currentPath = window.location.pathname.toLowerCase();
+            const currentPath = (window.location.hash ? window.location.hash.replace(/^#/, '') : window.location.pathname).toLowerCase();
             const requestUrl = String(error.config?.url || '').toLowerCase();
 
             // Only wipe token if we are actually in that section of the app
