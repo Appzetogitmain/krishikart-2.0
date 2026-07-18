@@ -3,11 +3,11 @@ import { ArrowLeft, IndianRupee, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
-import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
+// import { useDeliveryAuth } from '../contexts/DeliveryAuthContext'; // Razorpay prefill — disabled
 
 export default function CodRemittanceScreen() {
     const navigate = useNavigate();
-    const { delivery } = useDeliveryAuth();
+    // const { delivery } = useDeliveryAuth(); // used by Razorpay UPI prefill (disabled)
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [pendingOrders, setPendingOrders] = useState([]);
@@ -71,6 +71,7 @@ export default function CodRemittanceScreen() {
         );
     };
 
+    /* Razorpay (UPI remittance) — temporarily disabled
     const loadRazorpay = () => {
         return new Promise((resolve) => {
             const script = document.createElement('script');
@@ -80,6 +81,7 @@ export default function CodRemittanceScreen() {
             document.body.appendChild(script);
         });
     };
+    */
 
     const handleSubmitRemittance = async () => {
         if (!selectedOrderIds.length) {
@@ -87,9 +89,16 @@ export default function CodRemittanceScreen() {
             return;
         }
 
+        // Razorpay UPI disabled — use cash / manual remittance only
+        if (paymentMethod === 'upi') {
+            toast.error('UPI remittance is temporarily unavailable. Please use cash.');
+            return;
+        }
+
         try {
             setSubmitting(true);
 
+            /* Razorpay UPI flow — temporarily disabled
             if (paymentMethod === 'upi') {
                 const isLoaded = await loadRazorpay();
                 if (!isLoaded) {
@@ -153,21 +162,23 @@ export default function CodRemittanceScreen() {
                 rzp.open();
                 // Note: We don't setSubmitting(false) here because Razorpay is async
             } else {
-                // Cash Flow (Existing)
-                const response = await api.post('/delivery/cod/remittance', {
-                    orderIds: selectedOrderIds,
-                    paymentMethod,
-                    referenceNo,
-                    note
-                });
-                if (response.data.success) {
-                    toast.success('COD remittance submitted to admin');
-                    setReferenceNo('');
-                    setNote('');
-                    await fetchData();
-                }
-                setSubmitting(false);
+            */
+
+            // Cash Flow (Existing)
+            const response = await api.post('/delivery/cod/remittance', {
+                orderIds: selectedOrderIds,
+                paymentMethod,
+                referenceNo,
+                note
+            });
+            if (response.data.success) {
+                toast.success('COD remittance submitted to admin');
+                setReferenceNo('');
+                setNote('');
+                await fetchData();
             }
+            setSubmitting(false);
+            // } // end Razorpay else
         } catch (error) {
             console.error('COD submit error:', error);
             toast.error(error.response?.data?.message || 'Failed to submit remittance');
@@ -238,7 +249,8 @@ export default function CodRemittanceScreen() {
                 <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
                     <h2 className="text-sm font-bold text-slate-900">Submit to Admin</h2>
                     <div className="grid grid-cols-2 gap-2">
-                        {['cash', 'upi'].map((method) => (
+                        {/* Razorpay UPI option temporarily disabled — only cash */}
+                        {['cash' /* , 'upi' */].map((method) => (
                             <button
                                 key={method}
                                 onClick={() => setPaymentMethod(method)}

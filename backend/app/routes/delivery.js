@@ -22,8 +22,8 @@ import {
   getAllDeliveryPartners,
   getMyCodSummary,
   submitCodRemittance,
-  createCodRazorpayOrder,
-  verifyCodUpiPayment,
+  // createCodRazorpayOrder, // Razorpay COD UPI — temporarily disabled
+  // verifyCodUpiPayment,
   getMyCodRemittances,
   updateAvailability,
   saveFCMToken,
@@ -63,8 +63,9 @@ router.get(
 router.get("/cod/summary", protectDelivery, requireApproval, getMyCodSummary);
 router.get("/cod/remittances", protectDelivery, requireApproval, getMyCodRemittances);
 router.post("/cod/remittance", protectDelivery, requireApproval, submitCodRemittance);
-router.post("/cod/razorpay-order", protectDelivery, requireApproval, createCodRazorpayOrder);
-router.post("/cod/verify-upi", protectDelivery, requireApproval, verifyCodUpiPayment);
+// Razorpay COD UPI — temporarily disabled
+// router.post("/cod/razorpay-order", protectDelivery, requireApproval, createCodRazorpayOrder);
+// router.post("/cod/verify-upi", protectDelivery, requireApproval, verifyCodUpiPayment);
 router.put("/availability", protectDelivery, requireApproval, updateAvailability);
 router.post("/fcm-token", protectDelivery, saveFCMToken);
 router.post("/test-notification", protectDelivery, testPushByToken);

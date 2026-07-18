@@ -2,8 +2,8 @@ import Delivery from "../models/delivery.js";
 import Order from "../models/order.js";
 import DeliveryCodRemittance from "../models/deliveryCodRemittance.js";
 import { handleResponse } from "../utils/helper.js";
-import razorpay from "../utils/razorpay.js";
-import crypto from "crypto";
+// import razorpay from "../utils/razorpay.js"; // Razorpay COD UPI — temporarily disabled
+// import crypto from "crypto";
 import mongoose from "mongoose";
 import admin from "../services/firebaseAdmin.js";
 
@@ -133,6 +133,7 @@ export const submitCodRemittance = async (req, res) => {
     }
 };
 
+/* Razorpay COD UPI remittance — temporarily disabled
 export const createCodRazorpayOrder = async (req, res) => {
     try {
         const { amount } = req.body;
@@ -217,6 +218,7 @@ export const verifyCodUpiPayment = async (req, res) => {
         return handleResponse(res, 500, "Verification failed");
     }
 };
+*/
 
 export const getMyCodRemittances = async (req, res) => {
     try {
