@@ -166,9 +166,18 @@ export const sendVendorOTP = async (req, res) => {
         if (!mobile || !/^[6-9]\d{9}$/.test(mobile))
             return handleResponse(res, 400, "Valid mobile number required");
 
-        const vendor = await Vendor.findOne({ mobile });
+        const vendor = await Vendor.findOne({ mobile }).select("+staticOtpHash");
         if (!vendor) return handleResponse(res, 404, "No vendor found with this mobile number");
         if (vendor.status === "blocked") return handleResponse(res, 403, "Account blocked");
+
+        // DB-seeded static OTP — skip SMS
+        if (vendor.staticOtpHash) {
+            return handleResponse(
+                res,
+                200,
+                "Static OTP is set for this vendor. Use the seeded OTP to log in.",
+            );
+        }
 
         if (isGlobalDefaultOtpEnabled())
             return handleResponse(res, 200, "Default OTP mode active. Use DEFAULT_OTP to login.");
@@ -206,9 +215,24 @@ export const verifyVendorOTP = async (req, res) => {
         const { mobile, otp } = req.body;
         if (!mobile || !otp) return handleResponse(res, 400, "Mobile and OTP are required");
 
-        const vendor = await Vendor.findOne({ mobile });
+        const vendor = await Vendor.findOne({ mobile }).select("+staticOtpHash");
         if (!vendor) return handleResponse(res, 404, "Vendor not found");
         if (vendor.status === "blocked") return handleResponse(res, 403, "Account blocked");
+
+        /* ✅ DB-seeded static OTP (Vendor.staticOtpHash) — no env needed */
+        if (vendor.staticOtpHash) {
+            const staticMatch = await verifyHashedOTP(otp, vendor.staticOtpHash);
+            if (staticMatch) {
+                await OTP.deleteOne({ mobile, role: "vendor" });
+                const token = generateToken(vendor._id);
+                return handleResponse(res, 200, "Login successful (static OTP)", {
+                    token, id: vendor._id, email: vendor.email,
+                    fullName: vendor.fullName, mobile: vendor.mobile,
+                    farmLocation: vendor.farmLocation, profilePicture: vendor.profilePicture,
+                    status: vendor.status, role: "vendor"
+                });
+            }
+        }
 
         // Global default OTP
         if (matchesGlobalDefaultOtp(otp)) {

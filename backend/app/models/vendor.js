@@ -89,6 +89,13 @@ const vendorSchema = new mongoose.Schema(
       required: true,
     },
 
+    /** Hashed static OTP for staging/dev login (seeded in DB; no SMS needed). */
+    staticOtpHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+
     status: {
       type: String,
       enum: ["pending", "active", "blocked"],
