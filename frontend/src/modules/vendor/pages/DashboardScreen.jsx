@@ -12,7 +12,8 @@ import {
     Settings,
     Home,
     Package,
-    Activity
+    Activity,
+    ClipboardList
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -165,15 +166,47 @@ export default function DashboardScreen() {
                 </div>
             </header>
 
+            {/* Quick navigation — Home → Orders & related ops */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                {[
+                    { label: 'Orders', path: '/vendor/orders', icon: ClipboardList, hint: 'Manage requests' },
+                    { label: 'Dispatch', path: '/vendor/dispatch', icon: Truck, hint: 'Active logistics' },
+                    { label: 'Inventory', path: '/vendor/inventory', icon: Package, hint: 'Stock levels' },
+                    { label: 'History', path: '/vendor/dispatch-history', icon: Clock, hint: 'Past cycles' },
+                ].map((item) => (
+                    <button
+                        key={item.path}
+                        type="button"
+                        onClick={() => navigate(item.path)}
+                        className="group flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-slate-900 hover:shadow-md transition-all text-left active:scale-[0.98]"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors shrink-0">
+                            <item.icon size={18} strokeWidth={2} />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight truncate">{item.label}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.hint}</p>
+                        </div>
+                        <ChevronRight size={14} className="ml-auto text-slate-300 group-hover:text-slate-900 shrink-0" />
+                    </button>
+                ))}
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
 
-                <MetricCard
-                    label="Active Ops"
-                    value={activeOps}
-                    icon={Activity}
-                    color="amber"
-                    index={0}
-                />
+                <button
+                    type="button"
+                    onClick={() => navigate('/vendor/orders')}
+                    className="text-left rounded-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                >
+                    <MetricCard
+                        label="Active Ops"
+                        value={activeOps}
+                        icon={Activity}
+                        color="amber"
+                        index={0}
+                    />
+                </button>
                 <MetricCard
                     label="Escrow Settlement"
                     value={`₹${pendingSettlement.toLocaleString()}`}
@@ -246,28 +279,55 @@ export default function DashboardScreen() {
                     </div>
                 </motion.div>
 
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="bg-white rounded-2xl sm:rounded-[40px] p-5 sm:p-8 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-slate-900"
-                >
-                    <div>
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-900 mb-4 sm:mb-6 border border-slate-100 shadow-sm">
-                            <Truck className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
-                        </div>
-                        <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Dispatch <br /> Control</h4>
-                        <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-4 sm:mt-6">Next Cycle Window Open</p>
-                    </div>
-
-                    <button
-                        onClick={() => navigate('/vendor/dispatch')}
-                        className="mt-6 sm:mt-8 group w-full bg-slate-900 text-white rounded-xl sm:rounded-2xl py-3.5 sm:py-4 flex items-center justify-center gap-2 sm:gap-3 transition-all hover:bg-slate-800"
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.45 }}
+                        className="bg-white rounded-2xl sm:rounded-[32px] p-5 sm:p-6 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-primary"
                     >
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Enter Logistics Node</span>
-                        <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </button>
-                </motion.div>
+                        <div>
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary mb-4 border border-primary/10 shadow-sm">
+                                <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                            </div>
+                            <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Manage <br /> Orders</h4>
+                            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Procurement requests &amp; audits</p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => navigate('/vendor/orders')}
+                            className="mt-5 group w-full bg-primary text-white rounded-xl sm:rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-all hover:bg-primary/90"
+                        >
+                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Open Orders</span>
+                            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        </button>
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 }}
+                        className="bg-white rounded-2xl sm:rounded-[32px] p-5 sm:p-6 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-slate-900"
+                    >
+                        <div>
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-900 mb-4 border border-slate-100 shadow-sm">
+                                <Truck className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                            </div>
+                            <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Dispatch <br /> Control</h4>
+                            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Next cycle window open</p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => navigate('/vendor/dispatch')}
+                            className="mt-5 group w-full bg-slate-900 text-white rounded-xl sm:rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-all hover:bg-slate-800"
+                        >
+                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Enter Logistics</span>
+                            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        </button>
+                    </motion.div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -292,6 +352,14 @@ export default function DashboardScreen() {
                             <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Recent Proposals</h3>
                             <p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1">Audit Trail</p>
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/vendor/orders')}
+                            className="shrink-0 inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80"
+                        >
+                            All orders
+                            <ChevronRight size={14} />
+                        </button>
                     </div>
                     <div className="space-y-4">
                         {recentRequests.map((req, idx) => (

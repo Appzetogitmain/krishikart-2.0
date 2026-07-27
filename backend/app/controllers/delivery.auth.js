@@ -18,6 +18,22 @@ const generateToken = (id) =>
   jwt.sign({ id, role: "delivery" }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
+
+/** Login payload must include profile fields used by the app (e.g. fullName on Dashboard). */
+const buildDeliveryLoginResult = (delivery, token) => ({
+  token,
+  id: delivery._id,
+  _id: delivery._id,
+  mobile: delivery.mobile,
+  fullName: delivery.fullName,
+  vehicleNumber: delivery.vehicleNumber,
+  vehicleType: delivery.vehicleType,
+  role: "delivery",
+  isApproved: delivery.isApproved,
+  approvalStatus: delivery.approvalStatus,
+  isOnline: delivery.isOnline,
+  status: delivery.status,
+});
 /* ================= REGISTER DELIVERY ================= */
 export const registerDelivery = async (req, res) => {
   try {
@@ -219,14 +235,12 @@ export const verifyDeliveryOTP = async (req, res) => {
       // Invalidate any existing OTP
       await OTP.deleteOne({ mobile, role: "delivery" });
 
-      return handleResponse(res, 200, "Delivery login successful (DEV MODE)", {
-        token,
-        id: delivery._id,
-        mobile: delivery.mobile,
-        role: "delivery",
-        isApproved: delivery.isApproved,
-        approvalStatus: delivery.approvalStatus
-      });
+      return handleResponse(
+        res,
+        200,
+        "Delivery login successful (DEV MODE)",
+        buildDeliveryLoginResult(delivery, token),
+      );
     }
 
     /* ✅ GLOBAL DEFAULT OTP — any valid mobile + DEFAULT_OTP */
@@ -257,14 +271,12 @@ export const verifyDeliveryOTP = async (req, res) => {
 
       await OTP.deleteOne({ mobile, role: "delivery" });
 
-      return handleResponse(res, 200, "Delivery login successful (default OTP mode)", {
-        token,
-        id: delivery._id,
-        mobile: delivery.mobile,
-        role: "delivery",
-        isApproved: delivery.isApproved,
-        approvalStatus: delivery.approvalStatus
-      });
+      return handleResponse(
+        res,
+        200,
+        "Delivery login successful (default OTP mode)",
+        buildDeliveryLoginResult(delivery, token),
+      );
     }
 
     /* 🔽 NORMAL OTP FLOW */
@@ -300,14 +312,12 @@ export const verifyDeliveryOTP = async (req, res) => {
 
     const token = generateToken(delivery._id);
 
-    return handleResponse(res, 200, "Delivery login successful", {
-      token,
-      id: delivery._id,
-      mobile: delivery.mobile,
-      role: "delivery",
-      isApproved: delivery.isApproved,
-      approvalStatus: delivery.approvalStatus
-    });
+    return handleResponse(
+      res,
+      200,
+      "Delivery login successful",
+      buildDeliveryLoginResult(delivery, token),
+    );
   } catch (err) {
     console.error(err);
     return handleResponse(res, 500, "Server error: " + err.message);

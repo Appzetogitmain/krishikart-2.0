@@ -76,8 +76,8 @@ const DeliveryPartnerLogin = () => {
         try {
             const response = await api.post('/delivery/verify-otp', { mobile: phone, otp: otpCode });
 
-            // Store token and user data
-            loginSuccess(response.data.result, response.data.result.token);
+            // Store token and user data (includes fullName; also hydrates /me)
+            await loginSuccess(response.data.result, response.data.result.token);
 
             navigate(ROUTES.DASHBOARD);
         } catch (error) {
