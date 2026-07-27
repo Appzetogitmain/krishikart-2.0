@@ -62,12 +62,30 @@ export function DeliveryAuthProvider({ children }) {
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
 
-    const loginSuccess = (data, token) => {
-        const normalized = normalizeToken(token);
-        setDelivery(data);
+    const loginSuccess = async (data, authToken) => {
+        const normalized = normalizeToken(authToken);
         setToken(normalized);
         if (normalized) localStorage.setItem('deliveryToken', normalized);
-        localStorage.setItem('deliveryData', JSON.stringify(data));
+
+        // Optimistic: use verify-otp payload immediately (must include fullName from API)
+        const { token: _omitToken, ...profileFromLogin } = data || {};
+        setDelivery(profileFromLogin);
+        localStorage.setItem('deliveryData', JSON.stringify(profileFromLogin));
+
+        // Hydrate full profile so Dashboard/Profile never show the "Partner" fallback
+        if (normalized) {
+            try {
+                const { data: me } = await api.get('/delivery/me', {
+                    headers: { Authorization: `Bearer ${normalized}` },
+                });
+                if (me?.result) {
+                    setDelivery(me.result);
+                    localStorage.setItem('deliveryData', JSON.stringify(me.result));
+                }
+            } catch (error) {
+                console.error('Failed to hydrate delivery profile after login', error);
+            }
+        }
     };
 
     const logout = () => {
