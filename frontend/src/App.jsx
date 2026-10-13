@@ -127,6 +127,12 @@ const DeliveryProviders = () => (
   </DeliveryAuthProvider>
 );
 
+// On phones (the app), a logged-in customer goes straight to the shop instead of the landing page
+const LandingOrHome = () => {
+  const isMobileView = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+  if (isMobileView && localStorage.getItem('userToken')) return <Navigate to="/home" replace />;
+  return <LandingPage />;
+};
 
 function App() {
   const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -144,7 +150,7 @@ function App() {
           </div>
         }>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<LandingOrHome />} />
               <Route path="/splash" element={<SplashScreen />} />
               <Route path="/terms" element={<TermsScreen />} />
               <Route path="/privacy" element={<PrivacyPolicyScreen />} />
