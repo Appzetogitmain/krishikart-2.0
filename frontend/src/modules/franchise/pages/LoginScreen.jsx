@@ -7,7 +7,14 @@ import api from '../../../lib/axios';
 
 export default function LoginScreen() {
     const navigate = useNavigate();
-    const { loginSuccess } = useFranchiseAuth();
+    const { loginSuccess, isAuthenticated, loading, franchise } = useFranchiseAuth();
+
+    // Already logged in (e.g. the app was closed and reopened): skip the login screen
+    useEffect(() => {
+        if (isAuthenticated && !loading && franchise) {
+            navigate(franchise.isVerified ? '/franchise/dashboard' : '/franchise/documentation', { replace: true });
+        }
+    }, [isAuthenticated, loading, franchise, navigate]);
 
     const [loginMethod, setLoginMethod] = useState('password'); // 'password' | 'otp'
 

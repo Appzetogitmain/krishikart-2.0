@@ -25,6 +25,20 @@ export default function FloatingCartBar() {
     const itemCount = cartItems.length
     const visible = itemCount > 0 && !keyboardOpen
 
+    // Sit just above the bottom navigation, whatever height it actually renders at
+    const [navHeight, setNavHeight] = useState(76)
+    useEffect(() => {
+        if (!visible) return
+        const nav = document.getElementById('kk-bottom-nav')
+        if (!nav) return
+        const measure = () => setNavHeight(Math.ceil(nav.getBoundingClientRect().height))
+        measure()
+        if (typeof ResizeObserver === 'undefined') return
+        const observer = new ResizeObserver(measure)
+        observer.observe(nav)
+        return () => observer.disconnect()
+    }, [visible])
+
     return (
         <AnimatePresence>
             {visible && (
@@ -34,7 +48,7 @@ export default function FloatingCartBar() {
                     exit={{ y: 80, opacity: 0 }}
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     className="md:hidden fixed left-0 right-0 z-40 px-3 pointer-events-none"
-                    style={{ bottom: 'calc(60px + env(safe-area-inset-bottom))' }}
+                    style={{ bottom: navHeight + 8 }}
                 >
                     <button
                         type="button"

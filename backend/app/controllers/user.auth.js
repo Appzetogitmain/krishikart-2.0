@@ -127,7 +127,7 @@ export const verifyOTP = async (req, res) => {
       const token = jwt.sign(
         { id: user._id, role: "user" },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.APP_JWT_EXPIRES_IN || '30d' }
       );
 
       // Invalidate any existing OTP for this user
@@ -169,7 +169,7 @@ export const verifyOTP = async (req, res) => {
       const token = jwt.sign(
         { id: user._id, role: "user" },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.APP_JWT_EXPIRES_IN || '30d' }
       );
 
       await OTP.deleteOne({ mobile, role: "user" });
@@ -225,7 +225,7 @@ export const verifyOTP = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: "user" },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      { expiresIn: process.env.APP_JWT_EXPIRES_IN || '30d' }
     );
 
     return handleResponse(res, 200, "Login successful", {

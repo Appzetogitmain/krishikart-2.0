@@ -17,7 +17,7 @@ import { uploadToCloudinary } from "../utils/cloudinary.js";
 /* 🔐 TOKEN */
 const generateToken = (id) =>
   jwt.sign({ id, role: "delivery" }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+    expiresIn: process.env.APP_JWT_EXPIRES_IN || '30d',
   });
 
 /** Login payload must include profile fields used by the app (e.g. fullName on Dashboard). */

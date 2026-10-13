@@ -174,7 +174,7 @@ export default function ProductDetailScreen() {
       <PageTransition>
         <div className="bg-white pb-32 md:pb-20 min-h-screen">
           {/* Mobile Header Actions */}
-          <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex justify-between pointer-events-none max-w-md mx-auto md:hidden bg-white/95 backdrop-blur-xl border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)]">
+          <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-3 pb-3 flex justify-between pointer-events-none max-w-md mx-auto md:hidden bg-white/95 backdrop-blur-xl border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)]">
             <button
             onClick={() => navigate(-1)}
             className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-white/90 shadow-sm border border-slate-100 text-slate-900 active:scale-90 transition-transform pointer-events-auto shrink-0"
@@ -214,11 +214,20 @@ export default function ProductDetailScreen() {
         <div className="max-w-7xl mx-auto md:px-8">
           <div className="md:flex md:gap-12 md:items-start">
             {/* Hero Image */}
-            <div className="relative aspect-[3/4] md:aspect-square md:w-[450px] lg:w-[500px] shrink-0 bg-slate-50 overflow-hidden md:rounded-xl md:border md:border-slate-100">
+            <div className="relative mt-[69px] md:mt-0 aspect-square md:w-[450px] lg:w-[500px] shrink-0 bg-slate-50 overflow-hidden md:rounded-xl md:border md:border-slate-100">
+              {/* Soft blurred copy fills the frame so the full photo can be shown uncropped */}
+              <img
+                src={productImage}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover scale-110 blur-2xl opacity-60 select-none"
+                draggable={false}
+                onError={(e) => { e.target.style.display = 'none' }}
+              />
               <img
                 src={productImage}
                 alt={product.name}
-                className="absolute inset-0 h-full w-full object-cover object-center select-none"
+                className="absolute inset-0 h-full w-full object-contain object-center select-none"
                 draggable={false}
                 onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80' }}
               />

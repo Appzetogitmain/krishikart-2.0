@@ -8,7 +8,7 @@ export default function SplashScreen() {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            navigate('/login')
+            navigate(localStorage.getItem('userToken') ? '/home' : '/login', { replace: true })
         }, 3000)
         return () => clearTimeout(timer)
     }, [navigate])

@@ -12,7 +12,7 @@ import { useWishlist } from '../contexts/WishlistContext'
 import { useUserAuth } from '../contexts/UserAuthContext'
 
 export default function LoginScreen() {
-    const { loginSuccess } = useUserAuth()
+    const { loginSuccess, isAuthenticated } = useUserAuth()
     const { fetchCart } = useCart()
     const { fetchWishlist } = useWishlist()
     const [step, setStep] = useState('phone') // phone, otp
@@ -24,6 +24,11 @@ export default function LoginScreen() {
 
     const [isLoading, setIsLoading] = useState(false)
     const [timer, setTimer] = useState(120)
+
+    // Already logged in (e.g. the app was closed and reopened): skip the login screen
+    useEffect(() => {
+        if (isAuthenticated) navigate(from, { replace: true })
+    }, [isAuthenticated, navigate, from])
 
     useEffect(() => {
         let interval;

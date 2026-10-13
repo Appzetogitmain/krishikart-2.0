@@ -280,7 +280,7 @@ export default function ProductListScreen() {
             <div className="bg-white h-screen flex flex-col overflow-hidden">
                 {/* Unified Header - Mobile Redesign */}
                 <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)] md:hidden">
-                    <div className="flex items-center justify-between px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-3 h-16">
+                    <div className="flex items-center justify-between px-4 pt-2 pb-3 h-16">
                         <AnimatePresence mode="wait">
                             {showSearch ? (
                                 <motion.div

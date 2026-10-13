@@ -37,7 +37,7 @@ export default function BottomNav() {
     if (keyboardOpen) return null
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t-2 border-[var(--color-brand-primary)]/20 flex items-center justify-around min-h-[52px] py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-2px_16px_rgba(22,163,74,0.08)]">
+        <nav id="kk-bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t-2 border-[var(--color-brand-primary)]/20 flex items-center justify-around min-h-[52px] py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-2px_16px_rgba(22,163,74,0.08)]">
             {navItems.map((item) => {
                 const isActive = location.pathname === item.path
                 const Icon = item.icon

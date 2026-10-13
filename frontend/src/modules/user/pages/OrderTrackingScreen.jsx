@@ -117,7 +117,7 @@ export default function OrderTrackingScreen() {
         <PageTransition>
             <div className="bg-[#f8fafc] min-h-screen pb-32">
                 {/* Header */}
-                <div className="bg-white/90 backdrop-blur-xl px-4 py-2 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-slate-100/80 sticky top-0 z-40 flex items-center justify-between">
+                <div className="bg-white/90 backdrop-blur-xl px-4 py-2 pt-3 border-b border-slate-100/80 sticky top-0 z-40 flex items-center justify-between">
                     <div className="flex items-center gap-3 py-1">
                         <button onClick={handleBack} className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 text-slate-600 active:scale-95 transition-transform">
                             <ArrowLeft size={18} />

@@ -779,7 +779,7 @@ export default function CheckoutScreen() {
         <PageTransition>
             <div className="bg-[#f8fafd] min-h-screen overflow-x-hidden pb-[calc(8.5rem+env(safe-area-inset-bottom))] md:pb-20">
                 {/* Mobile Header */}
-                <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)] flex items-center justify-between md:hidden">
+                <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl px-3 py-2 pt-2 border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)] flex items-center justify-between md:hidden">
                     <div className="flex items-center gap-3 min-w-0">
                         <button onClick={() => navigate(-1)} className="min-h-[40px] min-w-[40px] shrink-0 flex items-center justify-center rounded-full bg-white border border-slate-100 shadow-sm text-slate-600 active:scale-95 transition-transform">
                             <ArrowLeft size={20} />

@@ -45,7 +45,7 @@ export default function OrderSummaryScreen() {
         <PageTransition>
             <div className="bg-[#f2f6f9] min-h-screen pb-32 font-sans">
                 {/* Header */}
-                <div className="bg-white/95 backdrop-blur-xl px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)] flex items-center justify-between sticky top-0 z-50 md:px-6 md:py-5 md:pt-5">
+                <div className="bg-white/95 backdrop-blur-xl px-4 py-3 pt-3 border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)] flex items-center justify-between sticky top-0 z-50 md:px-6 md:py-5 md:pt-5">
                     <div className="flex items-center gap-4">
                         <button onClick={() => navigate(-1)} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-white border border-slate-100 shadow-sm text-slate-600 active:scale-95 transition-all md:bg-slate-50 md:border-0 md:shadow-none">
                             <ArrowLeft size={20} />

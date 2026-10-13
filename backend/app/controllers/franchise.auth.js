@@ -27,7 +27,7 @@ import {
 /* 🔐 TOKEN */
 const generateToken = (id) =>
   jwt.sign({ id, role: "franchise" }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
+    expiresIn: process.env.APP_JWT_EXPIRES_IN || '30d',
   });
 
 /* ================= REGISTER ================= */

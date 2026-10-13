@@ -7,8 +7,13 @@ import api from '@/lib/axios';
 import { useVendorAuth } from '@/modules/vendor/contexts/VendorAuthContext';
 
 export default function LoginScreen() {
-    const { loginSuccess } = useVendorAuth();
+    const { loginSuccess, isAuthenticated } = useVendorAuth();
     const navigate = useNavigate();
+
+    // Already logged in (e.g. the app was closed and reopened): skip the login screen
+    useEffect(() => {
+        if (isAuthenticated) navigate('/vendor/dashboard', { replace: true });
+    }, [isAuthenticated, navigate]);
 
     const [loginMethod, setLoginMethod] = useState('password'); // 'password' | 'otp'
 

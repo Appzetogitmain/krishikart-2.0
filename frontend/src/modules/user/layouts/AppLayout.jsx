@@ -72,7 +72,7 @@ export default function AppLayout() {
             </main>
 
             {/* Extra scroll room on mobile so the floating cart bar never covers the last row */}
-            {!hideBottomNav && cartItems.length > 0 && <div className="md:hidden h-16" aria-hidden="true" />}
+            {!hideBottomNav && cartItems.length > 0 && <div className="md:hidden h-20" aria-hidden="true" />}
 
             {/* Desktop Footer */}
             {!hideBottomNav && <DesktopFooter />}
