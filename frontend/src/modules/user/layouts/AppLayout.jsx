@@ -1,6 +1,5 @@
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { useEffect, useMemo, useRef } from 'react'
-import { AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/layout/BottomNav'
 import FloatingCartBar from '../components/layout/FloatingCartBar'
 import DesktopNavbar from '../components/layout/DesktopNavbar'
@@ -87,9 +86,7 @@ export default function AppLayout() {
                     </div>
                 )}
 
-                <AnimatePresence mode="wait">
                     <Outlet key={location.pathname} />
-                </AnimatePresence>
             </main>
 
             {/* Extra scroll room on mobile so the floating cart bar never covers the last row */}

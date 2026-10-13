@@ -1,14 +1,5 @@
-import { motion } from 'framer-motion'
-
-// A short fade only: sliding a whole page of product photos is what made navigation feel heavy
+// Pages are shown immediately. Fading a page in from invisible left one blank frame between
+// screens, which showed up on phones as a flicker when switching tabs.
 export default function PageTransition({ children }) {
-    return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.16, ease: 'easeOut' }}
-        >
-            {children}
-        </motion.div>
-    )
+    return <div>{children}</div>
 }
