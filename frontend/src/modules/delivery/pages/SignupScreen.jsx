@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Navigation, ShieldCheck, ArrowRight, Phone, User, Truck, Camera, Upload, X } from 'lucide-react';
+import { Navigation, ShieldCheck, ArrowRight, Phone, User, Truck, Camera, Upload, X, Pencil } from 'lucide-react';
 import { ROUTES } from '../utils/constants';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../lib/axios';
@@ -420,6 +420,13 @@ const SignupScreen = () => {
                                     <h3 className="font-black text-slate-900 text-sm">Verify Details</h3>
                                     <p className="text-[10px] font-bold text-slate-400">OTP Sent to +91 {formData.phone}</p>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { setOtp(Array(otp.length).fill('')); setStep('details'); }}
+                                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2.5 bg-slate-50 border border-primary/20 rounded-2xl text-xs font-bold text-primary hover:bg-primary/10 active:scale-95 transition-all"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" /> Edit number
+                                </button>
                             </div>
 
                             <form onSubmit={handleVerifyOtp} className="space-y-6">

@@ -18,6 +18,7 @@ import {
   EyeOff,
   ChevronRight,
   Loader2,
+  Pencil,
 } from "lucide-react";
 import { useFranchiseAuth } from "../contexts/FranchiseAuthContext";
 import api from "../../../lib/axios";
@@ -593,8 +594,19 @@ export default function SignupScreen() {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
                           Verify Mobile Number
                         </label>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          {formData.mobile}
+                        <span className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {formData.mobile}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOtp(["", "", "", "", "", ""]);
+                              setMode("details");
+                            }}
+                            className="flex items-center gap-1 text-[10px] font-black text-slate-900 uppercase tracking-widest underline underline-offset-4">
+                            <Pencil size={11} /> Edit number
+                          </button>
                         </span>
                       </div>
 

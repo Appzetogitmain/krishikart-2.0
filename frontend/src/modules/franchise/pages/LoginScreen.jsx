@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, ArrowRight, ShieldCheck, Zap, ChevronRight, Home, Smartphone, Loader2, Mail, Eye, EyeOff } from 'lucide-react';
+import { Lock, ArrowRight, ShieldCheck, Zap, ChevronRight, Home, Smartphone, Loader2, Mail, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import api from '../../../lib/axios';
 
@@ -321,7 +321,12 @@ export default function LoginScreen() {
                                             <div className="space-y-2">
                                                 <div className="flex justify-between items-center px-1">
                                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">OTP Verification</label>
-                                                    <span className="text-[10px] font-bold text-slate-400">{mobile}</span>
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-slate-400">{mobile}</span>
+                                                        <button type="button" onClick={() => { setOtp(['', '', '', '', '', '']); setTimer(120); setOtpMode('mobile'); }} className="flex items-center gap-1 text-[10px] font-black text-slate-900 uppercase tracking-widest underline underline-offset-4">
+                                                            <Pencil size={11} /> Edit number
+                                                        </button>
+                                                    </span>
                                                 </div>
                                                 <div className="flex gap-2 justify-between">
                                                     {otp.map((digit, index) => (

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, ArrowRight, ShieldCheck, CheckCircle2, Sprout } from 'lucide-react'
+import { Phone, ArrowRight, ShieldCheck, CheckCircle2, Sprout, Pencil } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import api from '../../../lib/axios'
@@ -40,6 +41,13 @@ export default function LoginScreen() {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
+    // Wrong number? Go back to the phone step with the number still filled in, ready to correct
+    const handleEditNumber = () => {
+        setOtp(['', '', '', '', '', '']);
+        setTimer(120);
+        setStep('phone');
+    };
+
     const handleResendOtp = async () => {
         if (timer > 0) return;
         setIsLoading(true);
@@ -49,7 +57,7 @@ export default function LoginScreen() {
             setOtp(['', '', '', '', '', '']);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Failed to resend OTP');
+            toast.error(error.response?.data?.message || 'Failed to resend OTP');
         } finally {
             setIsLoading(false);
         }
@@ -65,7 +73,7 @@ export default function LoginScreen() {
                     setTimer(120)
                 } catch (error) {
                     console.error(error);
-                    alert(error.response?.data?.message || 'Failed to send OTP');
+                    toast.error(error.response?.data?.message || 'Failed to send OTP');
                 } finally {
                     setIsLoading(false);
                 }
@@ -96,7 +104,7 @@ export default function LoginScreen() {
                     navigate(from, { replace: true })
                 } catch (error) {
                     console.error(error);
-                    alert(error.response?.data?.message || 'Verification failed');
+                    toast.error(error.response?.data?.message || 'Verification failed');
                 } finally {
                     setIsLoading(false);
                 }
@@ -202,6 +210,22 @@ export default function LoginScreen() {
                                     exit={{ opacity: 0, x: -10 }}
                                     className="space-y-8"
                                 >
+                                    {/* Shows the number the code went to, with a way to fix a wrong number */}
+                                    <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-semibold text-slate-500">Code sent to</p>
+                                            <p className="text-sm font-bold text-slate-900 tabular-nums">+91 {phone}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleEditNumber}
+                                            disabled={isLoading}
+                                            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-primary/5 active:scale-95 transition-all disabled:opacity-50"
+                                        >
+                                            <Pencil size={13} /> Edit number
+                                        </button>
+                                    </div>
+
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 block mb-4">Verification Code</label>
                                         <div className="grid grid-cols-6 gap-2">

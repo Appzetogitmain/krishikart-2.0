@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sprout, Mail, Lock, Loader2, ArrowRight, Smartphone, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Sprout, Mail, Lock, Loader2, ArrowRight, Smartphone, ShieldCheck, Eye, EyeOff, Pencil } from 'lucide-react';
 import api from '@/lib/axios';
 import { useVendorAuth } from '@/modules/vendor/contexts/VendorAuthContext';
 
@@ -197,7 +197,12 @@ export default function LoginScreen() {
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center ml-1">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Enter OTP</label>
-                                                <span className="text-[10px] font-bold text-slate-400">{mobile}</span>
+                                                <span className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-bold text-slate-400">{mobile}</span>
+                                                    <button type="button" onClick={() => { setOtp(['', '', '', '', '', '']); setTimer(120); setOtpStep('mobile'); }} className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
+                                                        <Pencil size={11} /> Edit number
+                                                    </button>
+                                                </span>
                                             </div>
                                             <div className="flex gap-2 justify-between">
                                                 {otp.map((digit, i) => (
