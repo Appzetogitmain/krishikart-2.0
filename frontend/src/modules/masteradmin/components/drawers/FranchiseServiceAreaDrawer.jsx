@@ -302,11 +302,10 @@ export default function FranchiseServiceAreaDrawer({
           <X size={32} />
         </div>
         <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-          Map Engine Failure
+          Map could not load
         </h2>
         <p className="text-sm text-slate-500 mt-2 max-w-xs">
-          Verify Google Maps API Key and internet connectivity. Geolocation
-          services are temporarily offline.
+          Please check your internet connection and try again. If it keeps happening, contact technical support.
         </p>
         <button
           onClick={onClose}
@@ -322,7 +321,7 @@ export default function FranchiseServiceAreaDrawer({
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin text-slate-900" size={40} />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-            Initializing Grid Matrix...
+            Loading map...
           </span>
         </div>
       </div>
@@ -360,7 +359,7 @@ export default function FranchiseServiceAreaDrawer({
                   {franchise.franchiseName}{" "}
                   {selectedCategory
                     ? `· ${selectedCategory.name}`
-                    : "· Infrastructure Selection"}
+                    : "· Choose the areas this franchise delivers to"}
                 </p>
               </div>
             </div>
@@ -374,7 +373,7 @@ export default function FranchiseServiceAreaDrawer({
                     }
                   }}
                   className="p-2.5 rounded-sm border border-slate-200 hover:bg-slate-50 text-slate-600 transition-all hover:border-slate-400"
-                  title="Recenter on Base"
+                  title="Center on Franchise"
                 >
                   <Target size={20} />
                 </button>
@@ -393,10 +392,10 @@ export default function FranchiseServiceAreaDrawer({
               <div className="max-w-2xl mx-auto space-y-8">
                 <div className="text-center space-y-2">
                   <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-                    Deployment Sector
+                    Category
                   </h4>
                   <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest">
-                    Select the product category to manage geographic distribution
+                    Select a category to set its delivery area
                   </p>
                 </div>
 
@@ -435,8 +434,8 @@ export default function FranchiseServiceAreaDrawer({
                           <h5 className="font-black text-[11px] text-slate-900 uppercase tracking-widest">
                             {cat.name}
                           </h5>
-                          <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">
-                            Operational Protocol Alpha
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                            Delivery Area
                           </p>
                         </div>
                       </div>
@@ -453,7 +452,7 @@ export default function FranchiseServiceAreaDrawer({
                     onClick={() => setStep(1)}
                     className="px-10 py-4 bg-slate-900 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-sm shadow-2xl shadow-slate-200 hover:bg-slate-800 disabled:bg-slate-200 disabled:shadow-none transition-all flex items-center gap-4"
                   >
-                    Initialize Matrix Map
+                    Open Map
                     <Activity size={16} className="animate-pulse" />
                   </button>
                 </div>
@@ -478,7 +477,7 @@ export default function FranchiseServiceAreaDrawer({
                   >
                     <input
                       type="text"
-                      placeholder="Search region, locality or landmark to expand grid..."
+                      placeholder="Search an area, locality or landmark..."
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-sm text-[11px] font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:bg-white focus:border-slate-900 transition-all"
                     />
                   </Autocomplete>
@@ -502,7 +501,7 @@ export default function FranchiseServiceAreaDrawer({
 
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-sm">
                   <Info size={12} className="text-blue-500" />
-                  <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
                     Click territories to toggle coverage
                   </span>
                 </div>
@@ -547,7 +546,7 @@ export default function FranchiseServiceAreaDrawer({
                       url: "https://maps.google.com/mapfiles/ms/icons/red-pushpin.png",
                       scaledSize: new window.google.maps.Size(32, 32),
                     }}
-                    title="Franchise Hub"
+                    title="Franchise"
                   />
 
                   {/* Hexagon Grid */}
@@ -608,13 +607,13 @@ export default function FranchiseServiceAreaDrawer({
                 {/* Stats Legend */}
                 <div className="absolute bottom-10 left-6 z-10 bg-white/95 backdrop-blur-md border border-slate-200 p-5 rounded-sm shadow-2xl min-w-[260px]">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between border-b border-slate-100 pb-2.5">
-                    Coverage Analytics
+                    Coverage Summary
                     <Activity size={12} className="text-emerald-500" />
                   </h4>
                   <div className="space-y-3.5">
                     <div className="flex justify-between items-center text-[11px]">
                       <span className="text-slate-500 font-bold uppercase tracking-tighter">
-                        Active Matrix Cells
+                        Areas Selected
                       </span>
                       <span className="px-2.5 py-1 bg-slate-900 text-white font-black rounded-sm tabular-nums">
                         {selectedHexagons.length}
@@ -685,7 +684,7 @@ export default function FranchiseServiceAreaDrawer({
                   ) : (
                     <Save size={16} />
                   )}
-                  Commit Changes
+                  Save
                 </button>
               )}
             </div>

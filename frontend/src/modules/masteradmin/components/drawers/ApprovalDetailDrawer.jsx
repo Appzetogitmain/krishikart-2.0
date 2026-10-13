@@ -253,26 +253,26 @@ export default function ApprovalDetailDrawer({ isOpen, onClose, item, type, onAp
                                 {/* Detailed Information */}
                                 <div className="lg:col-span-7 space-y-8">
                                     <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-8">Verification Dossier</h4>
+                                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-8">Application Details</h4>
 
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-4 p-4 rounded-3xl bg-slate-50/50">
                                                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    <User size={12} /> Contact Primary
+                                                    <User size={12} /> Contact Person
                                                 </div>
-                                                <p className="font-black text-slate-900">{item.fullName || 'Arjun Singh'}</p>
+                                                <p className="font-black text-slate-900">{item.fullName || item.ownerName || 'Not provided'}</p>
                                             </div>
                                             <div className="space-y-4 p-4 rounded-3xl bg-slate-50/50">
                                                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    <Phone size={12} /> Communication
+                                                    <Phone size={12} /> Contact
                                                 </div>
-                                                <p className="font-black text-slate-900">{item.mobile || '+91 98765 43210'}</p>
+                                                <p className="font-black text-slate-900">{item.mobile || 'Not provided'}</p>
                                             </div>
                                             <div className="space-y-4 p-4 rounded-3xl bg-slate-50/50">
                                                 <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    <Mail size={12} /> Credentials
+                                                    <Mail size={12} /> Email
                                                 </div>
-                                                <p className="font-black text-slate-900 truncate">{item.email || 'verification@kisaankart.com'}</p>
+                                                <p className="font-black text-slate-900 truncate">{item.email || 'Not provided'}</p>
                                             </div>
                                             {isCredit ? (
                                                 <div className="space-y-4 p-4 rounded-3xl bg-slate-900 text-white">
@@ -284,9 +284,9 @@ export default function ApprovalDetailDrawer({ isOpen, onClose, item, type, onAp
                                             ) : (
                                                 <div className="space-y-4 p-4 rounded-3xl bg-slate-50/50">
                                                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                        <MapPin size={12} /> Operations Hub
+                                                        <MapPin size={12} /> Location
                                                     </div>
-                                                    <p className="font-black text-slate-900">{item.city || item.farmLocation || 'Benguluru Central'}</p>
+                                                    <p className="font-black text-slate-900">{[item.area, item.city].filter(Boolean).join(', ') || item.farmLocation || 'Not provided'}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -294,9 +294,9 @@ export default function ApprovalDetailDrawer({ isOpen, onClose, item, type, onAp
                                         <div className="mt-8 p-6 bg-amber-50 rounded-[32px] border border-amber-100 flex items-start gap-4">
                                             <AlertCircle className="text-amber-500 shrink-0 mt-1" size={20} />
                                             <div>
-                                                <p className="text-xs font-black text-amber-900 uppercase tracking-tight">Compliance Note</p>
+                                                <p className="text-xs font-black text-amber-900 uppercase tracking-tight">Note</p>
                                                 <p className="text-sm text-amber-800/80 font-medium mt-1">
-                                                    Self-reported data matches existing network patterns. Ensure physical verification is completed by the regional manager before final activation.
+                                                    Before approving, check that the name and numbers above match the uploaded documents.
                                                 </p>
                                             </div>
                                         </div>
@@ -351,7 +351,7 @@ export default function ApprovalDetailDrawer({ isOpen, onClose, item, type, onAp
                                         <div className="relative z-10">
                                             <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-8 flex items-center gap-2">
                                                 <FileText size={18} className="text-primary" />
-                                                Document Vault
+                                                Uploaded Documents
                                             </h4>
                                             <div className="space-y-4">
                                                 {documents.map((doc, idx) => (

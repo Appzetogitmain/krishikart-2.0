@@ -198,8 +198,8 @@ export default function ReportsScreen() {
                     <div className="space-y-4">
                         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-100">
                             <BarChart3 size={14} className="text-emerald-700" strokeWidth={2.5} />
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-800">
-                                Payout intelligence
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-800">
+                                Earnings
                             </span>
                         </div>
                         <div>
@@ -207,7 +207,7 @@ export default function ReportsScreen() {
                                 Settlement report
                             </h1>
                             <p className="mt-2 text-sm text-slate-500 font-medium max-w-xl leading-relaxed">
-                                Estimated commission owed to your node from the network admin, based on{' '}
+                                Estimated commission Kisaankart owes you, based on{' '}
                                 <span className="text-slate-700 font-semibold">Delivered</span> and{' '}
                                 <span className="text-slate-700 font-semibold">Received</span> orders and your
                                 category commission rates.
@@ -229,7 +229,7 @@ export default function ReportsScreen() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <label className="space-y-1.5 block">
-                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                         From
                                     </span>
                                     <input
@@ -241,7 +241,7 @@ export default function ReportsScreen() {
                                     />
                                 </label>
                                 <label className="space-y-1.5 block">
-                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                         To
                                     </span>
                                     <input
@@ -283,9 +283,7 @@ export default function ReportsScreen() {
                             Important
                         </p>
                         <p className="text-sm text-amber-950/80 leading-relaxed font-medium">
-                            Amounts are <strong className="font-semibold text-amber-950">estimates</strong> from your
-                            configured category commission percentages. Always reconcile the final settlement with your
-                            network administrator and signed agreement.{' '}
+                            Amounts are <strong className="font-semibold text-amber-950">estimates</strong> from your category commission rates. Always confirm the final amount with the admin and your signed agreement.{' '}
                             <strong className="font-semibold text-amber-950">Payments actually sent</strong> by admin
                             appear in <strong className="font-semibold text-amber-950">Payments received from admin</strong>{' '}
                             below when they are recorded in Finance → Franchise Payouts.
@@ -406,16 +404,16 @@ export default function ReportsScreen() {
                                     <table className="w-full text-left min-w-[520px]">
                                         <thead>
                                             <tr className="border-b border-slate-100 bg-slate-50/80">
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
                                                     Category
                                                 </th>
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
                                                     Rate
                                                 </th>
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
                                                     Sales
                                                 </th>
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
                                                     Payout
                                                 </th>
                                             </tr>
@@ -458,8 +456,7 @@ export default function ReportsScreen() {
                                     </div>
                                     <p className="text-sm font-bold text-slate-800">No commission data for this range</p>
                                     <p className="text-sm text-slate-500 mt-2 leading-relaxed">
-                                        Try a different date range, or ask your administrator to configure category
-                                        commission rates for your node.
+                                        Try a different date range, or ask the admin to set commission rates for your categories.
                                     </p>
                                 </div>
                             )}
@@ -482,12 +479,12 @@ export default function ReportsScreen() {
                                             Payments received from admin
                                         </h2>
                                         <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                            Recorded by the network admin for the same date range (paid date).
+                                            Payments recorded by the admin in this date range (by payment date).
                                         </p>
                                     </div>
                                 </div>
                                 <div className="text-left sm:text-right shrink-0">
-                                    <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
                                         Total in range
                                     </p>
                                     <p className="text-xl font-black text-slate-900 tabular-nums">
@@ -501,16 +498,16 @@ export default function ReportsScreen() {
                                     <table className="w-full text-left min-w-[480px]">
                                         <thead>
                                             <tr className="border-b border-slate-100 bg-slate-50/80">
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
                                                     Paid on
                                                 </th>
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 text-right">
                                                     Amount
                                                 </th>
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
                                                     Reference
                                                 </th>
-                                                <th className="px-6 py-3.5 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
+                                                <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
                                                     Note
                                                 </th>
                                             </tr>

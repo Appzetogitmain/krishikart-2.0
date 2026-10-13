@@ -115,7 +115,7 @@ export default function VendorProductDrawer({ isOpen, onClose, vendor }) {
                     <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                         <div className="flex items-center justify-between mb-2">
                             <div>
-                                <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Assign Inventory</h3>
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Assign Products</h3>
                                 <p className="text-slate-500 font-bold text-[10px] mt-1 uppercase tracking-wider">
                                     Manage products for <span className="text-primary">{vendor?.fullName}</span>
                                 </p>

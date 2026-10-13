@@ -1094,6 +1094,39 @@ export const reviewVendorCategoryRequest = async (req, res) => {
 
 export const getAllCustomers = async (req, res) => {
   try {
+    // Server-side pagination when ?page= is sent (Customers screen). Without it the full
+    // list is returned as before, because other screens (e.g. Credit Management) rely on that.
+    if (req.query.page !== undefined) {
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+      const search = String(req.query.search || "").trim();
+
+      const filter = {};
+      if (search) {
+        const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const rx = new RegExp(escaped, "i");
+        filter.$or = [{ fullName: rx }, { mobile: rx }, { email: rx }, { legalEntityName: rx }];
+      }
+
+      const [items, total] = await Promise.all([
+        User.find(filter)
+          .select("-password -otp -otpExpiresAt -walletTransactions")
+          .sort({ updatedAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        User.countDocuments(filter),
+      ]);
+
+      return handleResponse(res, 200, "Customers fetched successfully", {
+        items,
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      });
+    }
+
     const customers = await User.find()
       .select("-password -otp -otpExpiresAt")
       .sort({ updatedAt: -1 });

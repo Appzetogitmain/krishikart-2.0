@@ -76,7 +76,7 @@ export function MasterAdminAuthProvider({ children }) {
 
             const handleNewProcurement = (data) => {
                 playNotificationSound();
-                toast.success('New Procurement Request', {
+                toast.success('New Stock Request', {
                     description: data.message || 'A new procurement request has arrived.',
                     duration: 10000,
                     action: {

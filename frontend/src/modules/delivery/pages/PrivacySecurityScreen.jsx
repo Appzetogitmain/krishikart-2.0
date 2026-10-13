@@ -30,7 +30,7 @@ export default function PrivacySecurityScreen() {
                         </div>
                         <div>
                             <h2 className="text-sm font-black text-emerald-900">Account Secured</h2>
-                            <p className="text-xs text-emerald-700">Your account is protected with 256-bit encryption.</p>
+                            <p className="text-xs text-emerald-700">Your account is safe and secure.</p>
                         </div>
                     </div>
                 </div>

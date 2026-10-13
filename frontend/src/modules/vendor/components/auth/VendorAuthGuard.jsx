@@ -10,7 +10,7 @@ export default function VendorAuthGuard() {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50">
                 <Loader2 className="animate-spin text-primary w-12 h-12 mb-4" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Validating Credentials...</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Checking your login...</p>
             </div>
         );
     }

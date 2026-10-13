@@ -80,7 +80,7 @@ export default function LedgerSystemScreen() {
     const handleExport = () => {
         const columns = [
             { header: 'ID', key: 'id' },
-            { header: 'Source/Entity', key: 'name' },
+            { header: 'From', key: 'name' },
             { header: 'Type', key: 'type' },
             { header: 'Amount', key: 'amount' },
             { header: 'Date', key: 'date' },
@@ -154,7 +154,7 @@ export default function LedgerSystemScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Payment History</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">Transaction Ledgers</h1>
+                        <h1 className="text-sm font-bold text-slate-900">Transactions</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -171,7 +171,7 @@ export default function LedgerSystemScreen() {
                                     <ChevronRight size={10} className={cn("text-slate-400 transition-transform duration-200", isDatePickerOpen ? "rotate-90" : "rotate-0")} />
                                 </div>
                                 {dateRange.start && (
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                                         {dateRange.start} → {dateRange.end}
                                     </span>
                                 )}
@@ -216,7 +216,7 @@ export default function LedgerSystemScreen() {
                                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Custom Range</h4>
                                                 <div className="space-y-3">
                                                     <div className="space-y-1">
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">From</label>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">From</label>
                                                         <input
                                                             type="date"
                                                             value={dateRange.start}
@@ -228,7 +228,7 @@ export default function LedgerSystemScreen() {
                                                         />
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">To</label>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">To</label>
                                                         <input
                                                             type="date"
                                                             value={dateRange.end}
@@ -258,7 +258,7 @@ export default function LedgerSystemScreen() {
                             className="bg-slate-900 text-white px-4 py-1.5 h-[38px] rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors uppercase tracking-widest shadow-sm active:scale-95"
                         >
                             <Download size={13} />
-                            Export Ledger
+                            Download
                         </button>
                     </div>
                 </div>
@@ -335,7 +335,7 @@ export default function LedgerSystemScreen() {
                 <div className="bg-white border-t border-slate-200">
                     <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] tabular-nums">Status: Live // {currentTransactions.length} Records</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] tabular-nums">Status: Live {currentTransactions.length} Records</span>
                         </div>
                     </div>
 

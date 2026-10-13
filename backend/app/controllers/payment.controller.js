@@ -10,18 +10,24 @@ import {
     resolveCheckoutCoordinates,
 } from "../utils/checkoutOrderSplit.js";
 import { assignOrderToFranchise } from "../utils/assignment.js";
+import { resolveDeliverySchedule } from "../utils/deliverySchedule.js";
 
 export const createRazorpayOrder = async (req, res) => {
     try {
         const userId = req.user.id;
         const { amount } = req.body; // Amount in INR
 
-        if (!amount) {
-            return handleResponse(res, 400, "Amount is required");
+        const numericAmount = Number(amount);
+        if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+            return handleResponse(res, 400, "A valid payment amount is required");
+        }
+        // Razorpay rejects orders below ₹1
+        if (numericAmount < 1) {
+            return handleResponse(res, 400, "Online payment amount must be at least ₹1");
         }
 
         const options = {
-            amount: Math.round(amount * 100), // Convert to paise
+            amount: Math.round(numericAmount * 100), // Convert to paise
             currency: "INR",
             receipt: `receipt_order_${Date.now()}`,
         };
@@ -30,8 +36,16 @@ export const createRazorpayOrder = async (req, res) => {
 
         return handleResponse(res, 200, "Razorpay order created", order);
     } catch (error) {
-        console.error("Razorpay create order error:", error);
-        return handleResponse(res, 500, "Payment initialization failed");
+        console.error("Razorpay create order error:", error?.error || error);
+        const gatewayMessage = error?.error?.description;
+        if (error?.statusCode === 401) {
+            return handleResponse(res, 502, "Payment gateway is not configured correctly. Please contact support.");
+        }
+        return handleResponse(
+            res,
+            502,
+            gatewayMessage ? `Payment gateway error: ${gatewayMessage}` : "Payment initialization failed",
+        );
     }
 };
 
@@ -103,25 +117,16 @@ export const verifyPayment = async (req, res) => {
         // 2. Original Order Logic (Create the order in DB after payment)
         const { shippingAddress, shippingLocation, paymentMethod, deliveryShift, scheduledDate } = orderData;
 
-        // Pre-order validation
-        let preOrderDate = null;
-        let isPreOrder = false;
-        if (scheduledDate) {
-            preOrderDate = new Date(scheduledDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const maxDate = new Date(today);
-            maxDate.setDate(maxDate.getDate() + 7);
-            
-            if (preOrderDate < today) {
-                return handleResponse(res, 400, "Scheduled date cannot be in the past");
-            }
-            if (preOrderDate > maxDate) {
-                return handleResponse(res, 400, "Orders can only be scheduled up to 7 days in advance");
-            }
-            isPreOrder = true;
+        // Delivery date (evaluated in IST). The customer has already paid at this point, so an
+        // out-of-range date (e.g. payment finished just after midnight) falls back to today
+        // instead of rejecting a captured payment.
+        let schedule = resolveDeliverySchedule(scheduledDate, null);
+        if (!schedule.ok) {
+            console.warn("[VerifyPayment] Invalid scheduled date, defaulting to today:", schedule.message);
+            schedule = resolveDeliverySchedule(null, null);
         }
+        const preOrderDate = schedule.scheduledDate;
+        const isPreOrder = schedule.isPreOrder;
 
         // Get User Cart
         console.log("Fetching user cart for userId:", userId);

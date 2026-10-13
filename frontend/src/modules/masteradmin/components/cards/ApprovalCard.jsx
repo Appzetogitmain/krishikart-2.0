@@ -38,14 +38,14 @@ export default function ApprovalCard({ item, type, onApprove, onReject, onViewDo
                         </h4>
                         <div className="flex items-center gap-1.5">
                             <Calendar size={10} className="text-slate-400" />
-                            <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">
+                            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
                                 {new Date(item.createdAt || item.submittedAt || item.requestedAt).toLocaleDateString('en-GB')}
                             </span>
                         </div>
                     </div>
                 </div>
                 <div className={cn(
-                    "px-1.5 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest flex items-center gap-1",
+                    "px-1.5 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
                     isAlreadyApproved ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"
                 )}>
                     {isDelivery && item.pendingDocs?.status === 'pending' && (
@@ -58,11 +58,11 @@ export default function ApprovalCard({ item, type, onApprove, onReject, onViewDo
             <div className="p-4 flex-1 space-y-4">
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Audit Checklist</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Documents to Check</span>
                         <button 
                             type="button"
                             onClick={(e) => { e.stopPropagation(); onViewDoc(item); }}
-                            className="text-[9px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
+                            className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline flex items-center gap-1"
                         >
                             <ExternalLink size={10} />
                             View Profile
@@ -109,14 +109,14 @@ export default function ApprovalCard({ item, type, onApprove, onReject, onViewDo
                                         <CheckCircle2 size={10} className={doc.image ? "text-emerald-500" : "text-slate-300"} />
                                         {doc.label}
                                     </span>
-                                    {doc.value && <span className="text-[9px] font-bold text-slate-900 ml-4 tabular-nums">{doc.value}</span>}
+                                    {doc.value && <span className="text-[10px] font-bold text-slate-900 ml-4 tabular-nums">{doc.value}</span>}
                                 </div>
                                 {doc.image && <ExternalLink size={10} className="text-slate-300 group-hover:text-primary transition-colors" />}
                             </div>
                         ))}
                         {isCredit && (
                             <div className="flex flex-col gap-1 p-2 bg-slate-50 border border-slate-100 rounded-sm">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Exposure Requested</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">Credit Requested</span>
                                 <span className="text-lg font-black text-slate-900 tabular-nums leading-none">₹{item.requestedLimit.toLocaleString()}</span>
                             </div>
                         )}
@@ -129,7 +129,7 @@ export default function ApprovalCard({ item, type, onApprove, onReject, onViewDo
                     type="button"
                     disabled={item.status === 'blocked' || item.kyc?.status === 'rejected'}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReject(item); }}
-                    className="py-1.5 bg-white border border-slate-200 text-slate-500 rounded-sm font-bold text-[9px] uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="py-1.5 bg-white border border-slate-200 text-slate-500 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                 >
                     <XCircle size={12} />
                     Reject
@@ -138,7 +138,7 @@ export default function ApprovalCard({ item, type, onApprove, onReject, onViewDo
                     type="button"
                     disabled={isAlreadyApproved}
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onApprove(item); }}
-                    className="py-1.5 bg-slate-900 text-white rounded-sm font-bold text-[9px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:bg-emerald-500 disabled:opacity-100"
+                    className="py-1.5 bg-slate-900 text-white rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-sm disabled:bg-emerald-500 disabled:opacity-100"
                 >
                     <CheckCircle2 size={12} className={cn(isAlreadyApproved ? "text-slate-900" : "text-emerald-400")} />
                     {isAlreadyApproved ? 'Verified' : 'Verify'}

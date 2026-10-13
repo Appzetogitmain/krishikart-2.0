@@ -12,7 +12,8 @@ import {
     CircleDot,
     Info,
     CreditCard,
-    Trash2
+    Trash2,
+    MapPin
 } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '@/lib/axios'
@@ -60,7 +61,7 @@ const MenuItem = ({ icon: Icon, label, path, badge, isNew, hasToggle, isActive, 
                     </span>
                 )}
                 {isNew && (
-                    <span className="bg-emerald-400 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                    <span className="bg-emerald-400 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">
                         NEW
                     </span>
                 )}
@@ -190,6 +191,7 @@ export default function MobileProfileDrawer() {
                                         <SectionHeader title="Others" />
                                         <div className="bg-white rounded-[24px] overflow-hidden border border-slate-100 shadow-sm">
                                             <MenuItem icon={User} label="Profile settings" path="/edit-profile" isFirst />
+                                            <MenuItem icon={MapPin} label="Address book" path="/address-book" />
                                             <MenuItem icon={Bell} label="Notifications" path="/notifications" />
                                             <MenuItem icon={Heart} label="My list" path="/wishlist" />
                                             <MenuItem icon={Info} label="Contact us" path="/help-support" isLast />
@@ -216,7 +218,7 @@ export default function MobileProfileDrawer() {
                                             <Trash2 size={18} strokeWidth={2.5} />
                                             <span className="text-[15px]">Delete Account</span>
                                         </button>
-                                        <p className="text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-8">Version 2.4.0 (Stable)</p>
+                                        <p className="text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest mt-8">Version 2.4.0</p>
                                     </div>
                                 </div>
                             </div>

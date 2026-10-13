@@ -164,7 +164,7 @@ export default function VendorOnboardingDrawer({ isOpen, onClose, onSave }) {
                                                             : [...form.servedCategories, cat._id]
                                                     );
                                                 }}
-                                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 border-2 active:scale-95 flex items-center gap-1.5 ${
+                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 border-2 active:scale-95 flex items-center gap-1.5 ${
                                                     isSelected 
                                                     ? 'bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/10' 
                                                     : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200 hover:text-slate-600'

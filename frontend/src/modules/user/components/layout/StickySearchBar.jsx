@@ -108,7 +108,7 @@ export default function StickySearchBar() {
     }
 
     const handleUseCurrentLocation = async () => {
-        toast.info("Fetching real-time location...")
+        toast.info("Finding your location...")
         try {
             if (typeof updateFranchiseLocation !== 'function') {
                 toast.error("Location service is unavailable right now.")
@@ -153,7 +153,7 @@ export default function StickySearchBar() {
                 >
                     <Bell size={16} className="w-[16px] h-[16px]" />
                     {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] leading-none font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] leading-none font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                             {unreadCount > 99 ? '99+' : unreadCount}
                         </span>
                     )}
@@ -164,7 +164,7 @@ export default function StickySearchBar() {
                 >
                     <ShoppingCart size={16} className="w-[16px] h-[16px]" />
                     {cartCount > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[9px] leading-none font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] leading-none font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                             {cartCount > 99 ? '99+' : cartCount}
                         </span>
                     )}

@@ -149,7 +149,7 @@ const Dashboard = () => {
                     >
                         <Bell className="w-5 h-5" />
                         {taskCount > 0 && (
-                            <span className="absolute top-2 right-2 min-w-[16px] h-4 bg-rose-500 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-black text-white px-0.5">
+                            <span className="absolute top-2 right-2 min-w-[16px] h-4 bg-rose-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-black text-white px-0.5">
                                 {taskCount > 9 ? '9+' : taskCount}
                             </span>
                         )}
@@ -175,10 +175,14 @@ const Dashboard = () => {
                             <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center">
                                 <Clock size={16} className="text-amber-600" />
                             </div>
-                            <h3 className="text-xs font-black uppercase tracking-widest">Account Pending Approval</h3>
+                            <h3 className="text-xs font-black uppercase tracking-widest">
+                                {delivery?.approvalStatus === 'rejected' ? 'Account Not Approved' : 'Account Pending Approval'}
+                            </h3>
                         </div>
                         <p className="text-[10px] font-bold text-amber-700 uppercase leading-relaxed tracking-wider">
-                            Admin is currently verifying your documents. You will be able to accept delivery tasks and go online once your account is authorized.
+                            {delivery?.approvalStatus === 'rejected'
+                                ? 'Your account was not approved by the admin. Please contact support to get your account reviewed again.'
+                                : 'Admin is currently verifying your documents. You will be able to accept delivery tasks and go online once your account is approved.'}
                         </p>
                     </motion.div>
                 )}
@@ -193,7 +197,7 @@ const Dashboard = () => {
                             <Power className="w-5 h-5" />
                         </div>
                         <div>
-                            <span className="text-sm font-black uppercase tracking-widest block leading-none mb-1">{isOnline ? 'Active' : 'Resting'}</span>
+                            <span className="text-sm font-black uppercase tracking-widest block leading-none mb-1">{isOnline ? 'Active' : 'Offline'}</span>
                             <span className="text-[10px] text-muted-foreground font-medium">{isOnline ? 'Ready for new requests' : 'Status set to offline'}</span>
                         </div>
                     </div>
@@ -225,13 +229,13 @@ const Dashboard = () => {
                 >
                     <div className="relative z-10">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mb-2">Live Status</p>
-                        <h3 className="text-xl font-black mb-1">Task Feed Ready</h3>
+                        <h3 className="text-xl font-black mb-1">New Requests</h3>
                         <p className="text-white/60 text-xs mb-6">Check and accept incoming delivery requests near you.</p>
                         <button
                             onClick={() => navigate('/delivery/requests')}
                             className="bg-white text-slate-900 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-xl"
                         >
-                            Open Task Feed
+                            See Requests
                         </button>
                     </div>
                     <div className="absolute top-0 right-0 p-8 opacity-10">
@@ -333,7 +337,7 @@ const Dashboard = () => {
                                             <Store size={22} />
                                         </div>
                                         <div>
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Picked Up From</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Picked Up From</p>
                                             <h4 className="text-sm font-bold text-slate-900 uppercase">{selectedOrder.franchiseName}</h4>
                                             <p className="text-[10px] font-medium text-slate-500 line-clamp-1">{selectedOrder.franchiseAddress}</p>
                                         </div>

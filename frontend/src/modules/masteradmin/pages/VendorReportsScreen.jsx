@@ -94,7 +94,7 @@ export default function VendorReportsScreen() {
             'Owner',
             'Item Count',
             'Actual Weight (KG)',
-            'Manifest Value (₹)',
+            'Order Value (₹)',
             'Damaged Deduction (₹)',
             'Net Settlement (₹)',
             'Status'
@@ -153,7 +153,7 @@ export default function VendorReportsScreen() {
         <div className="flex items-center justify-center h-[60vh]">
             <div className="flex flex-col items-center gap-4">
                 <Loader2 className="animate-spin text-primary" size={48} />
-                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Compiling Audit Intelligence...</p>
+                <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Loading reports...</p>
             </div>
         </div>
     );
@@ -164,7 +164,7 @@ export default function VendorReportsScreen() {
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">Vendor Dispatch Reports</h1>
                     <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-[0.3em] flex items-center gap-2">
-                        <ShieldCheck size={14} className="text-emerald-500" /> Authorized Logistics Audit Protocol
+                        <ShieldCheck size={14} className="text-emerald-500" /> Everything vendors have delivered
                     </p>
                 </div>
                 <div className="flex gap-3">
@@ -173,7 +173,7 @@ export default function VendorReportsScreen() {
                         className="flex items-center gap-2 bg-white border border-slate-200 px-6 py-3 rounded-2xl text-[13px] font-black text-slate-700 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
                     >
                         <Download size={18} />
-                        Export Audit Log
+                        Download
                     </button>
                 </div>
             </header>
@@ -194,7 +194,7 @@ export default function VendorReportsScreen() {
                         <Scale size={28} />
                     </div>
                     <div>
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Gross Tonnage</p>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Weight</p>
                         <p className="text-3xl font-black text-slate-900 tracking-tighter">{reports.reduce((acc, r) => acc + (r.actualWeight || 0), 0).toFixed(2)} KG</p>
                     </div>
                 </motion.div>
@@ -203,7 +203,7 @@ export default function VendorReportsScreen() {
                         <IndianRupee size={28} />
                     </div>
                     <div>
-                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Procured Value</p>
+                        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Purchase Value</p>
                         <p className="text-3xl font-black text-slate-900 tracking-tighter">₹{reports.reduce((acc, r) => acc + (r.totalQuotedAmount || 0), 0).toLocaleString()}</p>
                     </div>
                 </motion.div>
@@ -247,12 +247,12 @@ export default function VendorReportsScreen() {
                     <table className="w-full text-left border-collapse min-w-[1000px]">
                         <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-100">
-                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Inbound Invoice</th>
-                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Franchise Node</th>
-                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Audit Items</th>
-                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Logistics Data</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Invoice</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Franchise</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Items</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Delivery</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Financials</th>
-                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Registry</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Details</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -297,13 +297,13 @@ export default function VendorReportsScreen() {
                                                         {report.status === 'completed' && (
                                                             <div className="flex items-center gap-2">
                                                                 <span className={cn(
-                                                                    "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter",
+                                                                    "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-tighter",
                                                                     item.damagedQuantity > 0 ? "bg-rose-50 text-rose-500" : "bg-emerald-50 text-emerald-500"
                                                                 )}>
                                                                     RECV: {item.receivedQuantity || 0}
                                                                 </span>
                                                                 {item.damagedQuantity > 0 && (
-                                                                    <span className="bg-rose-500 text-white px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter">
+                                                                    <span className="bg-rose-500 text-white px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-tighter">
                                                                         DMG: {item.damagedQuantity}
                                                                     </span>
                                                                 )}
@@ -313,13 +313,13 @@ export default function VendorReportsScreen() {
                                                 ))}
                                                 {report.items.length > 3 && (
                                                     <span className="text-[10px] font-black text-primary uppercase tracking-widest mt-1">
-                                                        +{report.items.length - 3} Extra Manifest items
+                                                        +{report.items.length - 3} more items
                                                     </span>
                                                 )}
                                                 {hasDamages && (
                                                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 shadow-sm">
                                                         <AlertTriangle size={12} className="animate-pulse" />
-                                                        <span className="text-[9px] font-black uppercase tracking-widest">Physical Loss Reported</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Damage Reported</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -330,13 +330,13 @@ export default function VendorReportsScreen() {
                                                     <Scale size={16} />
                                                     <span className="text-sm font-black tabular-nums">{report.actualWeight || 0} KG</span>
                                                 </div>
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">Verified Mass</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Weight</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-7">
                                             <div className="flex flex-col gap-2.5">
                                                 <div className="flex flex-col leading-tight">
-                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Manifest Value</span>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Order Value</span>
                                                     <span className="text-[13px] font-black text-slate-600 tabular-nums leading-none">₹{totalValue.toLocaleString()}</span>
                                                 </div>
 
@@ -344,7 +344,7 @@ export default function VendorReportsScreen() {
                                                     <>
                                                         {hasDamages && (
                                                             <div className="flex flex-col leading-tight text-rose-600">
-                                                                <span className="text-[8px] font-black uppercase tracking-widest mb-1">Damaged Deduction</span>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest mb-1">Deduction for Damage</span>
                                                                 <span className="text-[13px] font-black tabular-nums leading-none">- ₹{calculateDamagedLoss(report).toLocaleString()}</span>
                                                             </div>
                                                         )}
@@ -354,7 +354,7 @@ export default function VendorReportsScreen() {
                                                             isDiscrepancy ? "text-primary" : "text-emerald-600"
                                                         )}>
                                                             <div className="flex items-center gap-1.5 mb-1">
-                                                                <span className="text-[8px] font-black uppercase tracking-widest">Net Audit Settlement</span>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest">Final Amount</span>
                                                                 {isDiscrepancy && <ShieldCheck size={10} className="text-primary" />}
                                                             </div>
                                                             <span className="text-lg font-black tabular-nums leading-none">₹{(totalValue - calculateDamagedLoss(report)).toLocaleString()}</span>
@@ -440,8 +440,8 @@ export default function VendorReportsScreen() {
                         <div className="w-20 h-20 bg-slate-50 text-slate-200 rounded-full flex items-center justify-center mx-auto mb-6">
                             <FileText size={40} />
                         </div>
-                        <h3 className="text-lg font-black text-slate-900 tracking-tight">Audit Archive Empty</h3>
-                        <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Critical: No data matches the current parameters</p>
+                        <h3 className="text-lg font-black text-slate-900 tracking-tight">No reports found</h3>
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Nothing matches your filters</p>
                         <button
                             onClick={() => {
                                 setSearchTerm('');
@@ -449,7 +449,7 @@ export default function VendorReportsScreen() {
                             }}
                             className="mt-8 text-[11px] font-black text-primary uppercase tracking-[0.3em] hover:underline"
                         >
-                            Reset Logic Filters
+                            Clear Filters
                         </button>
                     </div>
                 )}

@@ -38,19 +38,19 @@ export default function RejectionReportsScreen() {
             render: (val, row) => (
                 <div>
                     <p className="text-[11px] font-black text-slate-900 tracking-tight">{val}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                         Ref: #{row.requestRef}
                     </p>
                 </div>
             ),
         },
         {
-            header: 'Franchise / Node',
+            header: 'Franchise',
             key: 'franchise',
             render: (val, row) => (
                 <div>
                     <p className="text-[11px] font-bold text-slate-700">{val}</p>
-                    <p className="text-[9px] text-slate-400 font-medium leading-tight">{row.franchiseLocation}</p>
+                    <p className="text-[10px] text-slate-400 font-medium leading-tight">{row.franchiseLocation}</p>
                 </div>
             ),
         },
@@ -67,7 +67,7 @@ export default function RejectionReportsScreen() {
                             {row.type === 'Rotten/Rejected' ? `Rejected: ${val}` : `Damaged: ${row.damagedQty}`} {row.unit}
                         </span>
                     </div>
-                    <p className="text-[9px] font-medium text-slate-400 tabular-nums">
+                    <p className="text-[10px] font-medium text-slate-400 tabular-nums">
                         Dispatched: {row.dispatchedQty} {row.unit}
                     </p>
                 </div>
@@ -88,7 +88,7 @@ export default function RejectionReportsScreen() {
             render: (val) => (
                 <span
                     className={cn(
-                        'inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tight border',
+                        'inline-flex px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tight border',
                         val === 'Rotten/Rejected'
                             ? 'bg-red-50 text-red-700 border-red-100'
                             : 'bg-amber-50 text-amber-700 border-amber-100'
@@ -191,8 +191,7 @@ export default function RejectionReportsScreen() {
                         </div>
                         <p className="text-slate-600 font-bold text-sm">No rejections found</p>
                         <p className="text-[11px] text-slate-400 mt-2 max-w-md mx-auto">
-                            Great! No stocks have been rejected or marked as damaged by 
-                            franchises in your recent cycles.
+                            Great! No items have been rejected or marked as damaged by franchises recently.
                         </p>
                     </div>
                 ) : (

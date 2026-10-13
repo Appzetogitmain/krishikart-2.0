@@ -84,7 +84,7 @@ export default function OrderCard({ order, onAction }) {
                                 onClick={() => onAction?.(order.id, 'procure')}
                                 className="w-full h-12 bg-amber-500 text-white rounded-[18px] font-black uppercase text-[10px] tracking-widest hover:bg-amber-600 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
                             >
-                                <Info size={16} /> Request Procurement
+                                <Info size={16} /> Request Stock
                             </button>
                         ) : (
                             <button
@@ -125,7 +125,7 @@ export default function OrderCard({ order, onAction }) {
 
                     {order.status === 'delivered' && (
                         <div className="flex-1 h-12 bg-slate-50 text-slate-400 rounded-[18px] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 border border-slate-100">
-                            Fulfillment Complete <CheckCircle2 size={16} />
+                            Order Complete <CheckCircle2 size={16} />
                         </div>
                     )}
                 </div>

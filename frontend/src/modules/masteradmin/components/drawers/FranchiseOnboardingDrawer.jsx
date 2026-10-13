@@ -174,9 +174,9 @@ export default function FranchiseOnboardingDrawer({ isOpen, onClose, onSave, ini
                 >
                     <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
                         <div>
-                            <h3 className="text-lg font-black text-slate-900">{isEdit ? 'Update Node Registry' : 'Onboard Franchise'}</h3>
+                            <h3 className="text-lg font-black text-slate-900">{isEdit ? 'Edit Franchise' : 'Onboard Franchise'}</h3>
                             <p className="text-xs text-slate-500 mt-0.5">
-                                {isEdit ? `Modifying technical parameters for ${initialData.franchiseName}` : 'Node details plus the same KYC fields as the franchise Documentation page.'}
+                                {isEdit ? `Modifying technical parameters for ${initialData.franchiseName}` : 'Franchise details and KYC documents.'}
                             </p>
                         </div>
                         <button type="button" onClick={onClose} className="p-2 rounded hover:bg-slate-100 text-slate-500">
@@ -188,7 +188,7 @@ export default function FranchiseOnboardingDrawer({ isOpen, onClose, onSave, ini
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             <div>
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                                    Node profile
+                                    Franchise details
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Input label="Franchise Name" required value={form.franchiseName} onChange={(v) => setValue('franchiseName', v)} />
@@ -204,8 +204,8 @@ export default function FranchiseOnboardingDrawer({ isOpen, onClose, onSave, ini
                             {/* Category Selection Section */}
                             <div className="border border-slate-200 rounded-lg p-4 space-y-4 bg-slate-50/40">
                                 <div>
-                                    <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Operational Domains</p>
-                                    <p className="text-[10px] text-slate-500 mt-1 font-bold">Select product categories serviced by this node.</p>
+                                    <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Categories Served</p>
+                                    <p className="text-[10px] text-slate-500 mt-1 font-bold">Select the product categories this franchise will sell.</p>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {categories.map(cat => (
@@ -230,7 +230,7 @@ export default function FranchiseOnboardingDrawer({ isOpen, onClose, onSave, ini
                                 {isLoadingCategories && (
                                     <div className="py-4 text-center border border-dashed border-slate-200 rounded flex items-center justify-center gap-2">
                                         <Loader2 size={14} className="animate-spin text-slate-400" />
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Fetching Categories...</span>
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Loading categories...</span>
                                     </div>
                                 )}
                                 {!isLoadingCategories && categories.length === 0 && (
@@ -242,7 +242,7 @@ export default function FranchiseOnboardingDrawer({ isOpen, onClose, onSave, ini
 
                             <div className="border border-slate-200 rounded-lg p-4 space-y-5 bg-slate-50/40">
                                 <div>
-                                    <p className="text-xs font-black text-slate-900">Identity (Aadhaar &amp; PAN)</p>
+                                    <p className="text-xs font-black text-slate-900">Aadhaar &amp; PAN</p>
                                     <p className="text-[11px] text-slate-500 mt-1">Numbers and document uploads.</p>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -268,7 +268,7 @@ export default function FranchiseOnboardingDrawer({ isOpen, onClose, onSave, ini
 
                             <div className="border border-slate-200 rounded-lg p-4 space-y-5 bg-slate-50/40">
                                 <div>
-                                    <p className="text-xs font-black text-slate-900">Business &amp; compliance</p>
+                                    <p className="text-xs font-black text-slate-900">Business Documents</p>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Input

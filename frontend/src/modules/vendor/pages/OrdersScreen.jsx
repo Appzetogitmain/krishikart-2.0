@@ -121,7 +121,7 @@ export default function OrdersScreen() {
             render: (val, row) => (
                 <div>
                     <p className="text-primary font-black uppercase tracking-widest">{val}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{row.franchiseName}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{row.franchiseName}</p>
                 </div>
             )
         },
@@ -149,7 +149,7 @@ export default function OrdersScreen() {
             align: 'right',
             render: (val) => (
                 <span className={cn(
-                    "px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border",
+                    "px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border",
                     statusColors[val] || "bg-slate-50 text-slate-400 border-slate-100"
                 )}>
                     {val}
@@ -191,7 +191,7 @@ export default function OrdersScreen() {
                     <VendorBackBar className="mt-0.5 shrink-0" />
                     <div className="min-w-0">
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Supply Requests</h1>
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Matrix Active: {allOrders.length} Ops</p>
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Active: {allOrders.length} orders</p>
                     </div>
                 </div>
                 <div className="flex bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
@@ -216,7 +216,7 @@ export default function OrdersScreen() {
                 onCategoryChange={setActiveTab}
                 searchTerm={searchTerm}
                 onSearchChange={(v) => setSearchTerm(typeof v === 'string' ? v.trim() : v)}
-                placeholder="Locate Supply Ref..."
+                placeholder="Search orders..."
             />
 
             {viewMode === 'list' ? (
@@ -250,7 +250,7 @@ export default function OrdersScreen() {
                                         </div>
                                     </div>
                                     <div className={cn(
-                                        "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                        "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                         statusColors[order.status] || "bg-slate-50 text-slate-400 border-slate-100"
                                     )}>
                                         {order.status}
@@ -265,7 +265,7 @@ export default function OrdersScreen() {
                                             </div>
                                             <div>
                                                 <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none">{item.name}</p>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.quantity} {item.unit}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.quantity} {item.unit}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -295,8 +295,8 @@ export default function OrdersScreen() {
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4 border border-dashed border-slate-200">
                         <AlertCircle size={32} />
                     </div>
-                    <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">No Active Supply Requests</h4>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Matrix search returned zero results</p>
+                    <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">No orders right now</h4>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">No orders match your search</p>
                 </div>
             )}
         </div>

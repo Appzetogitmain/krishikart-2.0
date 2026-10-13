@@ -112,12 +112,10 @@ const AccessDenied = () => (
       <ShieldCheck className="text-red-500 w-12 h-12" />
     </div>
     <h2 className="text-2xl font-black text-slate-900 mb-2">
-      Access Restricted
+      No Access
     </h2>
     <p className="max-w-md text-slate-500 font-medium mb-8">
-      Your identity has been verified, but your clearance level does not grant
-      access to this terminal. Contact the system administrator to update your
-      credentials.
+      You don't have permission to open this page. Ask the Super Admin to give you access.
     </p>
     <button
       onClick={() => (window.location.href = "/#/masteradmin/login")}

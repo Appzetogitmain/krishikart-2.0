@@ -58,30 +58,69 @@ export default function OrdersScreen() {
     const [isVendorsLoading, setIsVendorsLoading] = useState(false);
     const [compatibleVendors, setCompatibleVendors] = useState([]);
 
-    const handleExport = () => {
+    const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+
+    /** period: 'today' | 'month' | 'year' | 'current' (whatever is filtered on screen) */
+    const handleExport = (period = 'current') => {
+        setIsExportMenuOpen(false);
+        const now = new Date();
+        const startOf = {
+            today: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+            month: new Date(now.getFullYear(), now.getMonth(), 1),
+            year: new Date(now.getFullYear(), 0, 1),
+        }[period];
+        const source = period === 'current' ? filteredOrders : allOrders;
+        const rows = startOf ? source.filter(o => new Date(o.createdAt) >= startOf) : source;
+
+        if (!rows.length) {
+            toast.info('No orders found for the selected period');
+            return;
+        }
+
+        const fmtDate = (d) => (d ? new Date(d).toLocaleString('en-IN') : '');
         const columns = [
             { header: 'Order ID', key: '_id' },
+            { header: 'Order Date', key: 'orderDate' },
             { header: 'Customer', key: 'customerName' },
+            { header: 'Customer Mobile', key: 'customerMobile' },
+            { header: 'Franchise', key: 'franchiseName' },
             { header: 'Status', key: 'orderStatus' },
+            { header: 'Payment Method', key: 'paymentMethod' },
+            { header: 'Payment Status', key: 'paymentStatus' },
+            { header: 'Subtotal', key: 'subtotal' },
+            { header: 'Delivery Fee', key: 'deliveryFee' },
+            { header: 'Tax', key: 'tax' },
+            { header: 'Discount', key: 'discount' },
+            { header: 'Coupon', key: 'coupon' },
             { header: 'Total Amount', key: 'totalAmount' },
-            { header: 'Date', key: 'createdAt' }
+            { header: 'Delivery Date', key: 'deliveryDate' },
+            { header: 'Delivery Slot', key: 'deliveryShift' },
+            { header: 'Items', key: 'itemsSummary' },
         ];
 
-        const data = filteredOrders.map(order => ({
-            ...order,
+        const data = rows.map(order => ({
+            _id: order._id,
+            orderDate: fmtDate(order.createdAt),
             customerName: order.userId?.fullName || 'Unknown',
-            totalAmount: order.totalAmount,
+            customerMobile: order.userId?.mobile || '',
+            franchiseName: order.franchiseId?.franchiseName || '',
+            orderStatus: order.orderStatus,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            subtotal: order.subtotal ?? '',
+            deliveryFee: order.deliveryFee ?? '',
+            tax: order.tax ?? '',
             discount: order.discountAmount || 0,
-            coupon: order.couponCode || 'None'
+            coupon: order.couponCode || '',
+            totalAmount: order.totalAmount,
+            deliveryDate: order.scheduledDate ? new Date(order.scheduledDate).toLocaleDateString('en-IN') : '',
+            deliveryShift: order.deliveryShift || '',
+            itemsSummary: (order.items || []).map(i => `${i.name} x ${i.quantity} ${i.unit || ''}`.trim()).join('; '),
         }));
 
-        const exportColumns = [
-            ...columns,
-            { header: 'Discount', key: 'discount' },
-            { header: 'Coupon', key: 'coupon' }
-        ];
-
-        exportToCSV('Orders_Report', exportColumns, data);
+        const label = { today: 'Today', month: 'This_Month', year: 'This_Year', current: 'Filtered' }[period];
+        exportToCSV(`Orders_${label}`, columns, data);
+        toast.success(`Downloaded ${data.length} orders`);
     };
 
     const normalizeOrders = (results) => {
@@ -301,7 +340,7 @@ export default function OrdersScreen() {
             });
 
             if (Object.keys(finalQuantities).length === 0) {
-                toast.error("Please select at least one item to procure");
+                toast.error("Please select at least one item to request");
                 return;
             }
 
@@ -413,14 +452,36 @@ export default function OrdersScreen() {
                         <h1 className="text-sm font-bold text-slate-900">Orders Management</h1>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 relative">
                         <button
-                            onClick={handleExport}
+                            onClick={() => setIsExportMenuOpen(v => !v)}
                             className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-sm text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-colors"
                         >
-                            <FileText size={13} className="text-slate-400" />
-                            <span>Export CSV</span>
+                            <Download size={13} className="text-slate-400" />
+                            <span>Download Excel</span>
+                            <ChevronDown size={12} className="text-slate-400" />
                         </button>
+                        {isExportMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsExportMenuOpen(false)} />
+                                <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-white border border-slate-200 rounded-sm shadow-lg py-1">
+                                    {[
+                                        { id: 'today', label: "Today's orders" },
+                                        { id: 'month', label: "This month's orders" },
+                                        { id: 'year', label: "This year's orders" },
+                                        { id: 'current', label: 'Orders shown on screen' },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            onClick={() => handleExport(opt.id)}
+                                            className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -456,7 +517,7 @@ export default function OrdersScreen() {
                                 {tab.label}
                                 {tab.count !== undefined && (
                                     <span className={cn(
-                                        'px-1.5 py-0.5 rounded-sm text-[9px] font-black tabular-nums',
+                                        'px-1.5 py-0.5 rounded-sm text-[10px] font-black tabular-nums',
                                         tab.highlight && tab.count > 0
                                             ? 'bg-rose-100 text-rose-600'
                                             : 'bg-slate-100 text-slate-500'
@@ -615,7 +676,7 @@ export default function OrdersScreen() {
                                                 setSelectedProcurementIds(allIds);
                                             }}
                                             className={cn(
-                                                "px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-[1px] transition-all",
+                                                "px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-[1px] transition-all",
                                                 procurementMode === 'full' ? "bg-rose-600 text-white" : "text-rose-400 hover:text-rose-600"
                                             )}
                                         >
@@ -624,7 +685,7 @@ export default function OrdersScreen() {
                                         <button
                                             onClick={() => setProcurementMode('partial')}
                                             className={cn(
-                                                "px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-[1px] transition-all",
+                                                "px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-[1px] transition-all",
                                                 procurementMode === 'partial' ? "bg-rose-600 text-white" : "text-rose-400 hover:text-rose-600"
                                             )}
                                         >
@@ -662,7 +723,7 @@ export default function OrdersScreen() {
                                                 )}
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{item.name}</span>
-                                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Order: {item.quantity} {item.unit}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order: {item.quantity} {item.unit}</span>
                                                 </div>
                                             </div>
                                             <div className={cn(
@@ -728,7 +789,7 @@ export default function OrdersScreen() {
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1 tracking-widest">Available</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1 tracking-widest">Available</span>
                                                     <span className="text-xs font-bold text-slate-900 tabular-nums">{vendor.capacity || '100'}%</span>
                                                 </div>
                                             </div>
@@ -742,7 +803,7 @@ export default function OrdersScreen() {
                                                 </div>
                                                 <button
                                                     onClick={() => handleFinalizeProcurement(vendor)}
-                                                    className="bg-white border border-slate-900 text-slate-900 text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-sm hover:bg-slate-900 hover:text-white transition-all flex items-center gap-2"
+                                                    className="bg-white border border-slate-900 text-slate-900 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-sm hover:bg-slate-900 hover:text-white transition-all flex items-center gap-2"
                                                 >
                                                     Assign Vendor
                                                     <ArrowRight size={12} />
@@ -760,7 +821,7 @@ export default function OrdersScreen() {
                                         <Activity size={16} className="text-emerald-400" />
                                         <span className="text-[10px] font-bold text-white uppercase tracking-widest">Status: Online</span>
                                     </div>
-                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest pr-2">Kisaankart System</span>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pr-2">Kisaankart</span>
                                 </div>
                             </div>
                         </motion.div>

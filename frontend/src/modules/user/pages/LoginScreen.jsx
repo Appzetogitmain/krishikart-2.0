@@ -133,7 +133,7 @@ export default function LoginScreen() {
                     <div className="relative z-10 grid grid-cols-2 gap-6 border-t border-white/10 pt-8">
                         <div>
                             <p className="text-2xl font-bold">25+</p>
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-green-200 mt-1 opacity-80">Hubs</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-green-200 mt-1 opacity-80">Stores</p>
                         </div>
                         <div>
                             <p className="text-2xl font-bold">100%</p>
@@ -244,7 +244,7 @@ export default function LoginScreen() {
                                             disabled={isLoading || otp.join('').length !== 6}
                                             className="w-full h-12 rounded-lg bg-slate-900 hover:bg-slate-800 text-md font-bold shadow-lg"
                                         >
-                                            {isLoading ? 'Verifying...' : 'Verify Identity'}
+                                            {isLoading ? 'Verifying...' : 'Verify & Log In'}
                                         </Button>
                                         <button
                                             type="button"
@@ -264,7 +264,7 @@ export default function LoginScreen() {
                         <div className="flex items-center gap-3 border-t border-slate-100 pt-6">
                             <ShieldCheck className="text-green-500 w-5 h-5" />
                             <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                                Your data is protected by industry standard encryption. <br /> 
+                                Your data is kept safe and secure. <br /> 
                                 By continuing, you agree to our <button type="button" onClick={() => navigate('/terms')} className="text-primary border-b border-primary/20">Terms & Conditions</button>.
                             </p>
                         </div>

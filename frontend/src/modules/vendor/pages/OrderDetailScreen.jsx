@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -54,7 +55,7 @@ export default function OrderDetailScreen() {
             try {
                 const response = await api.get(`/procurement/vendor/${id}`);
                 if (response.data.success) {
-                    const foundOrder = response.data.results;
+                    const foundOrder = response.data.result || response.data.results;
                     let currentStatus = foundOrder.status?.toLowerCase();
                     if (currentStatus === 'assigned') {
                         currentStatus = 'requested';
@@ -73,6 +74,7 @@ export default function OrderDetailScreen() {
                 }
             } catch (error) {
                 console.error("Failed to fetch order details", error);
+                if (error.response?.status === 403) toast.error("This request is not assigned to your account");
             } finally {
                 setIsLoading(false);
             }
@@ -117,7 +119,7 @@ export default function OrderDetailScreen() {
                     try {
                         const response = await api.get(`/procurement/vendor/${id}`);
                         if (response.data.success) {
-                            const foundOrder = response.data.results;
+                            const foundOrder = response.data.result || response.data.results;
                             setOrder(foundOrder);
                             if (foundOrder.items) {
                                 setQuotedItems(foundOrder.items.map(item => ({
@@ -152,6 +154,7 @@ export default function OrderDetailScreen() {
             }
         } catch (error) {
             console.error("Failed to update status", error);
+            toast.error(error.response?.data?.message || "Could not update the order status");
         } finally {
             setIsActionLoading(false);
         }
@@ -167,6 +170,7 @@ export default function OrderDetailScreen() {
             }
         } catch (error) {
             console.error("Failed to submit quotation", error);
+            toast.error(error.response?.data?.message || "Could not submit the quotation");
         } finally {
             setIsActionLoading(false);
         }
@@ -198,20 +202,20 @@ export default function OrderDetailScreen() {
                 <AlertCircle size={32} />
             </div>
             <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">Order Not Found</h4>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">The requested supply reference does not exist</p>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">We couldn't find this order</p>
             <button onClick={() => navigate('/vendor/orders')} className="mt-6 text-primary font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2">
-                <ArrowLeft size={14} /> Back to Ledger
+                <ArrowLeft size={14} /> Back to Orders
             </button>
         </div>
     );
 
     const steps = [
-        { id: 'requested', label: 'Inquiry', icon: ClipboardList, description: 'New Node Request' },
+        { id: 'requested', label: 'New Request', icon: ClipboardList, description: 'Request received from a franchise' },
         { id: 'quoted', label: 'Quoted', icon: IndianRupee, description: 'Awaiting Approval' },
-        { id: 'approved', label: 'Authorized', icon: CheckCircle2, description: 'Order PO Received' },
-        { id: 'preparing', label: 'Processing', icon: Package, description: 'Batch under assembly' },
-        { id: 'ready', label: 'Staged', icon: Shield, description: 'Verified & Sealed' },
-        { id: 'completed', label: 'Dispatched', icon: Truck, description: 'Inbound to Node' }
+        { id: 'approved', label: 'Approved', icon: CheckCircle2, description: 'Admin approved your quote' },
+        { id: 'preparing', label: 'Processing', icon: Package, description: 'Packing in progress' },
+        { id: 'ready', label: 'Ready', icon: Shield, description: 'Packed and ready for pickup' },
+        { id: 'completed', label: 'Dispatched', icon: Truck, description: 'On the way to the franchise' }
     ];
 
     const getActiveStepId = (s) => {
@@ -235,9 +239,9 @@ export default function OrderDetailScreen() {
                             <span className="text-primary">{order.id}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Supply Reference</h1>
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Order Ref</h1>
                             <div className={cn(
-                                "px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                 status === 'assigned' || status === 'new' ? "bg-blue-50 text-blue-600 border-blue-100" :
                                     status === 'bidding' ? "bg-amber-50 text-amber-600 border-amber-100" :
                                         status === 'accepted' || status === 'ready' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
@@ -263,9 +267,9 @@ export default function OrderDetailScreen() {
                     >
                         <div className="flex items-center justify-between">
                             <div>
-                                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Supply Quotation Aggregate</h4>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                                    {status === 'requested' ? "Calculate per-item rates below to generate proposal" : "Current Quotation Value"}
+                                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Your Quotation</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                    {status === 'requested' ? "Enter your price for each item below" : "Quotation Total"}
                                 </p>
                             </div>
                             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary shadow-sm border border-primary/10">
@@ -287,7 +291,7 @@ export default function OrderDetailScreen() {
             {(order.deliveryChallan || order.grn) && (
                 <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-4">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Compliance & Logistics</p>
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Documents</p>
                         <Shield size={16} className="text-slate-200" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -302,7 +306,7 @@ export default function OrderDetailScreen() {
                                     </div>
                                     <div className="text-left">
                                         <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Delivery Challan</p>
-                                        <p className="text-[8px] font-bold text-slate-400 tracking-widest mt-0.5">{order.deliveryChallan.id}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 tracking-widest mt-0.5">{order.deliveryChallan.id}</p>
                                     </div>
                                 </div>
                                 <ExternalLink size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
@@ -319,7 +323,7 @@ export default function OrderDetailScreen() {
                                     </div>
                                     <div className="text-left">
                                         <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Digital GRN</p>
-                                        <p className="text-[8px] font-bold text-slate-400 tracking-widest mt-0.5">{order.grn.id}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 tracking-widest mt-0.5">{order.grn.id}</p>
                                     </div>
                                 </div>
                                 <ExternalLink size={14} className="text-slate-300 group-hover:text-primary transition-colors" />
@@ -338,8 +342,8 @@ export default function OrderDetailScreen() {
                                 <ClipboardList size={22} />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Supply Manifest</h3>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{order.items.length} Component SKUs</p>
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Item List</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{order.items.length} Items</p>
                             </div>
                         </div>
                     </div>
@@ -359,15 +363,15 @@ export default function OrderDetailScreen() {
                                         <div>
                                             <p className="font-black text-slate-900 text-sm tracking-tight">{item.name}</p>
                                             <div className="flex flex-col gap-0.5 mt-0.5">
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.qty || item.quantity} {item.unit} Requested</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.qty || item.quantity} {item.unit} Requested</p>
                                                 {(item.dispatchedQuantity > 0 || item.receivedQuantity > 0) && (
                                                     <div className="flex items-center gap-2">
                                                         {item.dispatchedQuantity > 0 && (
-                                                            <p className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Sent: {item.dispatchedQuantity}</p>
+                                                            <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Sent: {item.dispatchedQuantity}</p>
                                                         )}
                                                         {item.receivedQuantity !== undefined && (
                                                             <p className={cn(
-                                                                "text-[8px] font-black uppercase tracking-widest",
+                                                                "text-[10px] font-black uppercase tracking-widest",
                                                                 item.receivedQuantity === item.dispatchedQuantity ? "text-emerald-500" : "text-rose-500"
                                                             )}>
                                                                 Received: {item.receivedQuantity}
@@ -394,20 +398,20 @@ export default function OrderDetailScreen() {
                                             <div className="flex flex-col items-end">
                                                 <p className="text-[11px] font-black text-slate-900 tabular-nums">₹{item.quotedPrice || (item.price || 0)}</p>
                                                 {item.originalQuotedPrice && item.originalQuotedPrice !== item.quotedPrice && (
-                                                    <p className="text-[8px] font-black text-rose-500 uppercase tracking-tighter line-through opacity-60">Was ₹{item.originalQuotedPrice}</p>
+                                                    <p className="text-[10px] font-black text-rose-500 uppercase tracking-tighter line-through opacity-60">Was ₹{item.originalQuotedPrice}</p>
                                                 )}
                                             </div>
                                             {item.rejected && (
-                                                <span className="px-2 py-0.5 bg-rose-500 text-white text-[8px] font-black uppercase rounded-sm animate-pulse">
+                                                <span className="px-2 py-0.5 bg-rose-500 text-white text-[10px] font-black uppercase rounded-sm animate-pulse">
                                                     Rejected
                                                 </span>
                                             )}
                                             {item.damagedQuantity > 0 && (
-                                                <span className="px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase rounded-sm">
+                                                <span className="px-2 py-0.5 bg-amber-500 text-white text-[10px] font-black uppercase rounded-sm">
                                                     Damaged: {item.damagedQuantity}
                                                 </span>
                                             )}
-                                            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">Rate</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rate</p>
                                         </div>
                                     )}
                                 </div>
@@ -423,7 +427,7 @@ export default function OrderDetailScreen() {
                         <div className="relative z-10">
                             <div className="flex items-start justify-between mb-10">
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Target Fulfillment</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Deliver To</p>
                                     <h4 className="text-2xl font-black tracking-tight">{order.franchiseName}</h4>
                                 </div>
                                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-primary backdrop-blur-xl border border-white/5">
@@ -437,7 +441,7 @@ export default function OrderDetailScreen() {
                                         <Phone size={18} />
                                     </div>
                                     <div>
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Node Ops Contact</p>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Franchise Contact</p>
                                         <p className="text-sm font-black tabular-nums">{order.franchiseMobile}</p>
                                     </div>
                                 </div>
@@ -446,7 +450,7 @@ export default function OrderDetailScreen() {
                                         <Clock size={18} />
                                     </div>
                                     <div>
-                                        <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Order Sequence</p>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Order Timeline</p>
                                         <p className="text-sm font-black tabular-nums">{new Date(order.createdAt || order.date || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Today</p>
                                     </div>
                                 </div>
@@ -476,7 +480,7 @@ export default function OrderDetailScreen() {
                             >
                                 {isActionLoading ? <Loader2 className="animate-spin" size={20} /> : (
                                     <>
-                                        {status === 'quoted' ? 'Update Supply Proposal' : 'Transmit Supply Proposal'}
+                                        {status === 'quoted' ? 'Update Quotation' : 'Send Quotation'}
                                         <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
@@ -500,7 +504,7 @@ export default function OrderDetailScreen() {
                             >
                                 {isActionLoading ? <Loader2 className="animate-spin" size={20} /> : (
                                     <>
-                                        Initiate Fulfillment Cycle
+                                        Start Packing
                                         <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
@@ -516,7 +520,7 @@ export default function OrderDetailScreen() {
                             onClick={() => navigate(`/vendor/dispatch?order=${order.id}`)}
                             className="flex-1 bg-emerald-600 text-white py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-3 shadow-2xl shadow-emerald-100 active:scale-95 transition-all group"
                         >
-                            Sync Progress Checklist
+                            Progress
                             <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                         </motion.button>
                     )}
@@ -528,7 +532,7 @@ export default function OrderDetailScreen() {
                             animate={{ opacity: 1, y: 0 }}
                             className="flex-1 bg-slate-50 text-slate-300 py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-2 border border-dashed border-slate-200"
                         >
-                            <CheckCircle2 size={18} /> Cycle Completed & Synchronized
+                            <CheckCircle2 size={18} /> Order Completed
                         </motion.div>
                     )}
                 </AnimatePresence>

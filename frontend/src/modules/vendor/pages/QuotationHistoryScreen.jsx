@@ -69,12 +69,12 @@ export default function QuotationHistoryScreen() {
 
     const columns = [
         {
-            header: 'Proposal Reference',
+            header: 'Quotation Ref',
             key: '_id',
             render: (val, row) => (
                 <div>
                     <p className="text-primary font-black uppercase tracking-widest text-[10px]">ID: {val.slice(-6).toUpperCase()}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{row.franchiseId?.shopName || 'Franchise'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{row.franchiseId?.shopName || 'Franchise'}</p>
                 </div>
             )
         },
@@ -84,12 +84,12 @@ export default function QuotationHistoryScreen() {
             render: (val, row) => (
                 <div className="flex items-baseline gap-1">
                     <span className="text-[11px] font-black tabular-nums text-slate-900">₹{val?.toLocaleString() || row.totalQuotedAmount?.toLocaleString()}</span>
-                    <span className="text-[7px] font-bold text-slate-400 uppercase">INR</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">INR</span>
                 </div>
             )
         },
         {
-            header: 'Admin Audit',
+            header: 'Admin Price',
             key: 'totalQuotedAmount',
             render: (val, row) => {
                 const vendorTotal = row.vendorQuoteTotal || row.totalQuotedAmount;
@@ -108,7 +108,7 @@ export default function QuotationHistoryScreen() {
                         </div>
                         {hasBeenAudited && (
                             <p className={cn(
-                                "text-[7px] font-bold uppercase tracking-tighter flex items-center gap-0.5",
+                                "text-[10px] font-bold uppercase tracking-tighter flex items-center gap-0.5",
                                 variance < 0 ? "text-rose-500" : "text-amber-500"
                             )}>
                                 {variance < 0 ? <TrendingDown size={8} /> : <TrendingUp size={8} />}
@@ -120,14 +120,14 @@ export default function QuotationHistoryScreen() {
             }
         },
         {
-            header: 'Audit Status',
+            header: 'Status',
             key: 'status',
             align: 'right',
             render: (val) => {
                 const displayStatus = ['approved', 'preparing', 'ready_for_pickup', 'completed'].includes(val) ? 'Approved' : val;
                 return (
                     <span className={cn(
-                        "px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border capitalize",
+                        "px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border capitalize",
                         statusColors[val] || "bg-slate-50 text-slate-400 border-slate-100"
                     )}>
                         {displayStatus}
@@ -164,8 +164,8 @@ export default function QuotationHistoryScreen() {
                 <div className="flex items-start gap-3 min-w-0">
                     <VendorBackBar className="mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Proposal Audits</h1>
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Quotations & Admin Authorizations</p>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Quotations</h1>
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Your quotations and the admin’s decisions</p>
                     </div>
                 </div>
                 <div className="flex bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
@@ -190,7 +190,7 @@ export default function QuotationHistoryScreen() {
                 onCategoryChange={setActiveTab}
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                placeholder="Search proposals..."
+                placeholder="Search quotations..."
             />
 
             {viewMode === 'list' ? (
@@ -225,12 +225,12 @@ export default function QuotationHistoryScreen() {
                                                 <ClipboardList size={20} />
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">REQ #{order._id.slice(-6).toUpperCase()}</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">REQ #{order._id.slice(-6).toUpperCase()}</p>
                                                 <h4 className="text-sm font-black text-slate-900 tracking-tight">{order.franchiseId?.shopName || 'Franchise'}</h4>
                                             </div>
                                         </div>
                                         <div className={cn(
-                                            "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
+                                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                             statusColors[order.status] || "bg-slate-50 text-slate-400 border-slate-100"
                                         )}>
                                             {isApproved ? 'Approved' : order.status}
@@ -239,11 +239,11 @@ export default function QuotationHistoryScreen() {
 
                                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
                                         <div>
-                                            <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">My Proposal</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">My Quote</p>
                                             <p className="text-sm font-black text-slate-900 tabular-nums">₹{vendorTotal.toLocaleString()}</p>
                                         </div>
                                         <div>
-                                            <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Admin Audit</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Admin Price</p>
                                             <div className="flex items-center gap-2">
                                                 <p className={cn(
                                                     "text-sm font-black tabular-nums",
@@ -253,7 +253,7 @@ export default function QuotationHistoryScreen() {
                                                 </p>
                                                 {hasBeenAudited && (
                                                     <span className={cn(
-                                                        "text-[8px] font-black flex items-center",
+                                                        "text-[10px] font-black flex items-center",
                                                         variance < 0 ? "text-rose-500" : "text-amber-500"
                                                     )}>
                                                         {variance < 0 ? <TrendingDown size={10} /> : <TrendingUp size={10} />}
@@ -270,7 +270,7 @@ export default function QuotationHistoryScreen() {
                                             </div>
                                         ))}
                                         {order.items.length > 4 && (
-                                            <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[7px] font-black text-slate-400">
+                                            <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400">
                                                 +{order.items.length - 4}
                                             </div>
                                         )}
@@ -291,8 +291,8 @@ export default function QuotationHistoryScreen() {
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4 border border-dashed border-slate-200">
                         <ArrowUpRight size={32} strokeWidth={1} />
                     </div>
-                    <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">No Proposal History</h4>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Submit quotations to track authorizations here</p>
+                    <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">No quotations yet</h4>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Quotations you send will appear here with the admin's decision</p>
                 </div>
             )}
         </div>

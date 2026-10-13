@@ -40,7 +40,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
                 }
             } catch (error) {
                 console.error("Error fetching categories:", error);
-                toast.error("Failed to load category database");
+                toast.error("Could not load categories");
             }
         };
         if (isOpen) fetchCategories();
@@ -65,7 +65,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
             }
         } catch (error) {
             console.error("Save error:", error);
-            toast.error("Critical failure during category deployment");
+            toast.error("Could not save categories. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -103,7 +103,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
                                 <div>
                                     <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none">Category Assignment</h3>
                                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1.5">
-                                        {franchise?.franchiseName} · Operational Domains
+                                        {franchise?.franchiseName} · Categories this franchise serves
                                     </p>
                                 </div>
                             </div>
@@ -158,7 +158,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
                                                 )}>
                                                     {cat.name}
                                                 </h5>
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Status: Operational</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Status: Active</p>
                                             </div>
                                         </div>
                                         {selectedCategoryIds.includes(cat._id) ? (
@@ -177,7 +177,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
                                     <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-sm flex items-center justify-center mx-auto text-slate-300">
                                         <Layers size={24} />
                                     </div>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Matrix Query: Zero Hits</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">No categories match your search</p>
                                 </div>
                             )}
                         </div>
@@ -186,7 +186,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
                         <div className="p-6 border-t border-slate-200 bg-white space-y-4">
                             <div className="bg-slate-50 border border-slate-100 p-3 rounded-sm flex items-center gap-3">
                                 <Info size={14} className="text-slate-400" />
-                                <p className="text-[9px] text-slate-500 font-bold uppercase leading-relaxed tracking-wide">
+                                <p className="text-[10px] text-slate-500 font-bold uppercase leading-relaxed tracking-wide">
                                     Assigning a category allows the franchise to manage corresponding inventory and territory coverage.
                                 </p>
                             </div>
@@ -195,7 +195,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
                                     onClick={onClose}
                                     className="flex-1 py-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] hover:bg-slate-50 rounded-sm transition-all"
                                 >
-                                    Discard
+                                    Cancel
                                 </button>
                                 <button
                                     onClick={handleSave}
@@ -207,7 +207,7 @@ export default function FranchiseCategoryDrawer({ isOpen, onClose, franchise }) 
                                     ) : (
                                         <Save size={16} />
                                     )}
-                                    Sync Configuration
+                                    Save
                                 </button>
                             </div>
                         </div>

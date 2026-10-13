@@ -223,7 +223,7 @@ export default function EditProductScreen() {
         if (formData.skuCode && formData.skuCode.trim()) {
             const duplicateSku = products.some(p => p._id !== id && p.skuCode && p.skuCode.trim().toUpperCase() === formData.skuCode.trim().toUpperCase());
             if (duplicateSku) {
-                toast.error("A product with this SKU code already exists. Please choose a unique SKU code.");
+                toast.error("A product with this product code already exists. Please use a different code.");
                 return;
             }
         }
@@ -246,7 +246,7 @@ export default function EditProductScreen() {
     };
 
     if (isLoading) {
-        return <div className="p-8 animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest">Hydrating Product Data...</div>;
+        return <div className="p-8 animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest">Loading product...</div>;
     }
 
     return (
@@ -277,7 +277,7 @@ export default function EditProductScreen() {
                             </div>
                             <div className="p-6 space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Label Name</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Name</label>
                                     <input
                                         autoFocus
                                         type="text"
@@ -288,7 +288,7 @@ export default function EditProductScreen() {
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Visual Asset</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Image</label>
                                     <div className="relative aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-sm flex flex-col items-center justify-center space-y-2 group/upload cursor-pointer hover:bg-white hover:border-emerald-500 transition-all overflow-hidden text-center">
                                         {quickAddImage ? (
                                             <>
@@ -303,7 +303,7 @@ export default function EditProductScreen() {
                                         ) : (
                                             <>
                                                 <Upload size={20} className="text-slate-400 group-hover/upload:text-emerald-500 transition-colors" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-tight px-4">Upload {showQuickAddCat ? 'Category' : 'Subcategory'} Image</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight px-4">Upload {showQuickAddCat ? 'Category' : 'Subcategory'} Image</span>
                                                 <input
                                                     type="file"
                                                     className="absolute inset-0 opacity-0 cursor-pointer"
@@ -325,7 +325,7 @@ export default function EditProductScreen() {
                                     onClick={showQuickAddCat ? handleQuickAddCategory : handleQuickAddSubcategory}
                                     className="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all shadow-lg"
                                 >
-                                    Initialize Entry
+                                    Create
                                 </button>
                             </div>
                         </motion.div>
@@ -344,7 +344,7 @@ export default function EditProductScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Edit Product</span>
                         </div>
-                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Modify SKU record</h1>
+                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Change product details</h1>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -384,7 +384,7 @@ export default function EditProductScreen() {
                                     <div className="w-8 h-8 bg-emerald-50 text-emerald-600 flex items-center justify-center rounded-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
                                         <Info size={16} />
                                     </div>
-                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Principal Details</h3>
+                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Basic Details</h3>
                                 </div>
                             </div>
                             <div className="p-6 space-y-6">
@@ -401,7 +401,7 @@ export default function EditProductScreen() {
                                             />
                                         </div>
                                         <div className="md:w-64 space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">SKU Code</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Product Code (SKU)</label>
                                             <input
                                                 type="text"
                                                 name="skuCode"
@@ -412,7 +412,7 @@ export default function EditProductScreen() {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Dietary Classification</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Veg / Non-Veg</label>
                                             <div className="flex items-center gap-2 p-1 bg-slate-50 border border-slate-200 rounded-sm w-fit">
                                                 {['veg', 'non-veg', 'none'].map((type) => (
                                                     <button
@@ -420,7 +420,7 @@ export default function EditProductScreen() {
                                                         type="button"
                                                         onClick={() => setFormData(prev => ({ ...prev, dietaryType: type }))}
                                                         className={cn(
-                                                            "px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-sm transition-all flex items-center gap-2",
+                                                            "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-sm transition-all flex items-center gap-2",
                                                             formData.dietaryType === type
                                                                 ? type === 'veg' ? "bg-white text-emerald-600 shadow-sm border border-emerald-100" :
                                                                     type === 'non-veg' ? "bg-white text-rose-600 shadow-sm border border-rose-100" :
@@ -440,7 +440,7 @@ export default function EditProductScreen() {
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Description (Extended)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Description</label>
                                         <textarea
                                             name="description"
                                             value={formData.description}
@@ -481,7 +481,7 @@ export default function EditProductScreen() {
                                                 className="flex-1 bg-transparent border-none outline-none text-sm font-medium placeholder:text-slate-300 min-w-[120px]"
                                             />
                                         </div>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                             Press Enter or comma to add a tag. Backspace to remove last tag.
                                         </p>
                                     </div>
@@ -495,7 +495,7 @@ export default function EditProductScreen() {
                                 <div className="w-8 h-8 bg-amber-50 text-amber-600 flex items-center justify-center rounded-sm group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300">
                                     <IndianRupee size={16} />
                                 </div>
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Pricing Strategy</h3>
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Price</h3>
                             </div>
                             <div className="p-6">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -511,7 +511,7 @@ export default function EditProductScreen() {
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Comparison Price</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">MRP (Strike-through Price)</label>
                                         <div className="relative">
                                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
                                             <input
@@ -550,14 +550,14 @@ export default function EditProductScreen() {
                                     <div className="w-8 h-8 bg-emerald-50 text-emerald-600 flex items-center justify-center rounded-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
                                         <Zap size={16} />
                                     </div>
-                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Bulk Savings Protocol</h3>
+                                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Bulk Discounts</h3>
                                 </div>
                                 <button
                                     onClick={handleAddBulkTier}
-                                    className="px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-sm transition-all flex items-center gap-1.5"
+                                    className="px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm transition-all flex items-center gap-1.5"
                                 >
                                     <Plus size={10} />
-                                    Add Tier
+                                    Add Bulk Price
                                 </button>
                             </div>
                             <div className="p-6">
@@ -565,13 +565,13 @@ export default function EditProductScreen() {
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-12 gap-4 px-2">
                                             <div className="flex items-center gap-2 col-span-5">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Min. Quantity in</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Min. Quantity in</span>
                                                 <div className="relative">
                                                     <select
                                                         name="bulkUnit"
                                                         value={formData.bulkUnit}
                                                         onChange={handleChange}
-                                                        className="bg-slate-100/50 border border-slate-200 rounded-sm pl-2 pr-6 py-0.5 text-[9px] font-black uppercase tracking-tight outline-none focus:border-emerald-500 cursor-pointer appearance-none"
+                                                        className="bg-slate-100/50 border border-slate-200 rounded-sm pl-2 pr-6 py-0.5 text-[10px] font-black uppercase tracking-tight outline-none focus:border-emerald-500 cursor-pointer appearance-none"
                                                     >
                                                         <option value="kg">kg</option>
                                                         <option value="gm">gm</option>
@@ -583,7 +583,7 @@ export default function EditProductScreen() {
                                                     <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                                 </div>
                                             </div>
-                                            <div className="col-span-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Slashed Price (₹)</div>
+                                            <div className="col-span-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Slashed Price (₹)</div>
                                             <div className="col-span-2"></div>
                                         </div>
                                         <div className="space-y-3">
@@ -619,7 +619,7 @@ export default function EditProductScreen() {
                                     </div>
                                 ) : (
                                     <div className="text-center py-10 border-2 border-dashed border-slate-100 rounded-sm">
-                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No Bulk Incentives</p>
+                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No bulk discounts added</p>
                                     </div>
                                 )}
                             </div>
@@ -689,7 +689,7 @@ export default function EditProductScreen() {
                                 <div className="w-8 h-8 bg-indigo-50 text-indigo-600 flex items-center justify-center rounded-sm group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
                                     <LayoutGrid size={16} />
                                 </div>
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Visibility Channels</h3>
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Where to Show</h3>
                             </div>
                             <div className="p-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -703,8 +703,8 @@ export default function EditProductScreen() {
                                             {formData.showOnStorefront && <Check size={14} className="text-white" strokeWidth={3} />}
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Show on User Storefront</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Make this product visible to retail customers</p>
+                                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Show in Customer App</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Make this product visible to retail customers</p>
                                         </div>
                                     </div>
 
@@ -718,8 +718,8 @@ export default function EditProductScreen() {
                                             {formData.showOnPOS && <Check size={14} className="text-white" strokeWidth={3} />}
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Show on POS Terminal</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Make this product available for in-store billing</p>
+                                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Show at Franchise Counter (POS)</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Make this product available for in-store billing</p>
                                         </div>
                                     </div>
                                 </div>
@@ -736,7 +736,7 @@ export default function EditProductScreen() {
                                 <div className="w-8 h-8 bg-slate-50 text-slate-600 flex items-center justify-center rounded-sm group-hover:bg-slate-900 group-hover:text-white transition-colors duration-300">
                                     <ImageIcon size={16} />
                                 </div>
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Principal Image</h3>
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Main Image</h3>
                             </div>
                             <div className="p-6">
                                 <div className="relative aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-sm flex flex-col items-center justify-center space-y-3 group/upload cursor-pointer overflow-hidden">
@@ -753,7 +753,7 @@ export default function EditProductScreen() {
                                         <>
                                             <Upload size={20} className="text-slate-400" />
                                             <div className="text-center">
-                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Replace Asset</p>
+                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Change Image</p>
                                             </div>
                                         </>
                                     )}
@@ -778,7 +778,7 @@ export default function EditProductScreen() {
                                 <div className="w-8 h-8 bg-amber-50 text-amber-600 flex items-center justify-center rounded-sm group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300">
                                     <Zap size={16} />
                                 </div>
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Homepage Allocation</h3>
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Show on Home Page</h3>
                             </div>
                             <div className="p-6">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Select sections where this product should appear:</p>
@@ -841,7 +841,7 @@ export default function EditProductScreen() {
                                 <div className="w-8 h-8 bg-purple-50 text-purple-600 flex items-center justify-center rounded-sm group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
                                     <LayoutGrid size={16} />
                                 </div>
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Categorization</h3>
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Category</h3>
                             </div>
                             <div className="p-6 space-y-6">
                                 <div className="space-y-1.5">
@@ -862,7 +862,7 @@ export default function EditProductScreen() {
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Secondary Branch</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Subcategory</label>
                                     <div className="relative">
                                         <select
                                             name="subcategory"

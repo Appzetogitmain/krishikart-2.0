@@ -8,33 +8,33 @@ export default function TermsScreen() {
     const sections = [
         {
             id: 'node-auth',
-            title: 'Node Authorization & Settlement',
+            title: 'Approval & Payments',
             icon: Shield,
-            content: 'As a verified franchise node, you are authorized to facilitate orders within your designated geographical cluster. Settlement for all delivered orders is processed on a weekly basis, subject to a 10% platform commission on the gross order value.'
+            content: 'Once your franchise is verified, you can take orders in your assigned delivery area. Payments for delivered orders are made weekly, after a 10% platform commission on the order value.'
         },
         {
             id: 'logistical-compliance',
-            title: 'Logistical Compliance',
+            title: 'Delivery Rules',
             icon: ScrollText,
-            content: 'Franchisees must maintain the integrity of the storage conditions as per the categorized guidelines (Ambient, Cold Chain, etc.). Each inbound PO must be audited within 4 hours of arrival to claim any logistical losses or damages.'
+            content: 'Store every product the right way (room temperature, cold storage, etc.). Check each stock delivery within 4 hours of arrival if you want to claim for missing or damaged items.'
         },
         {
             id: 'quality-standards',
             title: 'Quality & Service Standards',
             icon: FileText,
-            content: 'All outgoing deliveries must adhere to the KisaanKart packaging standard. Delay in processing "Accepted" orders beyond 120 minutes may result in automated node-reassignment to maintain network efficiency.'
+            content: 'Pack every order to the Kisaankart packaging standard. If an accepted order is not processed within 120 minutes, it may be moved to another franchise.'
         },
         {
             id: 'data-privacy',
             title: 'Customer Data & Privacy',
             icon: Info,
-            content: 'Access to customer contact and delivery information is strictly for order fulfillment. Any unauthorized data scraping or usage for direct marketing outside the KisaanKart ecosystem is a breach of the franchise agreement.'
+            content: 'Use customer phone numbers and addresses only to deliver their orders. Using them for your own marketing or sharing them is a breach of the franchise agreement.'
         },
         {
             id: 'termination',
             title: 'Termination & Liability',
             icon: AlertCircle,
-            content: 'Failure to provide valid documentation (KYC/GST) or persistent low service ratings may result in node suspension. Either party may terminate the agreement with a 30-day notice period through the official support channel.'
+            content: 'Your franchise may be suspended if valid documents (KYC/GST) are not provided or service ratings stay low. Either side can end the agreement with 30 days’ notice through Kisaankart support.'
         }
     ];
 
@@ -65,10 +65,9 @@ export default function TermsScreen() {
                     className="space-y-12"
                 >
                     <div className="space-y-4">
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none uppercase">Agreement Protocol</h2>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none uppercase">Agreement</h2>
                         <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                            This agreement governs the relationship between KisaanKart Network (Platform) and the Franchisee (Node). 
-                            By logging into the terminal, you acknowledge and agree to the operational protocols outlined below.
+                            This agreement covers the relationship between Kisaankart (the platform) and you (the franchise). By logging in, you agree to the rules below.
                         </p>
                     </div>
 
@@ -97,7 +96,7 @@ export default function TermsScreen() {
                     <div className="p-8 bg-slate-900 rounded-sm text-white space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">Acknowledgment</h4>
                         <p className="text-xs font-bold leading-relaxed text-slate-400 uppercase tracking-wider">
-                            By continuing to use the dashboard, you certify that all information provided in your KYC documents is accurate and that you will uphold the logistical integrity of the KisaanKart network.
+                            By continuing to use the dashboard, you confirm that the information in your KYC documents is correct and that you will follow Kisaankart’s delivery rules.
                         </p>
                     </div>
 
@@ -106,7 +105,7 @@ export default function TermsScreen() {
                             onClick={() => navigate(-1)}
                             className="text-[11px] font-black uppercase text-slate-900 border-b-2 border-slate-900 pb-1"
                         >
-                            Back to Franchise Portal
+                            Back
                         </button>
                     </div>
                 </motion.div>

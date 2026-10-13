@@ -41,7 +41,7 @@ export default function CashManagementScreen() {
     const handleExport = () => {
         const columns = [
             { header: 'Order ID', key: 'orderId' },
-            { header: 'Entity', key: 'hotelName' },
+            { header: 'Customer', key: 'hotelName' },
             { header: 'Amount', key: 'amount' },
             { header: 'Status', key: 'status' },
             { header: 'Date', key: 'date' },
@@ -51,7 +51,7 @@ export default function CashManagementScreen() {
         const data = filteredTransactions.map(tx => ({
             ...tx,
             amount: `₹${tx.amount?.toLocaleString()}`,
-            status: tx.status === 'pending' ? 'Unreconciled' : 'Deposited'
+            status: tx.status === 'pending' ? 'Not Verified' : 'Deposited'
         }));
 
         exportToCSV('Cash_Reconciliation_Report', columns, data);
@@ -76,24 +76,24 @@ export default function CashManagementScreen() {
 
     const cashColumns = [
         {
-            header: 'Entity Identifier',
+            header: 'Customer',
             key: 'hotelName',
             render: (val, row) => (
                 <div className="flex flex-col">
                     <span className="font-black text-slate-900 text-[11px] tracking-tight leading-none mb-1">{val}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{row.orderId}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{row.orderId}</span>
                 </div>
             )
         },
         {
-            header: 'Reconciliation Status',
+            header: 'Status',
             key: 'status',
             render: (val) => (
                 <div className={cn(
-                    "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border w-fit",
+                    "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border w-fit",
                     val === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-emerald-50 text-emerald-600 border-emerald-100"
                 )}>
-                    {val === 'pending' ? 'Unreconciled' : 'Deposited'}
+                    {val === 'pending' ? 'Not Verified' : 'Deposited'}
                 </div>
             )
         },
@@ -109,18 +109,18 @@ export default function CashManagementScreen() {
             render: (val) => <span className="text-[11px] font-black text-slate-900 tabular-nums">₹{val?.toLocaleString() ?? 0}</span>
         },
         {
-            header: 'UTR Identification',
+            header: 'Bank Reference (UTR)',
             key: 'bankReference',
             render: (val) => val ? (
                 <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1">
                     <ShieldCheck size={10} /> {val}
                 </span>
             ) : (
-                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Awaiting Verification</span>
+                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Awaiting Verification</span>
             )
         },
         {
-            header: 'Operations',
+            header: 'Actions',
             key: 'actions',
             align: 'right',
             render: (_, row) => (
@@ -128,7 +128,7 @@ export default function CashManagementScreen() {
                     {row.status === 'pending' && (
                         <button
                             onClick={() => setSelectedTx(row)}
-                            className="p-1 px-3 text-[9px] font-black uppercase text-slate-900 border border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all underline decoration-slate-300 underline-offset-4"
+                            className="p-1 px-3 text-[10px] font-black uppercase text-slate-900 border border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all underline decoration-slate-300 underline-offset-4"
                         >
                             Verify Deposit
                         </button>
@@ -160,11 +160,11 @@ export default function CashManagementScreen() {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
                             <Home size={12} />
                             <ChevronRight size={10} />
-                            <span>Franchise Node</span>
+                            <span>Franchise</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Cash & Ledgers</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Cash Collection</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">COD Reconciliation Desk</h1>
+                        <h1 className="text-sm font-bold text-slate-900">COD Cash Verification</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ export default function CashManagementScreen() {
                         </button>
                         <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm uppercase tracking-widest">
                             <Landmark size={14} />
-                            Settlement Ledger
+                            Cash Records
                         </button>
                     </div>
                 </div>
@@ -185,30 +185,30 @@ export default function CashManagementScreen() {
             {/* Reconciliation Performance Strip */}
             <div className="bg-white border-b border-slate-200 grid grid-cols-1 md:grid-cols-4">
                 <div className="bg-slate-900 text-white px-6 py-4 flex flex-col justify-center border-r border-slate-800">
-                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1.5">Collection Liability</p>
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1.5">Cash To Deposit</p>
                     <h3 className="text-xl font-black tracking-tight tabular-nums leading-none text-white">
                         ₹{summary?.totalToDeposit?.toLocaleString() ?? 0}
                     </h3>
                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Liquidity Status: High</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cash collected</span>
                     </div>
                 </div>
                 <MetricRow
-                    label="Active Liquidity"
+                    label="Cash Collected"
                     value={`₹${summary?.totalDeposited?.toLocaleString() ?? 0}`}
                     trend="up"
                     change={5.2}
                     icon={TrendingUp}
                 />
                 <MetricRow
-                    label="Pending Assets"
+                    label="Pending Deposits"
                     value={summary.pendingTxCount}
                     trend="Stable"
                     icon={Banknote}
-                    sub="Count Across Terminal"
+                    sub="Waiting to be verified"
                 />
                 <MetricRow
-                    label="Risk Profile"
+                    label="Status"
                     value="Stabilized"
                     trend="Stable"
                     icon={ShieldCheck}
@@ -223,7 +223,7 @@ export default function CashManagementScreen() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={14} />
                                 <input
                                     type="text"
-                                    placeholder="Filter by Order ID or Entity..."
+                                    placeholder="Search by order ID or customer..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value.trim())}
                                     className="bg-white border border-slate-200 rounded-sm py-1.5 pl-9 pr-4 outline-none text-[11px] font-black text-slate-900 placeholder:text-slate-400 focus:border-slate-400 transition-all font-sans min-w-[240px]"
@@ -264,7 +264,7 @@ export default function CashManagementScreen() {
                             className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[60] shadow-2xl border-l border-slate-200"
                         >
                             <div className="h-14 border-b border-slate-200 px-6 flex items-center justify-between bg-slate-50/50">
-                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Verify Bank Settlement</h3>
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Verify Bank Deposit</h3>
                                 <button onClick={() => setSelectedTx(null)} className="p-1 text-slate-400 hover:text-slate-900">
                                     <ChevronRight size={20} />
                                 </button>
@@ -276,7 +276,7 @@ export default function CashManagementScreen() {
                                         <Banknote size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1.5">Collection Volume</p>
+                                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-1.5">Amount Collected</p>
                                         <h2 className="text-2xl font-black tracking-tight leading-none">₹{selectedTx?.amount?.toLocaleString() ?? 0}</h2>
                                     </div>
                                 </div>
@@ -284,26 +284,26 @@ export default function CashManagementScreen() {
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-2 gap-px bg-slate-200 border border-slate-200 rounded-sm overflow-hidden">
                                         <div className="bg-slate-50 p-4">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Entity Source</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p>
                                             <p className="text-[11px] font-black text-slate-900 uppercase">{selectedTx.hotelName}</p>
                                         </div>
                                         <div className="bg-slate-50 p-4">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Order Identifier</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Order ID</p>
                                             <p className="text-[11px] font-black text-slate-900 uppercase">{selectedTx.orderId}</p>
                                         </div>
                                     </div>
 
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Bank Reference Identifier (UTR)</label>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Bank Reference Number (UTR)</label>
                                         <input
                                             type="text"
-                                            placeholder="Verify 12-digit UTR protocol"
+                                            placeholder="Enter the 12-digit UTR number"
                                             value={referenceId}
                                             onChange={(e) => setReferenceId(e.target.value)}
                                             className="w-full h-12 px-4 bg-white border border-slate-200 rounded-sm text-xs font-black focus:border-slate-900 transition-all outline-none uppercase placeholder:text-slate-300"
                                         />
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed">
-                                            Verification implies the physical transfer of currency to the central treasury account has been verified through bank telemetry.
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
+                                            Only verify after you have checked that this cash has reached the company bank account.
                                         </p>
                                     </div>
 
@@ -318,13 +318,13 @@ export default function CashManagementScreen() {
                                                     : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
                                             )}
                                         >
-                                            <ShieldCheck size={16} /> Mark as Reconciled
+                                            <ShieldCheck size={16} /> Mark as Verified
                                         </button>
                                         <button
                                             onClick={() => setSelectedTx(null)}
                                             className="w-full h-12 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-900 transition-colors"
                                         >
-                                            Withdraw Action
+                                            Cancel
                                         </button>
                                     </div>
                                 </div>

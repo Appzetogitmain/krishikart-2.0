@@ -26,6 +26,7 @@ import {
 } from "../utils/checkoutOrderSplit.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
+import { resolveDeliverySchedule } from "../utils/deliverySchedule.js";
 
 /**
  * Helper to calculate price based on quantity and bulk pricing rules
@@ -142,25 +143,13 @@ export const createOrder = async (req, res) => {
       );
     }
 
-    // Pre-order validation
-    let preOrderDate = null;
-    let isPreOrder = false;
-    if (scheduledDate) {
-      preOrderDate = new Date(scheduledDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const maxDate = new Date(today);
-      maxDate.setDate(maxDate.getDate() + 7);
-      
-      if (preOrderDate < today) {
-        return handleResponse(res, 400, "Scheduled date cannot be in the past");
-      }
-      if (preOrderDate > maxDate) {
-        return handleResponse(res, 400, "Orders can only be scheduled up to 7 days in advance");
-      }
-      isPreOrder = true;
+    // Delivery date / slot validation (evaluated in IST)
+    const schedule = resolveDeliverySchedule(scheduledDate, deliveryShift);
+    if (!schedule.ok) {
+      return handleResponse(res, schedule.status, schedule.message);
     }
+    const preOrderDate = schedule.scheduledDate;
+    const isPreOrder = schedule.isPreOrder;
 
     const cart = await Cart.findOne({ userId }).populate("items.productId");
     if (!cart || cart.items.length === 0) {
@@ -251,18 +240,6 @@ export const createOrder = async (req, res) => {
         note: `Order paid via business credit ${appliedCouponCode ? "(Coupon: " + appliedCouponCode + ")" : ""}`,
         createdAt: new Date(),
       });
-      await createAdminNotification({
-        type: "new_order",
-        title: "New Order Placed",
-        message: `${user.fullName} placed order #${order._id.toString().slice(-6)} for ₹${Number(order.totalAmount || 0).toFixed(2)}.`,
-        link: "/masteradmin/orders",
-        meta: {
-          orderId: order._id.toString(),
-          orderGroupId: orderGroupId || null,
-          amount: order.totalAmount,
-          customerName: user.fullName,
-        },
-      });
     }
 
     const createdOrders = [];
@@ -300,6 +277,21 @@ export const createOrder = async (req, res) => {
 
       await order.save();
       createdOrders.push(order);
+
+      if (paymentMethod === "Credit") {
+        await createAdminNotification({
+          type: "new_order",
+          title: "New Order Placed",
+          message: `${user.fullName} placed order #${order._id.toString().slice(-6)} for ₹${Number(order.totalAmount || 0).toFixed(2)}.`,
+          link: "/masteradmin/orders",
+          meta: {
+            orderId: order._id.toString(),
+            orderGroupId: orderGroupId || null,
+            amount: order.totalAmount,
+            customerName: user.fullName,
+          },
+        });
+      }
 
       await createUserNotification({
         userId,
@@ -1183,6 +1175,42 @@ export const updateOrderStatus = async (req, res) => {
     const normalizedCurrent = (currentStatus || "").toLowerCase();
     const normalizedNew = (status || "").toLowerCase();
 
+    // Cancelling twice would run the wallet/credit refund twice
+    if (status === "Cancelled" && currentStatus === "Cancelled") {
+      return handleResponse(res, 400, "This order is already cancelled");
+    }
+    if (
+      !isMasterAdmin &&
+      status === "Cancelled" &&
+      ["Delivered", "Received"].includes(currentStatus)
+    ) {
+      return handleResponse(
+        res,
+        400,
+        "A delivered order cannot be cancelled. Please raise a return request instead.",
+      );
+    }
+
+    // Each role may only make the changes its app actually needs
+    if (isUser) {
+      const userCancellable = ["Placed", "pending", "Assigned", "Accepted", "Procuring"];
+      if (!["Received", "Cancelled"].includes(status)) {
+        return handleResponse(res, 403, "You can't change the order to this status");
+      }
+      if (status === "Cancelled" && !userCancellable.includes(currentStatus)) {
+        return handleResponse(res, 400, "This order can no longer be cancelled because it is already packed");
+      }
+    }
+    if (isDelivery) {
+      if (!["Out for Delivery", "Delivered"].includes(status)) {
+        return handleResponse(res, 403, "Delivery partners can only mark orders out for delivery or delivered");
+      }
+      const partnerId = req.delivery?._id || req.user?.id;
+      if (!partnerId || !order.deliveryPartnerId || order.deliveryPartnerId.toString() !== partnerId.toString()) {
+        return handleResponse(res, 403, "This order is not assigned to you");
+      }
+    }
+
     if (
       !isMasterAdmin &&
       status !== "Cancelled" &&
@@ -1434,8 +1462,10 @@ export const updateOrderStatus = async (req, res) => {
 
     await order.save();
 
-    // Deduct stock if status changed to Packed
-    if (status === "Packed" && isFranchise && order.orderStatus !== "Packed") {
+    // Deduct stock if status changed to Packed. Compare against the status *before* this update:
+    // order.orderStatus was already set to "Packed" above, so checking it here was always false
+    // and franchise stock was never deducted.
+    if (status === "Packed" && isFranchise && currentStatus !== "Packed") {
       try {
         const franchiseId = req.franchise._id;
         const inventory = await Inventory.findOne({ franchiseId });
@@ -1489,7 +1519,9 @@ export const updateOrderStatus = async (req, res) => {
               (i) => i.productId.toString() === item.productId.toString(),
             );
             if (inventoryItem) {
-              inventoryItem.currentStock += item.quantity;
+              // Return what was actually taken out at packing time (partial packs take less)
+              const returnedQty = Number(item.packedQuantity ?? item.quantity ?? 0);
+              inventoryItem.currentStock += returnedQty;
               inventoryItem.lastUpdated = new Date();
             }
           }

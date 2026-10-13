@@ -25,7 +25,7 @@ const ProcurementUpdateAlert = () => {
                     bgColor: 'bg-blue-50',
                     accentColor: 'bg-blue-500',
                     icon: <Info className="w-10 h-10" />,
-                    title: 'New Procurement Assigned'
+                    title: 'Stock Request Assigned'
                 };
             case 'quoted':
                 return {
@@ -130,7 +130,7 @@ const ProcurementUpdateAlert = () => {
                                     <Package className="text-slate-900 w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Procurement ID</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Request ID</p>
                                     <p className="text-lg font-black text-slate-900">
                                         #{shortId}
                                     </p>
@@ -162,7 +162,7 @@ const ProcurementUpdateAlert = () => {
 
                     {/* Footer Info */}
                     <div className="bg-slate-900 py-3 px-6 flex items-center justify-center gap-2">
-                        <span className="text-[9px] font-bold text-white/50 uppercase tracking-[0.3em]">Kisaankart Supply Chain Monitoring</span>
+                        <span className="text-[10px] font-bold text-white/50 uppercase tracking-[0.3em]">Kisaankart</span>
                     </div>
                 </motion.div>
             </div>

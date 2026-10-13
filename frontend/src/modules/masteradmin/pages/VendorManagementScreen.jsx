@@ -101,7 +101,7 @@ export default function VendorManagementScreen() {
                     </div>
                     <div className="flex flex-col">
                         <span className="font-bold text-slate-900 text-[11px] leading-none mb-1">{val}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{row._id}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{row._id}</span>
                     </div>
                 </div>
             )
@@ -127,7 +127,7 @@ export default function VendorManagementScreen() {
             key: 'status',
             render: (val) => (
                 <div className={cn(
-                    "px-2 py-1 rounded-sm text-[9px] font-bold uppercase tracking-widest border w-fit",
+                    "px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest border w-fit",
                     val === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
                 )}>
                     {val}

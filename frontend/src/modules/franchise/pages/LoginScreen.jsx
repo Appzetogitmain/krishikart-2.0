@@ -128,12 +128,12 @@ export default function LoginScreen() {
                     </div>
                     <div className="flex flex-col">
                         <span className="text-white text-lg font-black tracking-tight leading-none uppercase">Kisaankart</span>
-                        <span className="text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">Franchise Terminal</span>
+                        <span className="text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">Franchise Portal</span>
                     </div>
                 </div>
                 <div className="space-y-6 max-w-md">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-widest rounded-sm">
-                        <Zap size={10} /> v2.4.0 Live
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-sm">
+                        <Zap size={10} /> Franchise Portal
                     </div>
                     <h1 className="text-5xl font-black text-white tracking-tighter leading-[0.9] uppercase">
                         Franchise <br />Access <br />Login.
@@ -145,15 +145,15 @@ export default function LoginScreen() {
                 <div className="flex items-center gap-12 text-slate-500">
                     <div className="flex flex-col">
                         <span className="text-xs font-black text-white uppercase tabular-nums tracking-widest">99.9%</span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Uptime SLA</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Always On</span>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-black text-white uppercase tabular-nums tracking-widest">&lt;200MS</span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Sync Latency</span>
+                        <span className="text-xs font-black text-white uppercase tabular-nums tracking-widest">Fast</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Quick Updates</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-xs font-black text-white uppercase tabular-nums tracking-widest">Secure</span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest mt-1">Encryption</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest mt-1">Login</span>
                     </div>
                 </div>
                 <div className="absolute inset-0 opacity-10 -z-10" style={{ backgroundImage: 'radial-gradient(#fff 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
@@ -172,7 +172,7 @@ export default function LoginScreen() {
                             <span className="text-slate-900 border-b border-slate-900 pb-px">Login</span>
                         </div>
                         <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter leading-none">Account Access</h2>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Verify your franchise identity</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Log in to your franchise account</p>
                     </div>
 
                     {/* Method Toggle */}
@@ -205,7 +205,7 @@ export default function LoginScreen() {
                                 className="space-y-4"
                             >
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">Email Address</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">Email Address</label>
                                     <div className="relative group">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors">
                                             <Mail size={16} />
@@ -221,7 +221,7 @@ export default function LoginScreen() {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">Password</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">Password</label>
                                     <div className="relative group">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors">
                                             <Lock size={16} />
@@ -245,7 +245,7 @@ export default function LoginScreen() {
                                         <button
                                             type="button"
                                             onClick={() => navigate('/franchise/forgot-password')}
-                                            className="text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
+                                            className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
                                         >
                                             Forgot Password?
                                         </button>
@@ -286,7 +286,7 @@ export default function LoginScreen() {
                                             className="space-y-4"
                                         >
                                             <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">Mobile Number</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">Mobile Number</label>
                                                 <div className="relative group">
                                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors">
                                                         <Smartphone size={16} />
@@ -320,8 +320,8 @@ export default function LoginScreen() {
                                         >
                                             <div className="space-y-2">
                                                 <div className="flex justify-between items-center px-1">
-                                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">OTP Verification</label>
-                                                    <span className="text-[9px] font-bold text-slate-400">{mobile}</span>
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">OTP Verification</label>
+                                                    <span className="text-[10px] font-bold text-slate-400">{mobile}</span>
                                                 </div>
                                                 <div className="flex gap-2 justify-between">
                                                     {otp.map((digit, index) => (
@@ -366,9 +366,9 @@ export default function LoginScreen() {
                     <div className="pt-8 border-t border-slate-100 flex flex-col items-center gap-4">
                         <div className="flex items-center gap-3">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Secure Connection Active</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Secure connection</span>
                         </div>
-                        <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest text-center leading-relaxed">
+                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest text-center leading-relaxed">
                             By logging in, you agree to our{' '}
                             <button type="button" onClick={() => navigate('/franchise/terms')} className="text-slate-900 border-b border-slate-900">Franchise Terms</button>.
                         </p>

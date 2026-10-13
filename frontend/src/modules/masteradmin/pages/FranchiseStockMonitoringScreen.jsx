@@ -279,7 +279,7 @@ export default function FranchiseStockMonitoringScreen() {
       }
     } catch (error) {
       console.error("Update item error:", error);
-      toast.error("Failed to update item parameters");
+      toast.error("Failed to update the product");
     }
   };
 
@@ -507,15 +507,15 @@ export default function FranchiseStockMonitoringScreen() {
               <span>Inventory</span>
               <ChevronRight size={10} />
               <span className="text-slate-900 uppercase tracking-widest">
-                Global Monitoring
+                All Franchises
               </span>
             </div>
             <h1 className="text-sm font-bold text-slate-900">
               {viewMode === "network"
-                ? "Network Intelligence Desk"
+                ? "Franchise Stock Levels"
                 : viewMode === "categories"
                   ? `${franchiseDetail?.franchise?.franchiseName} Dashboard`
-                  : `${selectedCategoryName} Matrix`}
+                  : `${selectedCategoryName} Stock`}
             </h1>
           </div>
 
@@ -525,7 +525,7 @@ export default function FranchiseStockMonitoringScreen() {
                 onClick={handleBack}
                 className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-sm text-[11px] font-bold text-slate-400 hover:text-slate-900 transition-colors">
                 <ChevronLeft size={14} />
-                {viewMode === "categories" ? "Network View" : "All Categories"}
+                {viewMode === "categories" ? "All Franchises" : "All Categories"}
               </button>
             )}
             <button
@@ -557,7 +557,7 @@ export default function FranchiseStockMonitoringScreen() {
         {viewMode === "network" ? (
           <>
             <MetricRow
-              label="Active Hubs"
+              label="Active Franchises"
               value={globalStats.totalFranchises.toString()}
               icon={Store}
               change={0}
@@ -571,14 +571,14 @@ export default function FranchiseStockMonitoringScreen() {
               trend="up"
             />
             <MetricRow
-              label="Low Stock Desk"
+              label="Low Stock"
               value={globalStats.lowStockAlerts.toString()}
               icon={Activity}
               change={0}
               trend="down"
             />
             <MetricRow
-              label="Operational Health"
+              label="Stock Health"
               value={
                 globalStats.totalFranchises > 0
                   ? `${Math.round((globalStats.healthyFranchises / globalStats.totalFranchises) * 100)}%`
@@ -593,21 +593,21 @@ export default function FranchiseStockMonitoringScreen() {
           activeFranchiseMetrics && (
             <>
               <MetricRow
-                label="Monitored SKUs"
+                label="Products Tracked"
                 value={activeFranchiseMetrics.totalItems.toString()}
                 icon={Package}
                 change={0}
                 trend="up"
               />
               <MetricRow
-                label="Alert Thresholds"
+                label="Alert Levels"
                 value={activeFranchiseMetrics.lowStockItems.toString()}
                 icon={AlertTriangle}
                 change={0}
                 trend="up"
               />
               <MetricRow
-                label="Risk Probability"
+                label="Risk"
                 value={activeFranchiseMetrics.criticalItems.toString()}
                 icon={Activity}
                 change={0}
@@ -616,7 +616,7 @@ export default function FranchiseStockMonitoringScreen() {
               <div className="px-6 py-4 flex items-center justify-center bg-slate-50/50">
                 <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-sm">
                   <ShoppingCart size={14} />
-                  Auto-Generate POs
+                  Auto Stock Requests
                 </button>
               </div>
             </>
@@ -655,7 +655,7 @@ export default function FranchiseStockMonitoringScreen() {
                       </div>
                       <div
                         className={cn(
-                          "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border",
+                          "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border",
                           criticalCount > 0
                             ? "bg-red-50 text-red-500 border-red-100"
                             : "bg-emerald-50 text-emerald-500 border-emerald-100",
@@ -678,8 +678,8 @@ export default function FranchiseStockMonitoringScreen() {
 
                     <div className="space-y-3">
                       <div className="flex justify-between items-end mb-1">
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans">
-                          Health Index
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">
+                          Stock Health
                         </span>
                         <span className="text-xs font-black text-slate-900 tabular-nums">
                           {healthScore}%
@@ -703,7 +703,7 @@ export default function FranchiseStockMonitoringScreen() {
                     <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-50">
                       <div className="flex gap-4">
                         <div>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                             Alerts
                           </p>
                           <p className="font-bold text-slate-900 text-xs tabular-nums">
@@ -715,8 +715,8 @@ export default function FranchiseStockMonitoringScreen() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                            Payload
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                            Products
                           </p>
                           <p className="font-bold text-slate-900 text-xs tabular-nums">
                             {franchise.stock.length}
@@ -749,7 +749,7 @@ export default function FranchiseStockMonitoringScreen() {
                     <div className="flex flex-col items-end gap-2">
                       <div
                         className={cn(
-                          "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border",
+                          "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border",
                           cat.criticalItems > 0
                             ? "bg-red-50 text-red-500 border-red-100"
                             : cat.lowStockItems > 0
@@ -775,7 +775,7 @@ export default function FranchiseStockMonitoringScreen() {
                     {cat.name}
                   </h3>
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-sm text-[9px] font-black uppercase tracking-widest">
+                    <div className="px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-sm text-[10px] font-black uppercase tracking-widest">
                       {cat.commissionPercentage}% Commission
                     </div>
                   </div>
@@ -783,7 +783,7 @@ export default function FranchiseStockMonitoringScreen() {
                   <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                     <div className="flex gap-4">
                       <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                           Alerts
                         </p>
                         <p className="font-bold text-slate-900 text-xs tabular-nums">
@@ -791,7 +791,7 @@ export default function FranchiseStockMonitoringScreen() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                           SKUs
                         </p>
                         <p className="font-bold text-slate-900 text-xs tabular-nums">
@@ -855,7 +855,7 @@ export default function FranchiseStockMonitoringScreen() {
                         {subcategory}
                       </h4>
                       <div className="h-px flex-1 bg-slate-100" />
-                      <span className="text-[9px] font-bold text-slate-400 uppercase">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">
                         {items.length} SKUs
                       </span>
                     </div>
@@ -864,22 +864,22 @@ export default function FranchiseStockMonitoringScreen() {
                       <table className="w-full text-left">
                         <thead className="bg-slate-50">
                           <tr>
-                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 w-1/4">
-                              Object Definition
+                            <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 w-1/4">
+                              Product
                             </th>
-                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">
-                              Quantities
+                            <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">
+                              Stock
                             </th>
-                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">
+                            <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">
                               Price Control
                             </th>
-                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">
-                              Threshold (MBQ)
+                            <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">
+                              Minimum Stock
                             </th>
-                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                              Security Status
+                            <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                              Status
                             </th>
-                            <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">
+                            <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">
                               Actions
                             </th>
                           </tr>
@@ -894,7 +894,7 @@ export default function FranchiseStockMonitoringScreen() {
                                   <span className="font-bold text-slate-900 text-sm">
                                     {item.productName}
                                   </span>
-                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
                                     CODE: {item.productId?.slice(-8)}
                                   </span>
                                 </div>
@@ -912,7 +912,7 @@ export default function FranchiseStockMonitoringScreen() {
                                         : "text-slate-900",
                                     )}>
                                     {item.currentStock}{" "}
-                                    <span className="text-[9px] uppercase font-bold text-slate-400">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400">
                                       {item.unit}
                                     </span>
                                   </span>
@@ -954,7 +954,7 @@ export default function FranchiseStockMonitoringScreen() {
                                       <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                                     )}
                                   </div>
-                                  <span className="text-[8px] uppercase font-black text-slate-400 mt-0.5 tracking-tighter">
+                                  <span className="text-[10px] uppercase font-black text-slate-400 mt-0.5 tracking-tighter">
                                     {item.franchisePrice
                                       ? "Franchise Rate"
                                       : "Global Rate"}
@@ -973,16 +973,16 @@ export default function FranchiseStockMonitoringScreen() {
                                 <button
                                   onClick={(e) => handleOpenEditModal(e, item)}
                                   className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-all"
-                                  title="Edit All Parameters">
+                                  title="Edit">
                                   <Edit3 size={14} />
                                 </button>
                                 {item.alertStatus !== "ok" ? (
-                                  <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm font-bold text-[9px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-sm">
-                                    Draft PO
+                                  <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-sm">
+                                    Request Stock
                                   </button>
                                 ) : (
-                                  <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest px-2 py-1 bg-slate-50 border border-slate-100 rounded-sm">
-                                    Optimized
+                                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-2 py-1 bg-slate-50 border border-slate-100 rounded-sm">
+                                    Enough Stock
                                   </span>
                                 )}
                               </td>
@@ -999,7 +999,7 @@ export default function FranchiseStockMonitoringScreen() {
                 <div className="py-20 flex flex-col items-center justify-center text-center opacity-30">
                   <Package size={32} className="text-slate-300 mb-2" />
                   <p className="text-[10px] font-black uppercase tracking-widest">
-                    No objects found in local registry
+                    No products found
                   </p>
                 </div>
               )}
@@ -1023,7 +1023,7 @@ export default function FranchiseStockMonitoringScreen() {
                     Financial Control
                   </span>
                   <h2 className="text-sm font-bold text-slate-900">
-                    Commission Configuration
+                    Commission
                   </h2>
                 </div>
                 <button
@@ -1076,7 +1076,7 @@ export default function FranchiseStockMonitoringScreen() {
                       %
                     </div>
                   </div>
-                  <p className="text-[9px] text-slate-400 italic">
+                  <p className="text-[10px] text-slate-400 italic">
                     This commission will be applied to all products within this
                     category for this specific franchise.
                   </p>
@@ -1098,7 +1098,7 @@ export default function FranchiseStockMonitoringScreen() {
                 <button
                   onClick={handleSaveCommission}
                   className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md shadow-slate-200">
-                  Update Policy
+                  Save
                 </button>
               </div>
             </motion.div>
@@ -1121,7 +1121,7 @@ export default function FranchiseStockMonitoringScreen() {
                     Pricing Control
                   </span>
                   <h2 className="text-sm font-bold text-slate-900">
-                    Franchise Price Override
+                    Special Price for this Franchise
                   </h2>
                 </div>
                 <button
@@ -1174,9 +1174,9 @@ export default function FranchiseStockMonitoringScreen() {
                       ₹
                     </div>
                   </div>
-                  <p className="text-[9px] text-slate-400 italic">
-                    Enter a value to override the global price for this
-                    franchise. Clear the field to revert to the standard rate.
+                  <p className="text-[10px] text-slate-400 italic">
+                    Enter a special price for this
+                    franchise. Leave it empty to use the normal price.
                   </p>
                 </div>
               </div>
@@ -1192,7 +1192,7 @@ export default function FranchiseStockMonitoringScreen() {
                 <button
                   onClick={handleSavePrice}
                   className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-md shadow-slate-200">
-                  Save Override
+                  Save Price
                 </button>
               </div>
             </motion.div>
@@ -1297,10 +1297,10 @@ export default function FranchiseStockMonitoringScreen() {
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Matrix Configuration
+                    Edit Product
                   </span>
                   <h2 className="text-sm font-bold text-slate-900">
-                    Product Parameters Override
+                    Price and stock for this franchise
                   </h2>
                 </div>
                 <button
@@ -1334,16 +1334,16 @@ export default function FranchiseStockMonitoringScreen() {
                   <a
                     href={`/masteradmin/products/edit/${editModal.item?.productId}`}
                     target="_blank"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-sm text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-all shadow-sm">
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-sm text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-all shadow-sm">
                     <ExternalLink size={12} />
-                    Master Edit
+                    Edit
                   </a>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      Current Stock Registry
+                      Current Stock
                     </label>
                     <div className="relative">
                       <input
@@ -1365,7 +1365,7 @@ export default function FranchiseStockMonitoringScreen() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      Threshold (MBQ)
+                      Minimum Stock
                     </label>
                     <div className="relative">
                       <input
@@ -1405,9 +1405,8 @@ export default function FranchiseStockMonitoringScreen() {
                       ₹
                     </div>
                   </div>
-                  <p className="text-[9px] text-slate-400 italic">
-                    Overrides the global rate for this hub. Leave blank to
-                    inherit global pricing.
+                  <p className="text-[10px] text-slate-400 italic">
+                    Special price for this franchise. Leave blank to use the normal price.
                   </p>
                 </div>
               </div>
@@ -1421,7 +1420,7 @@ export default function FranchiseStockMonitoringScreen() {
                 <button
                   onClick={handleSaveEditModal}
                   className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-md">
-                  Commit Changes
+                  Save
                 </button>
               </div>
             </motion.div>
@@ -1432,17 +1431,17 @@ export default function FranchiseStockMonitoringScreen() {
       {/* Diagnostics Strip */}
       <div className="px-4 py-1.5 bg-slate-900 text-white/40 flex items-center justify-between border-t border-slate-800">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest">
+          <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest">
             <div className="w-1 h-1 rounded-full bg-emerald-400" />
-            Network Pipeline: Synchronized
+            Up to date
           </div>
           <div className="h-3 w-px bg-slate-700" />
-          <div className="text-[9px] font-bold tabular-nums">
-            Monitor ID: KK-INVT-v2.1
+          <div className="text-[10px] font-bold tabular-nums">
+            Kisaankart
           </div>
         </div>
-        <div className="text-[9px] font-bold uppercase tracking-widest text-white/60">
-          Live Analytics Layer
+        <div className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+          Stock Levels
         </div>
       </div>
     </div>

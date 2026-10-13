@@ -8,7 +8,7 @@ export default function LocationSummary({
   if (!formattedAddress) {
     return (
       <div className="space-y-2">
-        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
           Business Location {required && '*'}
         </label>
         <button
@@ -25,7 +25,7 @@ export default function LocationSummary({
 
   return (
     <div className="space-y-2">
-      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
         Business Location {required && '*'}
       </label>
       <div className="relative group">

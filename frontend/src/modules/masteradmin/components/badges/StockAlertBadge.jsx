@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
 export default function StockAlertBadge({ status }) {
     const config = {
         'critical': {
-            label: 'Critical Deficit',
+            label: 'Very Low Stock',
             icon: AlertCircle,
             bg: 'bg-red-50',
             text: 'text-red-600',
@@ -20,7 +20,7 @@ export default function StockAlertBadge({ status }) {
             pulse: false
         },
         'ok': {
-            label: 'Stable Stock',
+            label: 'Enough Stock',
             icon: CheckCircle2,
             bg: 'bg-emerald-50',
             text: 'text-emerald-600',

@@ -78,9 +78,19 @@ export function FranchiseAuthProvider({ children }) {
     const loginSuccess = (data, token) => {
         const normalized = normalizeToken(token);
         setFranchise(data);
-        setToken(normalized);
-        if (normalized) localStorage.setItem('franchiseToken', normalized);
+        // Only replace the session token when a new one is supplied; a profile-only refresh
+        // must never clear it (that used to log the franchise out after uploading a QR code).
+        if (normalized) {
+            setToken(normalized);
+            localStorage.setItem('franchiseToken', normalized);
+        }
         localStorage.setItem('franchiseData', JSON.stringify(data));
+    };
+
+    /** Update the cached franchise profile without touching the session token. */
+    const updateFranchiseData = (updated) => {
+        setFranchise(updated);
+        localStorage.setItem('franchiseData', JSON.stringify(updated));
     };
 
     const updateProfile = async (data) => {
@@ -119,6 +129,7 @@ export function FranchiseAuthProvider({ children }) {
         <FranchiseAuthContext.Provider value={{
             franchise,
             loginSuccess,
+            updateFranchiseData,
             logout,
             updateProfile,
             updatePassword,

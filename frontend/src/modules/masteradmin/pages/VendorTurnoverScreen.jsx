@@ -34,7 +34,7 @@ export default function VendorTurnoverScreen() {
     const handleExport = () => {
         const columns = [
             { header: 'Vendor ID', key: 'id' },
-            { header: 'Merchant Name', key: 'name' },
+            { header: 'Vendor Name', key: 'name' },
             { header: 'Category', key: 'category' },
             { header: 'Total Turnover', key: 'totalTurnover' },
             { header: 'Growth %', key: 'growth' },
@@ -98,14 +98,14 @@ export default function VendorTurnoverScreen() {
                             {viewMode === 'detail' && (
                                 <>
                                     <ChevronRight size={10} />
-                                    <button onClick={() => setViewMode('grid')} className="hover:text-slate-900 transition-colors">Vendor Economics</button>
+                                    <button onClick={() => setViewMode('grid')} className="hover:text-slate-900 transition-colors">Vendor Sales</button>
                                 </>
                             )}
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">{viewMode === 'grid' ? 'Network Turnover' : activeVendor?.id}</span>
+                            <span className="text-slate-900 uppercase tracking-widest">{viewMode === 'grid' ? 'Vendor Turnover' : activeVendor?.id}</span>
                         </div>
                         <h1 className="text-sm font-bold text-slate-900 whitespace-nowrap">
-                            {viewMode === 'grid' ? 'Vendor Performance Matrix' : `Audit: ${activeVendor?.name}`}
+                            {viewMode === 'grid' ? 'Vendor performance' : `Audit: ${activeVendor?.name}`}
                         </h1>
                     </div>
 
@@ -119,7 +119,7 @@ export default function VendorTurnoverScreen() {
                         <div
                             onClick={toggleFY}
                             className={cn(
-                                "flex items-center gap-1.5 px-2 py-1 bg-slate-900 text-white text-[9px] font-black rounded-sm uppercase tracking-widest cursor-pointer transition-all active:scale-95",
+                                "flex items-center gap-1.5 px-2 py-1 bg-slate-900 text-white text-[10px] font-black rounded-sm uppercase tracking-widest cursor-pointer transition-all active:scale-95",
                                 isFYLoading && "opacity-50 pointer-events-none"
                             )}
                         >
@@ -135,27 +135,27 @@ export default function VendorTurnoverScreen() {
                 {viewMode === 'grid' ? (
                     <>
                         <MetricStripItem
-                            label="Aggregated Turnover"
+                            label="Total Turnover"
                             value={`₹${(aggregateStats.totalTurnover / 1000000).toFixed(2)}M`}
                             trend="+14.2%"
                             isPositive={true}
                             icon={IndianRupee}
                         />
                         <MetricStripItem
-                            label="Avg Network Growth"
+                            label="Average Growth"
                             value={`${aggregateStats.avgGrowth}%`}
                             trend="Stable"
                             isPositive={true}
                             icon={TrendingUp}
                         />
                         <MetricStripItem
-                            label="Generating Nodes"
+                            label="Active Vendors"
                             value={aggregateStats.activeVendors}
                             sub="Active Partners"
                             icon={Users}
                         />
                         <MetricStripItem
-                            label="Peak Performance Node"
+                            label="Top Vendor"
                             value={aggregateStats.highestEarner.name.split(' ')[0]}
                             sub="Top Contributor"
                             icon={Briefcase}
@@ -171,13 +171,13 @@ export default function VendorTurnoverScreen() {
                             icon={IndianRupee}
                         />
                         <MetricStripItem
-                            label="Operational Mean"
+                            label="Average"
                             value={`₹${((activeVendor.totalTurnover / activeVendor.monthlyTurnover.length) / 1000).toFixed(1)}K`}
                             sub="Avg Monthly"
                             icon={BarChart3}
                         />
                         <MetricStripItem
-                            label="Growth Velocity"
+                            label="Growth"
                             value="+12.0%"
                             trend="Target Met"
                             isPositive={true}
@@ -214,7 +214,7 @@ export default function VendorTurnoverScreen() {
                                 </div>
                                 <button className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-sm text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50">
                                     <Filter size={12} />
-                                    Refine Results
+                                    Filter
                                 </button>
                             </div>
 
@@ -224,11 +224,11 @@ export default function VendorTurnoverScreen() {
                                     <table className="w-full text-left">
                                         <thead className="bg-slate-50 border-b border-slate-100">
                                             <tr>
-                                                <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Merchant Identity</th>
-                                                <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Peak Volume (Monthly)</th>
-                                                <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Current Velocity</th>
-                                                <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Aggregated Turnover</th>
-                                                <th className="px-6 py-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Operations</th>
+                                                <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Vendor</th>
+                                                <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Peak Volume (Monthly)</th>
+                                                <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Current Sales</th>
+                                                <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total Turnover</th>
+                                                <th className="px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
@@ -241,7 +241,7 @@ export default function VendorTurnoverScreen() {
                                                         <td className="px-6 py-4">
                                                             <div className="flex flex-col">
                                                                 <span className="font-black text-slate-900 text-xs tracking-tight">{vendor.name}</span>
-                                                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">{vendor.id} • {vendor.category}</span>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">{vendor.id} • {vendor.category}</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4 text-xs font-bold text-slate-600 tabular-nums">
@@ -250,7 +250,7 @@ export default function VendorTurnoverScreen() {
                                                         <td className="px-6 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-xs font-black text-slate-900 tabular-nums">₹{currentMonth.toLocaleString()}</span>
-                                                                <div className="px-1.5 py-0.5 rounded-sm bg-emerald-50 text-emerald-600 text-[9px] font-black flex items-center gap-0.5 tabular-nums">
+                                                                <div className="px-1.5 py-0.5 rounded-sm bg-emerald-50 text-emerald-600 text-[10px] font-black flex items-center gap-0.5 tabular-nums">
                                                                     <ArrowUpRight size={10} /> 8.0%
                                                                 </div>
                                                             </div>
@@ -282,12 +282,12 @@ export default function VendorTurnoverScreen() {
                             <div className="bg-white border border-slate-200 rounded-sm p-8 shadow-sm">
                                 <div className="flex items-center justify-between mb-10 pb-4 border-b border-slate-100">
                                     <div>
-                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Monthly Revenue Velocity</h3>
-                                        <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Operational Flow Analysis (FY 2025)</p>
+                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Monthly Revenue</h3>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Monthly trend (FY 2025)</p>
                                     </div>
                                     <div className="flex gap-8">
                                         <div className="text-right">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Peak Utilization</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Busiest Month</p>
                                             <p className="text-lg font-black text-slate-900 tabular-nums">₹{Math.max(...activeVendor.monthlyTurnover.map(m => m.amount)).toLocaleString()}</p>
                                         </div>
                                     </div>
@@ -309,11 +309,11 @@ export default function VendorTurnoverScreen() {
                                                             idx === activeVendor.monthlyTurnover.length - 1 ? "bg-slate-900" : "bg-slate-100 group-hover:bg-slate-200"
                                                         )}
                                                     />
-                                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black py-0.5 px-1.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity tabular-nums whitespace-nowrap z-10">
+                                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-black py-0.5 px-1.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity tabular-nums whitespace-nowrap z-10">
                                                         ₹{(item.amount / 1000).toFixed(1)}K
                                                     </div>
                                                 </div>
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{item.month}</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{item.month}</span>
                                             </div>
                                         );
                                     })}
@@ -325,15 +325,15 @@ export default function VendorTurnoverScreen() {
                                 <div className="md:col-span-2 bg-white border border-slate-200 rounded-sm p-6 shadow-sm">
                                     <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                                         <BarChart3 size={14} className="text-slate-400" />
-                                        Performance Projections
+                                        Forecast
                                     </h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-4 bg-slate-50 border border-slate-100 rounded-sm">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Expected M+1</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Expected M+1</span>
                                             <span className="text-lg font-black text-slate-900 tabular-nums">₹2.1L</span>
                                         </div>
                                         <div className="p-4 bg-slate-50 border border-slate-100 rounded-sm">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Annualized Projection</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Annualized Projection</span>
                                             <span className="text-lg font-black text-slate-900 tabular-nums">₹24.8L</span>
                                         </div>
                                     </div>
@@ -341,14 +341,14 @@ export default function VendorTurnoverScreen() {
 
                                 <div className="bg-slate-900 border border-slate-800 rounded-sm p-6 text-white overflow-hidden relative shadow-sm">
                                     <div className="relative z-10">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-white/60">Compliance & Audit</h4>
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-white/60">Tax & Payments</h4>
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 bg-emerald-500/10 text-emerald-400 rounded-sm flex items-center justify-center">
                                                     <ShieldCheckIcon size={16} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Taxation Status</p>
+                                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Taxation Status</p>
                                                     <p className="text-xs font-bold text-white">Fully Compliant</p>
                                                 </div>
                                             </div>
@@ -357,7 +357,7 @@ export default function VendorTurnoverScreen() {
                                                     <Info size={16} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Last Settlement</p>
+                                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">Last Settlement</p>
                                                     <p className="text-xs font-bold text-white">48h Ago</p>
                                                 </div>
                                             </div>
@@ -383,19 +383,19 @@ function MetricStripItem({ label, value, trend, isPositive, sub, icon: Icon }) {
                 {Icon && <Icon size={16} />}
             </div>
             <div className="flex-1">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5">{label}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5">{label}</p>
                 <div className="flex items-baseline gap-2">
                     <h3 className="text-lg font-black text-slate-900 tracking-tight tabular-nums">{value}</h3>
                     {trend && (
                         <span className={cn(
-                            "text-[9px] font-bold tabular-nums",
+                            "text-[10px] font-bold tabular-nums",
                             isPositive ? "text-emerald-500" : "text-red-500"
                         )}>
                             {trend}
                         </span>
                     )}
                     {sub && (
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                             {sub}
                         </span>
                     )}

@@ -30,12 +30,13 @@ import { toast } from 'sonner'
 import { geocodeAddressFrontend, fetchAddressSuggestions, geocodePlaceId } from '@/lib/geo'
 import { useLocation } from '../contexts/LocationContext'
 
-const SAVED_ADDRESSES_KEY = 'kk_user_saved_addresses'
-const ADDRESS_TAGS = [
-    { value: 'home', label: 'Home' },
-    { value: 'work', label: 'Work' },
-    { value: 'other', label: 'Other' }
-]
+import {
+    ADDRESS_TAGS,
+    buildFullAddress,
+    loadSavedAddresses,
+    saveSavedAddresses,
+    upsertAddressByTag as upsertSavedAddress,
+} from '../utils/savedAddresses'
 
 /** Start time of each delivery window (local time). Only slots whose window hasn't started yet are selectable. */
 const DELIVERY_SHIFT_SLOTS = [
@@ -66,7 +67,8 @@ function isDeliveryShiftSelectable(shiftLabel, targetDate, now = new Date()) {
     if (!targetDate) return true;
     
     const nowIST = getISTDate(now);
-    const tDateIST = getISTDate(new Date(targetDate));
+    // targetDate already holds IST wall-clock values (see getNext7Days), so don't shift it again
+    const tDateIST = new Date(targetDate);
     
     // Normalize dates to midnight in IST for comparison
     tDateIST.setHours(0, 0, 0, 0);
@@ -130,7 +132,7 @@ export default function CheckoutScreen() {
     const [isEditingAddress, setIsEditingAddress] = useState(false)
 
     // Pre-order States
-    const [availableDates] = useState(getNext7Days())
+    const [availableDates, setAvailableDates] = useState(getNext7Days)
     const [selectedDate, setSelectedDate] = useState(availableDates[0])
 
     // Coupon States
@@ -166,6 +168,16 @@ export default function CheckoutScreen() {
         return () => clearInterval(id)
     }, [])
 
+    // Roll the date strip forward when the IST day changes or it passes 6 PM while the page is open
+    useEffect(() => {
+        const fresh = getNext7Days()
+        if (fresh[0].getTime() === availableDates[0].getTime()) return
+        setAvailableDates(fresh)
+        if (selectedDate.getTime() < fresh[0].getTime()) {
+            setSelectedDate(fresh[0])
+        }
+    }, [shiftTimeTick])
+
     useEffect(() => {
         if (!deliveryShift) return
         if (!isDeliveryShiftSelectable(deliveryShift, selectedDate)) {
@@ -197,16 +209,15 @@ export default function CheckoutScreen() {
         }
     }
 
-    const buildFullAddress = (details) => {
-        const parts = [];
-        if (details.flat) parts.push(`Flat: ${details.flat}`);
-        if (details.floor) parts.push(`Floor: ${details.floor}`);
-        if (details.colony) parts.push(details.colony);
-        if (details.landmark) parts.push(`Landmark: ${details.landmark}`);
-        if (details.city) parts.push(details.city);
-        if (details.state) parts.push(details.state);
-        if (details.pincode) parts.push(details.pincode);
-        return parts.join(', ');
+    const persistSavedAddresses = (addresses) => {
+        setSavedAddresses(addresses)
+        saveSavedAddresses(user?._id, addresses)
+    }
+
+    const upsertAddressByTag = (tag, details) => {
+        const next = upsertSavedAddress(savedAddresses, tag, details)
+        persistSavedAddresses(next)
+        return buildFullAddress(details)
     }
 
     const parseAddressToDetails = (address = '') => {
@@ -272,58 +283,6 @@ export default function CheckoutScreen() {
         setDeliveryAddress(fullAddress)
     }
 
-    const persistSavedAddresses = (addresses) => {
-        setSavedAddresses(addresses)
-        const key = user?._id ? `${SAVED_ADDRESSES_KEY}_${user._id}` : SAVED_ADDRESSES_KEY;
-        localStorage.setItem(key, JSON.stringify(addresses))
-    }
-
-    const upsertAddressByTag = (tag, details) => {
-        const normalizedTag = tag || 'other'
-        const fullAddress = buildFullAddress(details)
-        const label = ADDRESS_TAGS.find((item) => item.value === normalizedTag)?.label || 'Other'
-        
-        let next = [];
-        if (normalizedTag === 'home' || normalizedTag === 'work') {
-            // Home and Work are unique slots
-            next = [
-                ...(savedAddresses.filter((entry) => entry.tag !== normalizedTag)),
-                {
-                    id: normalizedTag,
-                    tag: normalizedTag,
-                    label,
-                    details,
-                    fullAddress,
-                    updatedAt: new Date().toISOString()
-                }
-            ]
-        } else {
-            // 'Other' can have multiple entries. Check if this exact address already exists.
-            const existingIdx = savedAddresses.findIndex(a => a.fullAddress === fullAddress);
-            if (existingIdx > -1) {
-                // Update existing matching address
-                next = [...savedAddresses];
-                next[existingIdx] = { ...next[existingIdx], details, updatedAt: new Date().toISOString() };
-            } else {
-                // Add as a new 'Other' entry
-                next = [
-                    ...savedAddresses,
-                    {
-                        id: `other_${Date.now()}`,
-                        tag: 'other',
-                        label: 'Other',
-                        details,
-                        fullAddress,
-                        updatedAt: new Date().toISOString()
-                    }
-                ]
-            }
-        }
-
-        persistSavedAddresses(next)
-        return fullAddress
-    }
-
     const handleSelectSavedAddress = (saved) => {
         if (!saved?.details) return
         setAddressTag(saved.tag || 'other')
@@ -381,29 +340,8 @@ export default function CheckoutScreen() {
     }, [])
 
     useEffect(() => {
-        if (!user?._id) return;
-        try {
-            const userKey = `${SAVED_ADDRESSES_KEY}_${user._id}`;
-            const raw = localStorage.getItem(userKey);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) {
-                    setSavedAddresses(parsed);
-                }
-            } else {
-                // Fallback to legacy shared key and migrate to user key
-                const legacyRaw = localStorage.getItem(SAVED_ADDRESSES_KEY);
-                if (legacyRaw) {
-                    const parsed = JSON.parse(legacyRaw);
-                    if (Array.isArray(parsed)) {
-                        setSavedAddresses(parsed);
-                        localStorage.setItem(userKey, legacyRaw);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Failed to parse saved addresses:', error);
-        }
+        if (!user?._id) return
+        setSavedAddresses(loadSavedAddresses(user._id))
     }, [user?._id])
 
     useEffect(() => {
@@ -557,7 +495,11 @@ export default function CheckoutScreen() {
             // 1. Load Razorpay Script
             const res = await loadRazorpay()
             if (!res) {
-                toast.error("Razorpay SDK failed to load. Are you online?")
+                toast.error("Could not open the payment page. Please check your internet connection.")
+                return
+            }
+            if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+                toast.error("Online payment is not configured. Please choose another payment method.")
                 return
             }
 
@@ -636,11 +578,14 @@ export default function CheckoutScreen() {
             }
 
             const paymentObject = new window.Razorpay(options)
+            paymentObject.on('payment.failed', (response) => {
+                toast.error(response?.error?.description || "Payment failed. Please try again.")
+            })
             paymentObject.open()
 
         } catch (error) {
             console.error("Razorpay flow error:", error)
-            toast.error("Could not initiate payment")
+            toast.error(error.response?.data?.message || "Could not initiate payment")
         } finally {
             setIsPlacingOrder(false)
         }
@@ -678,13 +623,13 @@ export default function CheckoutScreen() {
             const manualCity = addressDetails.city.trim().toLowerCase();
             const pinnedCity = ctxDeliveryComponents.city.trim().toLowerCase();
             if (manualCity && !pinnedCity.includes(manualCity) && !manualCity.includes(pinnedCity)) {
-                toast.error(`pin location and city you entered is diifferent so you can not proceed further`);
+                toast.error(`The city you typed does not match the location pinned on the map. Please fix the city or re-pin your location.`);
                 setIsEditingAddress(true);
                 return;
             }
         }
         if (!deliveryShift) {
-            toast.error("Please select a delivery shift timing");
+            toast.error("Please select a delivery time slot");
             return;
         }
         if (!isDeliveryShiftSelectable(deliveryShift, selectedDate)) {
@@ -728,8 +673,9 @@ export default function CheckoutScreen() {
             shippingLocation: coords,
             paymentMethod: methodMap[selectedMethod],
             deliveryShift: deliveryShift,
-            scheduledDate: selectedDate.toISOString(),
-            isPreOrder: selectedDate.toDateString() !== new Date().toDateString(),
+            // Calendar day in IST as YYYY-MM-DD (availableDates hold IST wall-clock values)
+            scheduledDate: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`,
+            isPreOrder: selectedDate.toDateString() !== getISTDate().toDateString(),
             couponCode: appliedCoupon?.code || '',
             discountAmount: discountAmount
         }
@@ -800,7 +746,7 @@ export default function CheckoutScreen() {
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight md:font-bold">Order placed successfully!</h1>
                     {(lastPlacement?.orders?.length ?? 0) > 1 && (
                         <p className="mt-4 text-sm font-medium text-slate-600 max-w-md">
-                            Your cart was split into {lastPlacement.orders.length} orders by category — each is fulfilled by the nearest store for that category. You can track them separately.
+                            Your cart was split into {lastPlacement.orders.length} orders by category. Each is delivered by the nearest store for that category, and you can track them separately.
                         </p>
                     )}
 
@@ -1013,7 +959,7 @@ export default function CheckoutScreen() {
                                 <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
                                     {availableDates.map((date, idx) => {
                                         const isSelected = selectedDate.toDateString() === date.toDateString();
-                                        const isToday = new Date().toDateString() === date.toDateString();
+                                        const isToday = getISTDate().toDateString() === date.toDateString();
                                         return (
                                             <button
                                                 key={idx}
@@ -1026,13 +972,13 @@ export default function CheckoutScreen() {
                                                         : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
                                                 )}
                                             >
-                                                <span className={cn("text-[9px] md:text-[10px] font-black uppercase tracking-tighter", isSelected ? "text-emerald-100" : "text-slate-400")}>
+                                                <span className={cn("text-[10px] md:text-[10px] font-black uppercase tracking-tighter", isSelected ? "text-emerald-100" : "text-slate-400")}>
                                                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
                                                 </span>
                                                 <span className="text-lg md:text-xl font-black tabular-nums leading-none">
                                                     {date.getDate()}
                                                 </span>
-                                                <span className={cn("text-[8px] md:text-[9px] font-black uppercase", isSelected ? "text-emerald-100" : "text-slate-400")}>
+                                                <span className={cn("text-[10px] md:text-[10px] font-black uppercase", isSelected ? "text-emerald-100" : "text-slate-400")}>
                                                     {isToday ? 'Today' : date.toLocaleDateString('en-US', { month: 'short' })}
                                                 </span>
                                             </button>
@@ -1046,11 +992,10 @@ export default function CheckoutScreen() {
                             <section className="mt-6 md:mt-10 pt-2 md:pt-0 border-t border-slate-200/60 md:border-0">
                                 <div className="mb-2 md:mb-3 space-y-1">
                                     <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:text-sm md:normal-case md:tracking-normal md:text-slate-900 md:text-base md:font-bold">
-                                        Delivery Shift Timing
+                                        Delivery Time Slot
                                     </h2>
                                     <p className="text-[10px] md:text-xs text-slate-400 font-medium leading-snug">
-                                        During the day, only upcoming time windows are selectable. After 6 PM, all slots
-                                        open for the next delivery day.
+                                        You can only choose time slots that haven’t started yet. After 6 PM, slots open for the next day.
                                     </p>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
@@ -1142,7 +1087,7 @@ export default function CheckoutScreen() {
                                                 <div className="space-y-0.5">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-black text-slate-900 uppercase">'{appliedCoupon.code}' Applied!</span>
-                                                        <span className="px-1.5 py-0.5 bg-emerald-600 text-white text-[9px] font-black rounded-sm uppercase tracking-widest">
+                                                        <span className="px-1.5 py-0.5 bg-emerald-600 text-white text-[10px] font-black rounded-sm uppercase tracking-widest">
                                                             Save ₹{appliedCoupon.discount}
                                                         </span>
                                                     </div>
@@ -1185,7 +1130,7 @@ export default function CheckoutScreen() {
                                                                     <div className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
                                                                         {coupon.code}
                                                                         {coupon.isFirstTimeUserOnly && (
-                                                                            <span className="text-[8px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-black uppercase">NEW USER</span>
+                                                                            <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-black uppercase">NEW USER</span>
                                                                         )}
                                                                     </div>
                                                                     <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-tight">{coupon.title}</div>
@@ -1370,7 +1315,7 @@ export default function CheckoutScreen() {
                 <div className="fixed bottom-0 left-0 right-0 z-60 bg-white/95 backdrop-blur-xl border-t border-slate-100/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] max-w-md mx-auto md:hidden">
                     <div className="flex items-center gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                         <div className="shrink-0 flex flex-col justify-center min-w-0 max-w-[42%]">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Final Amount</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">Final Amount</span>
                             <span className="text-lg font-black text-slate-900 leading-none tracking-tight tabular-nums truncate">₹{total}</span>
                         </div>
 
@@ -1400,9 +1345,9 @@ export default function CheckoutScreen() {
                                 animate={{ y: 0 }}
                                 exit={{ y: '100%' }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-101 p-8 pb-12 shadow-2xl md:max-w-xl md:mx-auto md:bottom-10 md:rounded-[40px]"
+                                className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-101 shadow-2xl md:max-w-xl md:mx-auto md:bottom-10 md:rounded-[40px] flex flex-col max-h-[90vh]"
                             >
-                                <div className="flex justify-between items-center mb-6">
+                                <div className="flex justify-between items-center mb-6 px-8 pt-8 shrink-0">
                                     <h2 className="text-xl font-bold text-slate-900">
                                         {ctxHasDeliveryPinned && !addressDetails.flat ? 'Complete Delivery Address' : 'Change Delivery Address'}
                                     </h2>
@@ -1410,7 +1355,7 @@ export default function CheckoutScreen() {
                                         <X size={20} />
                                     </button>
                                 </div>
-                                <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1">
+                                <div className="flex-1 min-h-0 overflow-y-auto px-8 space-y-4">
                                     <div className="space-y-2">
                                         <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Save as</label>
                                         <div className="flex gap-2">
@@ -1560,6 +1505,8 @@ export default function CheckoutScreen() {
                                         />
                                     </div>
                                 </div>
+                                </div>
+                                <div className="shrink-0 px-8 pt-4 pb-[max(3rem,env(safe-area-inset-bottom,0px))]">
                                     <Button
                                         onClick={async () => {
                                             if (!addressDetails.flat || !addressDetails.colony || !addressDetails.city || !addressDetails.state) {
@@ -1572,7 +1519,7 @@ export default function CheckoutScreen() {
                                                 const manualCity = addressDetails.city.trim().toLowerCase();
                                                 const pinnedCity = ctxDeliveryComponents.city.trim().toLowerCase();
                                                 if (manualCity && !pinnedCity.includes(manualCity) && !manualCity.includes(pinnedCity)) {
-                                                    toast.error(`pin location and city you entered is diifferent so you can not proceed further`);
+                                                    toast.error(`The city you typed does not match the location pinned on the map. Please fix the city or re-pin your location.`);
                                                     return;
                                                 }
                                             }

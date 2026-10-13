@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, IndianRupee, Loader2 } from 'lucide-react';
+import { ArrowLeft, IndianRupee, Loader2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
-// import { useDeliveryAuth } from '../contexts/DeliveryAuthContext'; // Razorpay prefill — disabled
+import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
 
 export default function CodRemittanceScreen() {
     const navigate = useNavigate();
-    // const { delivery } = useDeliveryAuth(); // used by Razorpay UPI prefill (disabled)
+    const { delivery, setDelivery } = useDeliveryAuth();
+    const [isApproved, setIsApproved] = useState(delivery?.isApproved ?? null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [pendingOrders, setPendingOrders] = useState([]);
@@ -25,6 +26,21 @@ export default function CodRemittanceScreen() {
     const fetchData = useCallback(async () => {
         try {
             setLoading(true);
+
+            // Re-check approval so a freshly approved partner doesn't have to log in again,
+            // and an unapproved partner sees an explanation instead of an "Access Denied" error.
+            const meRes = await api.get('/delivery/me');
+            const me = meRes.data?.result;
+            if (me) {
+                setDelivery(me);
+                localStorage.setItem('deliveryData', JSON.stringify(me));
+            }
+            if (!me?.isApproved) {
+                setIsApproved(false);
+                return;
+            }
+            setIsApproved(true);
+
             const [summaryRes, historyRes] = await Promise.all([
                 api.get('/delivery/cod/summary'),
                 api.get('/delivery/cod/remittances'),
@@ -50,7 +66,7 @@ export default function CodRemittanceScreen() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [setDelivery]);
 
     useEffect(() => {
         fetchData();
@@ -102,7 +118,7 @@ export default function CodRemittanceScreen() {
             if (paymentMethod === 'upi') {
                 const isLoaded = await loadRazorpay();
                 if (!isLoaded) {
-                    toast.error('Razorpay SDK failed to load');
+                    toast.error('Could not open the payment page. Please check your internet connection.');
                     return;
                 }
 
@@ -205,6 +221,25 @@ export default function CodRemittanceScreen() {
                 </div>
             </div>
 
+            {isApproved === false ? (
+                <div className="p-6">
+                    <div className="p-5 bg-amber-50 border border-amber-200 rounded-3xl space-y-3">
+                        <div className="flex items-center gap-3 text-amber-800">
+                            <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center">
+                                <Clock size={16} className="text-amber-600" />
+                            </div>
+                            <h3 className="text-sm font-black">
+                                {delivery?.approvalStatus === 'rejected' ? 'Account not approved' : 'Account pending approval'}
+                            </h3>
+                        </div>
+                        <p className="text-xs font-semibold text-amber-700 leading-relaxed">
+                            {delivery?.approvalStatus === 'rejected'
+                                ? 'Your delivery partner account was not approved by the admin, so COD cash cannot be submitted from this account. Please contact support.'
+                                : 'You can submit COD cash once the admin approves your account. You will get a notification as soon as it is approved.'}
+                        </p>
+                    </div>
+                </div>
+            ) : (
             <div className="p-6 space-y-5">
                 <div className="grid grid-cols-3 gap-3">
                     <StatCard label="Pending" value={totals.pendingAmount} tone="amber" />
@@ -306,6 +341,7 @@ export default function CodRemittanceScreen() {
                     </div>
                 </div>
             </div>
+            )}
         </div>
     );
 }

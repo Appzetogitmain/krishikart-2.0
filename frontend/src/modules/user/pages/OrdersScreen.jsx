@@ -145,14 +145,14 @@ export default function OrdersScreen() {
                                                     Ordered {new Date(createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                 </div>
                                                 {order.scheduledDate && (
-                                                    <div className="text-[9px] font-black text-emerald-600 uppercase mt-1.5 flex items-center gap-1.5 leading-none">
+                                                    <div className="text-[10px] font-black text-emerald-600 uppercase mt-1.5 flex items-center gap-1.5 leading-none">
                                                         <Zap size={10} className="fill-emerald-600 text-emerald-600" />
                                                         Delivering {new Date(order.scheduledDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'short' })}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
-                                        <Badge variant="outline" className={cn("rounded-lg border-[0.5px] font-black text-[8px] py-1 px-2.5 flex items-center gap-1.5 shrink-0 bg-opacity-40 mt-0.5", getStatusColor(displayStatus))}>
+                                        <Badge variant="outline" className={cn("rounded-lg border-[0.5px] font-black text-[10px] py-1 px-2.5 flex items-center gap-1.5 shrink-0 bg-opacity-40 mt-0.5", getStatusColor(displayStatus))}>
                                             <div className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
                                             <span className="uppercase tracking-[0.15em]">{displayStatus?.replace(/_/g, ' ')}</span>
                                         </Badge>
@@ -160,11 +160,11 @@ export default function OrdersScreen() {
 
                                     <div className="flex items-center bg-slate-50/70 p-3 rounded-2xl border border-slate-50 gap-4">
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5 opacity-80">Final Payable</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 opacity-80">Final Payable</p>
                                             <div className="text-base font-black text-slate-900 tracking-tighter italic">₹{(totalAmount || 0).toLocaleString()}</div>
                                         </div>
                                         <div className="h-8 w-[1px] bg-slate-200/50" />
-                                        <div className="flex items-center gap-1 text-[9px] font-black text-primary uppercase tracking-[0.2em] shrink-0 pl-1">
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-[0.2em] shrink-0 pl-1">
                                             {isSplitOrder ? 'Track All' : 'Details'} <ChevronRight size={14} strokeWidth={4} />
                                         </div>
                                     </div>

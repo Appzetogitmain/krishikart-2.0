@@ -25,6 +25,7 @@ import { useCatalog } from '../contexts/CatalogContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import TablePagination from '../components/tables/TablePagination';
 
 export default function ManageProductScreen() {
     const {
@@ -40,6 +41,8 @@ export default function ManageProductScreen() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
+    const PAGE_SIZE = 25;
+    const [page, setPage] = useState(1);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -54,7 +57,7 @@ export default function ManageProductScreen() {
         try {
             const result = await importProducts(file);
             if (result && result.success) {
-                toast.success('Inventory synced successfully via Excel');
+                toast.success('Products updated from Excel');
                 if (result.data?.summary) {
                     const { createdCount, updatedCount, errorCount } = result.data.summary;
                     toast.info(`Created: ${createdCount}, Updated: ${updatedCount}, Errors: ${errorCount}`);
@@ -69,7 +72,7 @@ export default function ManageProductScreen() {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to permanently remove this SKU from inventory?')) {
+        if (window.confirm('Are you sure you want to permanently delete this product?')) {
             await deleteProduct(id);
         }
     };
@@ -93,8 +96,11 @@ export default function ManageProductScreen() {
         return matchesSearch;
     });
 
+    useEffect(() => { setPage(1); }, [searchTerm, statusFilter]);
+    const pagedProducts = filteredProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
     if (contextLoading && products.length === 0) {
-        return <div className="p-8 animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest text-center mt-20">Syncing Ledger...</div>;
+        return <div className="p-8 animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest text-center mt-20">Loading products...</div>;
     }
 
     return (
@@ -110,7 +116,7 @@ export default function ManageProductScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Inventory Management</span>
                         </div>
-                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">SKU Ledger</h1>
+                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">All products</h1>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
@@ -154,13 +160,13 @@ export default function ManageProductScreen() {
                             className="px-4 py-1.5 border border-slate-200 text-slate-500 hover:text-slate-900 rounded-sm text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm group/export"
                         >
                             <Download size={12} className="group-hover/export:translate-y-0.5 transition-transform" />
-                            Export Ledger
+                            Download
                         </button>
                         <label className={cn(
                             "px-6 py-1.5 bg-emerald-600 text-white rounded-sm text-[10px] font-black uppercase tracking-widest flex items-center gap-2 cursor-pointer transition-all hover:bg-emerald-700 shadow-sm",
                             isImporting && "opacity-50 pointer-events-none"
                         )}>
-                            {isImporting ? 'Importing...' : <><FileUp size={12} /> Bulk Induction</>}
+                            {isImporting ? 'Importing...' : <><FileUp size={12} /> Upload from Excel</>}
                             <input
                                 type="file"
                                 className="hidden"
@@ -174,7 +180,7 @@ export default function ManageProductScreen() {
                             className="px-6 py-1.5 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:bg-indigo-600 shadow-sm"
                         >
                             <Plus size={12} />
-                            Induct New Product
+                            Add Product
                         </button>
                     </div>
                 </div>
@@ -189,14 +195,14 @@ export default function ManageProductScreen() {
                             <input
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="SEARCH BY PRODUCT NAME OR SKU ID..."
+                                placeholder="SEARCH BY PRODUCT NAME OR CODE..."
                                 className="w-full bg-transparent py-3 text-[10px] font-bold uppercase tracking-widest focus:outline-none outline-none border-none text-slate-900 placeholder:text-slate-400"
                             />
                         </div>
                     </div>
                     <div className="bg-slate-900 rounded-sm p-3 flex-1 flex items-center justify-between shadow-lg">
                         <div className="space-y-0.5">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total SKU Count</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Products</p>
                             <p className="text-lg font-black text-white leading-none">{products.length}</p>
                         </div>
                         <Package className="text-emerald-500" size={24} />
@@ -209,15 +215,15 @@ export default function ManageProductScreen() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-100">
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Principal Identity</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Taxonomy</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valuation</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Price</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Inventory</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                                {filteredProducts.length > 0 ? filteredProducts.map((product) => (
+                                {pagedProducts.length > 0 ? pagedProducts.map((product) => (
                                     <tr key={product._id} className="group hover:bg-slate-50/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-4">
@@ -239,17 +245,17 @@ export default function ManageProductScreen() {
                                                 <div className="space-y-0.5">
                                                     <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight line-clamp-1">{product.name}</h4>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">ID: {product._id.slice(-8)}</span>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {product._id.slice(-8)}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-1">
                                                         {product.showOnStorefront !== false && (
                                                             <div className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-[2px] border border-indigo-100/50">
-                                                                <span className="text-[7px] font-black uppercase tracking-widest">Storefront</span>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest">Storefront</span>
                                                             </div>
                                                         )}
                                                         {product.showOnPOS !== false && (
                                                             <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-[2px] border border-amber-100/50">
-                                                                <span className="text-[7px] font-black uppercase tracking-widest">POS</span>
+                                                                <span className="text-[10px] font-black uppercase tracking-widest">POS</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -258,19 +264,19 @@ export default function ManageProductScreen() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{product.category?.name || 'Unmapped'}</p>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                                <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{product.category?.name || 'No Category'}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                                     <ChevronRight size={8} />
-                                                    {product.subcategory?.name || 'General Branch'}
+                                                    {product.subcategory?.name || 'General'}
                                                 </p>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="space-y-0.5">
                                                 <p className="text-[11px] font-black text-slate-900 tracking-tight">₹{product.price}</p>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">per {product.unitValue > 1 ? product.unitValue : ''}{product.unit}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">per {product.unitValue > 1 ? product.unitValue : ''}{product.unit}</p>
                                                 {product.comparePrice && (
-                                                    <p className="text-[9px] font-bold text-slate-400 line-through tracking-tighter">₹{product.comparePrice}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 line-through tracking-tighter">₹{product.comparePrice}</p>
                                                 )}
                                             </div>
                                         </td>
@@ -286,8 +292,8 @@ export default function ManageProductScreen() {
                                                             style={{ width: `${Math.min(100, (product.stock / 50) * 100)}%` }}
                                                         />
                                                     </div>
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                                        {product.stock} {product.unit} <span className="text-slate-300 mx-1">|</span> {product.stock > 0 ? 'In Stock' : 'Void'}
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                        {product.stock} {product.unit} <span className="text-slate-300 mx-1">|</span> {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -296,7 +302,7 @@ export default function ManageProductScreen() {
                                             <div className="flex items-center justify-end gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => handleViewProduct(product)}
-                                                    title="Quick View Record"
+                                                    title="Quick View"
                                                     className="p-2 text-slate-400 hover:text-slate-900 hover:bg-white rounded-sm transition-all border border-transparent hover:border-slate-100"
                                                 >
                                                     <Eye size={14} />
@@ -325,13 +331,13 @@ export default function ManageProductScreen() {
                                                 </div>
                                                 <div className="text-center">
                                                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">No Matches Found</h3>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Inventory ledger is currently empty or filtered.</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">No products to show. Try a different search.</p>
                                                 </div>
                                                 <button
                                                     onClick={() => navigate('/masteradmin/products/add')}
                                                     className="mt-4 px-8 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-sm hover:bg-emerald-600 transition-all shadow-xl shadow-slate-100"
                                                 >
-                                                    Initialize First Product
+                                                    Add Your First Product
                                                 </button>
                                             </div>
                                         </td>
@@ -339,6 +345,7 @@ export default function ManageProductScreen() {
                                 )}
                             </tbody>
                         </table>
+                        <TablePagination page={page} pageSize={PAGE_SIZE} totalItems={filteredProducts.length} onPageChange={setPage} />
                     </div>
                 </div>
 
@@ -347,15 +354,15 @@ export default function ManageProductScreen() {
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Global Active</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Low Stock Alert</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Low Stock Alert</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-rose-500" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Inventory Void</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Out of Stock</span>
                         </div>
                     </div>
                 </div>
@@ -408,27 +415,27 @@ function QuickViewModal({ isOpen, onClose, product, onEdit }) {
                         </button>
 
                         <div className="space-y-1">
-                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">SKU Details</p>
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Product Details</p>
                             <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">{product.name}</h2>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Internal ID: {product._id}</p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-8">
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Base Valuation</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Price</p>
                                 <p className="text-lg font-black text-slate-900">₹{product.price} <span className="text-xs text-slate-400 font-bold">/ {product.unitValue > 1 ? product.unitValue : ''}{product.unit}</span></p>
                             </div>
                             <div className="space-y-1">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Live Inventory</p>
-                                <p className="text-lg font-black text-slate-900">{product.stock} <span className="text-xs text-slate-400 font-bold">In Ledger</span></p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Inventory</p>
+                                <p className="text-lg font-black text-slate-900">{product.stock} <span className="text-xs text-slate-400 font-bold">In Stock</span></p>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Principal Identity (Description)</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</p>
                             <div className="bg-slate-50 border border-slate-100 p-4 rounded-sm">
                                 <p className="text-xs font-medium text-slate-600 leading-relaxed italic">
-                                    {product.description || 'No detailed documentation available for this SKU record.'}
+                                    {product.description || 'No description added for this product.'}
                                 </p>
                             </div>
                         </div>
@@ -436,12 +443,12 @@ function QuickViewModal({ isOpen, onClose, product, onEdit }) {
                         <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="text-center">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Taxonomy</p>
-                                    <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">{product.category?.name || 'Unmapped'}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</p>
+                                    <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">{product.category?.name || 'No Category'}</p>
                                 </div>
                                 <ChevronRight size={12} className="text-slate-300" />
                                 <div className="text-center">
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Secondary</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secondary</p>
                                     <p className="text-[10px] font-bold text-slate-900 uppercase tracking-widest">{product.subcategory?.name || 'General'}</p>
                                 </div>
                             </div>
@@ -453,7 +460,7 @@ function QuickViewModal({ isOpen, onClose, product, onEdit }) {
                                 className="px-6 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all flex items-center gap-2"
                             >
                                 <Pencil size={12} />
-                                Edit SKU
+                                Edit Product
                             </button>
                         </div>
                     </div>

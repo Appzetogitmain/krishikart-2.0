@@ -217,7 +217,7 @@ const SignupScreen = () => {
                     >
                         <Navigation className="w-8 h-8 text-white" />
                     </motion.div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Join Fleet</h1>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Become a Delivery Partner</h1>
                     <p className="text-primary font-bold tracking-[0.2em] uppercase text-[10px] mt-1">Delivery Partner Registration</p>
                 </div>
 
@@ -231,7 +231,7 @@ const SignupScreen = () => {
                         >
                             <form onSubmit={handleSendOtp} className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Full Name</label>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Full Name</label>
                                     <div className="relative group">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                             <User size={16} />
@@ -249,7 +249,7 @@ const SignupScreen = () => {
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Phone Number</label>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Phone Number</label>
                                     <div className="relative group">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                             <Phone size={16} />
@@ -267,7 +267,7 @@ const SignupScreen = () => {
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Vehicle Number</label>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Vehicle Number</label>
                                     <div className="relative group">
                                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                             <Truck size={16} />
@@ -283,7 +283,7 @@ const SignupScreen = () => {
                                             className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-border bg-slate-50/50 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-black tracking-tight uppercase"
                                         />
                                     </div>
-                                    <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider ml-1">2 letters (state) + 2 digits + 2 letters + 4 digits</p>
+                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider ml-1">2 letters (state) + 2 digits + 2 letters + 4 digits</p>
                                 </div>
 
                                 <div className="space-y-4 pt-2">
@@ -295,7 +295,7 @@ const SignupScreen = () => {
                                             { name: 'licenseImage', label: 'License', preview: previews.license, ref: fileInputRefs.licenseImage }
                                         ].map((doc) => (
                                             <div key={doc.name} className="space-y-1">
-                                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest text-center block">{doc.label}</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center block">{doc.label}</label>
                                                 <div 
                                                     onClick={() => {
                                                         if (window.flutter_inappwebview) {
@@ -311,7 +311,7 @@ const SignupScreen = () => {
                                                     ) : (
                                                         <div className="flex flex-col items-center gap-1">
                                                             <ShieldCheck className="w-5 h-5 text-slate-300 group-hover:text-primary transition-colors" />
-                                                            <span className="text-[8px] font-black text-slate-400">UPLOAD</span>
+                                                            <span className="text-[10px] font-black text-slate-400">UPLOAD</span>
                                                         </div>
                                                     )}
                                                     <input
@@ -329,7 +329,7 @@ const SignupScreen = () => {
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest ml-1">Vehicle Type</label>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Vehicle Type</label>
                                     <div className="flex gap-2">
                                         {['bike', 'scooter'].map((type) => (
                                             <button
@@ -347,7 +347,7 @@ const SignupScreen = () => {
                                 <div className="text-center py-2">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
                                         By joining, you agree to our <br/>
-                                        <button type="button" onClick={() => navigate('/delivery/terms')} className="text-primary border-b border-primary/20">Logistics Terms & Conditions</button>
+                                        <button type="button" onClick={() => navigate('/delivery/terms')} className="text-primary border-b border-primary/20">Delivery Partner Terms & Conditions</button>
                                     </p>
                                 </div>
 
@@ -509,7 +509,7 @@ const SignupScreen = () => {
                                         <Camera size={22} />
                                     </div>
                                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Take Photo</span>
-                                    <span className="text-[8px] font-medium text-slate-400 text-center">Use Device Camera</span>
+                                    <span className="text-[10px] font-medium text-slate-400 text-center">Use Device Camera</span>
                                 </button>
                                 
                                 <button
@@ -527,7 +527,7 @@ const SignupScreen = () => {
                                         <Upload size={22} />
                                     </div>
                                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Choose File</span>
-                                    <span className="text-[8px] font-medium text-slate-400 text-center">Gallery or Files</span>
+                                    <span className="text-[10px] font-medium text-slate-400 text-center">Gallery or Files</span>
                                 </button>
                             </div>
                         </motion.div>

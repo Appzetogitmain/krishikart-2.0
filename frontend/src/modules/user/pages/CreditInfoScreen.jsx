@@ -27,7 +27,7 @@ const CreditCardGraphic = ({ limit, used, available }) => {
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Kisaankart Credit</p>
-                        <h2 className="text-2xl font-black tracking-tight">Business Line</h2>
+                        <h2 className="text-2xl font-black tracking-tight">Business Credit</h2>
                     </div>
                     <CreditCard size={32} className="opacity-40" strokeWidth={1.5} />
                 </div>
@@ -77,7 +77,7 @@ export default function CreditInfoScreen() {
     const items = [
         {
             icon: TrendingUp,
-            label: "Credit Utilization",
+            label: "Credit Used",
             value: `₹${creditUsed.toLocaleString()}`,
             desc: "Current outstanding balance",
             color: "text-emerald-600",
@@ -85,7 +85,7 @@ export default function CreditInfoScreen() {
         },
         {
             icon: Calendar,
-            label: "Repayment Cycle",
+            label: "Payment Due",
             value: "Net 7",
             desc: "Payment due every 7 days",
             color: "text-blue-600",
@@ -120,7 +120,7 @@ export default function CreditInfoScreen() {
                     <div className="hidden lg:flex items-center justify-between mb-8">
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900 font-sans">Kisaankart Credit</h1>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Enterprise Business Finance</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Business Credit</p>
                         </div>
                         <div className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-emerald-100">
                             Available: ₹{availableCredit.toLocaleString()}
@@ -184,7 +184,7 @@ export default function CreditInfoScreen() {
                                 <div className="relative">
                                     <h4 className="text-lg font-black tracking-tight mb-4">How it works?</h4>
                                     <p className="text-sm font-medium opacity-90 leading-relaxed mb-8">
-                                        Kisaankart Credit allows you to procure stock now and pay later. Your limit is determined by your transaction history and admin overrides.
+                                        Kisaankart Credit lets you buy now and pay later. Your limit depends on your order and payment history.
                                     </p>
                                     <ul className="space-y-4">
                                         {[
@@ -226,7 +226,7 @@ export default function CreditInfoScreen() {
 
                 {/* Footer Note */}
                 <p className="hidden md:block text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pb-12">
-                    Financial services powered by Kisaankart Enterprise Solution
+                    Provided by Kisaankart
                 </p>
             </div>
         </PageTransition>

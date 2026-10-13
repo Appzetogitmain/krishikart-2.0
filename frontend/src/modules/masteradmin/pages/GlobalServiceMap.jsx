@@ -58,7 +58,7 @@ export default function GlobalServiceMap() {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-120px)] bg-slate-50">
                 <Loader2 className="animate-spin text-slate-900 mb-4" size={40} />
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Loading Global Matrix...</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Loading map...</span>
             </div>
         );
     }
@@ -73,7 +73,7 @@ export default function GlobalServiceMap() {
                     <div>
                         <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none">Global Coverage Map</h3>
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1.5">
-                            {franchises.length} Active Nodes Monitoring · Real-time Service Boundaries
+                            {franchises.length} Where each franchise delivers
                         </p>
                     </div>
                 </div>
@@ -157,8 +157,8 @@ export default function GlobalServiceMap() {
                                     <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">{selectedFranchise.ownerName} · {selectedFranchise.mobile}</p>
                                     <div className="flex items-center gap-2 border-t border-slate-100 pt-2">
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: selectedFranchise.color }} />
-                                        <span className="text-[9px] font-black uppercase text-slate-400">
-                                            {selectedFranchise.serviceHexagons?.length || 0} Matrix Cells
+                                        <span className="text-[10px] font-black uppercase text-slate-400">
+                                            {selectedFranchise.serviceHexagons?.length || 0} Areas
                                         </span>
                                     </div>
                                 </div>
@@ -190,7 +190,7 @@ export default function GlobalServiceMap() {
                                 <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: f.color }} />
                                 <div className="flex flex-col min-w-0">
                                     <span className="text-[10px] font-black text-slate-700 uppercase truncate leading-none mb-0.5">{f.franchiseName}</span>
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">{f.city} · {f.serviceHexagons?.length || 0} Cells</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{f.city} · {f.serviceHexagons?.length || 0} Cells</span>
                                 </div>
                             </div>
                         ))}

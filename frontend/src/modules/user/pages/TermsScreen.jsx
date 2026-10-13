@@ -57,7 +57,7 @@ export default function TermsScreen() {
                 'Kisaankart strives for the highest quality. Report damaged or incorrect products within 24 hours of delivery for a valid return or refund request.',
         },
         {
-            title: '3. Delivery Protocol',
+            title: '3. Delivery',
             content:
                 'Estimated delivery times are provided for convenience. Deliveries will be made to the address specified in your profile.',
         },

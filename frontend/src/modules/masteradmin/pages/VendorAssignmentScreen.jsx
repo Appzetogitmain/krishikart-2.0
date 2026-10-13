@@ -195,7 +195,7 @@ export default function VendorAssignmentScreen() {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
                             <Home size={12} />
                             <ChevronRight size={10} />
-                            <span>Logistics</span>
+                            <span>Delivery</span>
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Assign Vendors</span>
                         </div>
@@ -214,7 +214,7 @@ export default function VendorAssignmentScreen() {
                                 Pending Orders
                             </h3>
                             <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 text-[9px] font-black rounded-sm uppercase tracking-widest tabular-nums">
+                                <span className="px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black rounded-sm uppercase tracking-widest tabular-nums">
                                     {pendingRequests.length} Orders Waiting
                                 </span>
                             </div>
@@ -243,10 +243,10 @@ export default function VendorAssignmentScreen() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-1">
                                                 <div>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Franchise</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Franchise</span>
                                                     <h4 className="font-black text-slate-900 text-xs tracking-tight uppercase">{order.ownerName}</h4>
                                                 </div>
-                                                <span className="text-[9px] font-bold text-slate-400 tabular-nums">{order.createdAt}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 tabular-nums">{order.createdAt}</span>
                                             </div>
 
                                             <p className="text-[10px] text-slate-500 font-bold tracking-tight mb-2 flex items-center gap-1.5">
@@ -255,7 +255,7 @@ export default function VendorAssignmentScreen() {
                                             </p>
 
                                             <div className="bg-slate-50 border border-slate-100 rounded-sm p-2">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 border-b border-slate-200 pb-1">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 border-b border-slate-200 pb-1">
                                                     Required Items ({order.items.length})
                                                 </p>
                                                 <div className="space-y-1">
@@ -343,7 +343,7 @@ export default function VendorAssignmentScreen() {
                                 <div className="flex flex-col h-full">
                                     <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                                         <div className="flex items-center justify-between mb-6">
-                                            <div className="px-2 py-0.5 bg-slate-900 text-white text-[9px] font-black rounded-sm uppercase tracking-widest">Order ID: {String(selectedOrder.id).slice(-4).toUpperCase()}</div>
+                                            <div className="px-2 py-0.5 bg-slate-900 text-white text-[10px] font-black rounded-sm uppercase tracking-widest">Order ID: {String(selectedOrder.id).slice(-4).toUpperCase()}</div>
                                             <button onClick={() => setSelectedOrder(null)} className="p-1.5 hover:bg-white border border-transparent hover:border-slate-200 rounded-sm text-slate-400 transition-colors">
                                                 <X size={16} />
                                             </button>
@@ -360,17 +360,17 @@ export default function VendorAssignmentScreen() {
                                                     <Users size={20} />
                                                 </div>
                                                 <div>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Franchise Request From</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Franchise Request From</span>
                                                     <h3 className="font-black text-slate-900 text-sm">{selectedOrder.ownerName}</h3>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Contact</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Contact</span>
                                                     <span className="text-xs font-bold text-slate-700">{selectedOrder.mobile}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Requested On</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Requested On</span>
                                                     <span className="text-xs font-bold text-slate-700">{selectedOrder.createdAt}</span>
                                                 </div>
                                             </div>
@@ -393,7 +393,7 @@ export default function VendorAssignmentScreen() {
                                                         </div>
                                                         <button
                                                             onClick={() => handleAssignProduct(item)}
-                                                            className="text-[9px] font-black uppercase text-slate-900 bg-white border border-slate-200 rounded-sm px-2 py-1.5 hover:bg-slate-900 hover:text-white transition-all shadow-sm flex items-center gap-1"
+                                                            className="text-[10px] font-black uppercase text-slate-900 bg-white border border-slate-200 rounded-sm px-2 py-1.5 hover:bg-slate-900 hover:text-white transition-all shadow-sm flex items-center gap-1"
                                                         >
                                                             Assign <ArrowRight size={10} />
                                                         </button>
@@ -458,16 +458,16 @@ export default function VendorAssignmentScreen() {
                                                             <div>
                                                                 <h4 className="font-black text-slate-900 text-xs tracking-tight leading-tight">{vendor.name}</h4>
                                                                 <div className="flex items-center gap-1.5 mt-1">
-                                                                    <div className="flex items-center gap-1 text-amber-500 font-black text-[9px] tabular-nums">
+                                                                    <div className="flex items-center gap-1 text-amber-500 font-black text-[10px] tabular-nums">
                                                                         <Star size={9} fill="currentColor" /> {vendor.rating}
                                                                     </div>
                                                                     <span className="text-slate-200">•</span>
-                                                                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{vendor.category}</span>
+                                                                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{vendor.category}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Available</div>
+                                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Available</div>
                                                             <div className="text-xs font-black text-slate-900 tabular-nums leading-none">{vendor.capacity}%</div>
                                                         </div>
                                                     </div>
@@ -475,12 +475,12 @@ export default function VendorAssignmentScreen() {
                                                     <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-50">
                                                         <div className="flex items-center gap-1.5 text-slate-400">
                                                             <MapPin size={10} />
-                                                            <span className="text-[9px] font-bold tabular-nums">{index + 1}.2km away</span>
+                                                            <span className="text-[10px] font-bold tabular-nums">{index + 1}.2km away</span>
                                                         </div>
                                                         <button
                                                             disabled={isAssigning}
                                                             onClick={() => handleAssign(vendor)}
-                                                            className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-wider px-3 py-2 rounded-sm hover:bg-slate-800 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                                                            className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-sm hover:bg-slate-800 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
                                                         >
                                                             {isAssigning ? 'Assigning...' : 'Assign Vendor'}
                                                             <ArrowRight size={12} />
@@ -535,12 +535,12 @@ export default function VendorAssignmentScreen() {
             {/* Status Footer */}
             < div className="px-4 py-1.5 bg-slate-900 text-white/40 flex items-center justify-between border-t border-slate-800" >
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest">
+                    <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest">
                         <div className="w-1 h-1 rounded-full bg-emerald-400" />
                         System Status: Active
                     </div>
                 </div>
-                <div className="text-[9px] font-bold uppercase tracking-widest tabular-nums">Kisaankart Assignment v1.0</div>
+                <div className="text-[10px] font-bold uppercase tracking-widest tabular-nums">Kisaankart</div>
             </div >
         </div >
     );

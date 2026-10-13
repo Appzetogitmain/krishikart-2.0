@@ -223,7 +223,7 @@ export const CatalogProvider = ({ children }) => {
             if (response.data.success) {
                 const newProd = response.data.result;
                 setProducts(prev => [newProd, ...prev]);
-                toast.success('Product inducted into SKU ledger');
+                toast.success('Product added');
                 return newProd;
             }
         } catch (error) {
@@ -236,7 +236,7 @@ export const CatalogProvider = ({ children }) => {
         try {
             await api.delete(`/products/${id}`);
             setProducts(prev => prev.filter(p => p._id !== id));
-            toast.success('Product removed from inventory');
+            toast.success('Product deleted');
         } catch (error) {
             toast.error(error.response?.data?.message || 'Delete failed');
         }
@@ -280,7 +280,7 @@ export const CatalogProvider = ({ children }) => {
             if (response.data.success) {
                 const updated = response.data.result;
                 setProducts(prev => prev.map(p => p._id === id ? updated : p));
-                toast.success('Product record updated');
+                toast.success('Product updated');
                 return updated;
             }
         } catch (error) {
@@ -328,7 +328,7 @@ export const CatalogProvider = ({ children }) => {
         try {
             const response = await api.post('/masteradmin/recommendations', data);
             if (response.data.success) {
-                toast.success('Product pairing established successfully');
+                toast.success('Recommendation saved');
                 await fetchRecommendations();
                 return response.data.result;
             }

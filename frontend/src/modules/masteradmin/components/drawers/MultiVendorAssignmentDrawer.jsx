@@ -59,7 +59,7 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
                                     <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-full uppercase tracking-widest">Replenishment Request</span>
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{po.id}</span>
                                 </div>
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Split Procurement</h3>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">Assign Vendors per Item</h3>
                                 <p className="text-slate-500 font-medium text-sm mt-1">Assign specialized vendors for each line item requested by {po.franchiseName}.</p>
                             </div>
                             <button
@@ -83,7 +83,7 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
                                 <div className="flex flex-col justify-end">
                                     <div className="flex items-center gap-2 text-xs font-bold text-white/80">
                                         <Truck size={14} className="text-primary" />
-                                        Logistics: Multi-Vendor Pickup
+                                        Pickup from multiple vendors
                                     </div>
                                 </div>
                             </div>
@@ -92,7 +92,7 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
 
                         {/* Items List */}
                         <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Procurement Items</h4>
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Items Needed</h4>
                             {assignments.map((item) => (
                                 <div
                                     key={item.productId}
@@ -109,12 +109,12 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <h5 className="font-extrabold text-slate-900 text-lg tracking-tight">{item.productName}</h5>
-                                                    <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-[8px] font-black uppercase tracking-widest whitespace-nowrap">
-                                                        Procurement Needed
+                                                    <span className="px-2 py-0.5 bg-red-50 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                                                        Needs Stock
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Deficit: {item.orderQty} {item.unit}</span>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Short by: {item.orderQty} {item.unit}</span>
                                                     <div className="w-1 h-1 bg-slate-200 rounded-full" />
                                                     <span className="text-[10px] font-black text-primary uppercase tracking-widest">Rate: ₹{item.pricePerUnit}/{item.unit}</span>
                                                 </div>
@@ -125,7 +125,7 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
                                             {item.vendorId ? (
                                                 <div className="bg-emerald-50 p-3 rounded-2xl border border-emerald-100 flex items-center justify-between group">
                                                     <div className="flex flex-col">
-                                                        <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Assigned Vendor</span>
+                                                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Assigned Vendor</span>
                                                         <span className="text-xs font-black text-emerald-900 truncate">{item.vendorName}</span>
                                                     </div>
                                                     <button
@@ -181,7 +181,7 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
                                                                 </div>
                                                                 <div className="flex flex-col min-w-0">
                                                                     <span className="text-[10px] font-black text-slate-900 truncate">{vendor.name}</span>
-                                                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Cap: {vendor.capacity}%</span>
+                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Capacity: {vendor.capacity}%</span>
                                                                 </div>
                                                             </button>
                                                         ))}
@@ -198,7 +198,7 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
                     <div className="p-8 bg-white border-t border-slate-100">
                         <div className="flex items-center justify-between mb-8 px-2">
                             <div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Consolidated Value</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Total Value</span>
                                 <div className="text-3xl font-black text-slate-900 mt-1">₹{po.totalAmount.toLocaleString()}</div>
                             </div>
                             <div className="text-right">
@@ -229,7 +229,7 @@ export default function MultiVendorAssignmentDrawer({ isOpen, onClose, po, onFin
                                         : "bg-slate-100 text-slate-300 shadow-none cursor-not-allowed"
                                 )}
                             >
-                                {isAllAssigned ? 'Finalize Procurement' : 'Complete Assignment'}
+                                {isAllAssigned ? 'Confirm Vendors' : 'Complete Assignment'}
                                 <ArrowRight size={16} />
                             </button>
                         </div>

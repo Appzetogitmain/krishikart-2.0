@@ -23,7 +23,7 @@ const heroSlides = [
     },
     {
         image: '/assets/hero_banner_3.png',
-        title: 'Supply Chain Solutions That Scale',
+        title: 'Reliable Supply for Growing Businesses',
         sub: 'Reliable sourcing, quality checks, and on-time delivery — every single day.',
     },
 ];
@@ -52,14 +52,14 @@ const qualityCards = [
     },
     {
         title: 'Cold Supply Chain',
-        desc: 'Temperature-controlled logistics preserve quality from farm to your doorstep.',
+        desc: 'Temperature-controlled delivery keeps produce fresh from the farm to your door.',
         icon: Snowflake,
         bg: '#e0f7fa',
         color: '#00838f',
     },
     {
         title: 'Same-Day Delivery',
-        desc: 'Our dense franchise network enables rapid last-mile delivery every day.',
+        desc: 'Our stores near you deliver quickly, every day.',
         icon: Truck,
         bg: '#fff3e0',
         color: '#e65100',
@@ -650,7 +650,7 @@ export default function LandingPage() {
                         <h4>Portals</h4>
                         <Link to="/login">User Login</Link>
                         <Link to="/vendor/login">Vendor Portal</Link>
-                        <Link to="/franchise/login">Franchise Hub</Link>
+                        <Link to="/franchise/login">Franchise Login</Link>
                         <Link to="/delivery/login">Delivery Partner</Link>
                         <Link to="/masteradmin/login">Admin Panel</Link>
                     </div>

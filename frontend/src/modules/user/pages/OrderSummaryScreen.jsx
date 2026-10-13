@@ -179,7 +179,7 @@ export default function OrderSummaryScreen() {
                             </div>
                             {order.discountAmount > 0 && (
                                 <div className="bg-emerald-50 px-4 py-2 rounded-2xl border border-emerald-100">
-                                    <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Savings</p>
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-1">Savings</p>
                                     <p className="text-[11px] font-black text-emerald-600 uppercase">₹{order.discountAmount} SAVED</p>
                                 </div>
                             )}
@@ -188,7 +188,7 @@ export default function OrderSummaryScreen() {
 
                     <div className="flex items-center justify-center gap-2 text-slate-300 py-6">
                         <ShieldCheck size={14} />
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em]">Verified Secure Transaction</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Secure Payment</span>
                     </div>
                 </div>
             </div>

@@ -82,7 +82,7 @@ export default function CategoryApprovalScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900">Category Ownership</span>
                         </div>
-                        <h1 className="text-lg font-black text-slate-900 tracking-tight uppercase">Category Approval Desk</h1>
+                        <h1 className="text-lg font-black text-slate-900 tracking-tight uppercase">Category Requests</h1>
                     </div>
                     <button 
                         onClick={() => activeTab === 'franchise' ? fetchPendingCategoryRequests() : fetchPendingVendorCategoryRequests()}
@@ -168,7 +168,7 @@ export default function CategoryApprovalScreen() {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="text-right hidden md:block">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Queue Status</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pending</p>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs font-black text-slate-900 uppercase">{entity.requestedCategories.length} Categories Pending</span>
                                                 <Clock size={12} className="text-amber-500 animate-pulse" />
@@ -187,7 +187,7 @@ export default function CategoryApprovalScreen() {
                                                     </div>
                                                     <div>
                                                         <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{cat.name}</h4>
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Approval Required</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Approval Required</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -214,17 +214,17 @@ export default function CategoryApprovalScreen() {
                                     <div className="mt-6 pt-6 border-t border-slate-50 flex items-center gap-4">
                                         <div className="flex -space-x-2">
                                             {(entity.servedCategories || []).slice(0, 5).map((cat, i) => (
-                                                <div key={i} className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[8px] font-black text-slate-400 uppercase ring-2 ring-white shadow-sm" title={cat.name}>
+                                                <div key={i} className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 uppercase ring-2 ring-white shadow-sm" title={cat.name}>
                                                     {cat.name.charAt(0)}
                                                 </div>
                                             ))}
                                             {entity.servedCategories?.length > 5 && (
-                                                <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[8px] font-black text-slate-400 ring-2 ring-white">
+                                                <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400 ring-2 ring-white">
                                                     +{entity.servedCategories.length - 5}
                                                 </div>
                                             )}
                                         </div>
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                             Currently serving {entity.servedCategories?.length || 0} categories
                                         </span>
                                     </div>
@@ -241,8 +241,8 @@ export default function CategoryApprovalScreen() {
                                 <div className="w-16 h-16 bg-slate-50 rounded-sm flex items-center justify-center text-slate-200 mb-6 border border-slate-100">
                                     <CheckCircle2 size={32} />
                                 </div>
-                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tighter">Queue Empty</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">Zero pending {activeTab} category requests found</p>
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tighter">All done</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">No pending {activeTab} category requests found</p>
                             </motion.div>
                         )}
                     </AnimatePresence>

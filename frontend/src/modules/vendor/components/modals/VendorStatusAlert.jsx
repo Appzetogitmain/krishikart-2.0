@@ -34,7 +34,7 @@ const VendorStatusAlert = () => {
                     bgColor: 'bg-amber-50',
                     accentColor: 'bg-amber-500',
                     icon: <Package className="w-10 h-10 animate-bounce" />,
-                    title: 'Staged for Logistics'
+                    title: 'Ready for Pickup'
                 };
             case 'shipped':
             case 'dispatched':
@@ -124,7 +124,7 @@ const VendorStatusAlert = () => {
                                     <Package className="text-slate-900 w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Procurement ID</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Request ID</p>
                                     <p className="text-lg font-black text-slate-900">
                                         #{shortId}
                                     </p>
@@ -146,7 +146,7 @@ const VendorStatusAlert = () => {
                                 }}
                                 className={`h-14 px-6 rounded-2xl bg-slate-900 text-white font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-slate-200 hover:bg-slate-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group`}
                             >
-                                View Order Pipeline
+                                View Order
                             </button>
                             <button
                                 type="button"
@@ -160,7 +160,7 @@ const VendorStatusAlert = () => {
 
                     {/* Footer Info */}
                     <div className="bg-slate-900 py-3 px-6 flex items-center justify-center gap-2">
-                        <span className="text-[9px] font-bold text-white/50 uppercase tracking-[0.3em]">Kisaankart Supply Chain Matrix</span>
+                        <span className="text-[10px] font-bold text-white/50 uppercase tracking-[0.3em]">Kisaankart</span>
                     </div>
                 </motion.div>
             </div>

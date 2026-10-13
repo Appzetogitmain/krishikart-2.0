@@ -61,7 +61,7 @@ export default function InventoryCard({ item }) {
                         </p>
                     </div>
                     <div className="text-right space-y-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em]">MBQ Target</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.12em]">Minimum Stock</p>
                         <span className="px-2 py-1 rounded-lg bg-slate-900 text-white text-[10px] font-black tracking-tight">
                             {item.mbq} {item.unit}
                         </span>

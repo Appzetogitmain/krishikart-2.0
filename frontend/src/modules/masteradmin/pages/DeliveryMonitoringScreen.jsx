@@ -131,9 +131,9 @@ export default function DeliveryMonitoringScreen() {
                             {rider?.name || 'NOT ASSIGNED'}
                         </span>
                         <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{rider?.vehicle || 'NA-00-0000'}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{rider?.vehicle || 'NA-00-0000'}</span>
                             {rider?.mobile && (
-                                <span className="text-[9px] font-bold text-blue-500">{rider.mobile}</span>
+                                <span className="text-[10px] font-bold text-blue-500">{rider.mobile}</span>
                             )}
                         </div>
                     </div>
@@ -147,31 +147,31 @@ export default function DeliveryMonitoringScreen() {
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                         <span className="font-black text-slate-900 text-[10px] tracking-tighter">LID-{val?.slice(-6).toUpperCase()}</span>
-                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1 border border-emerald-100 rounded-sm">₹{row.amount?.toLocaleString()}</span>
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 border border-emerald-100 rounded-sm">₹{row.amount?.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-1.5 mt-1">
                         <Home size={10} className="text-slate-400" />
                         <span className="text-[10px] font-bold text-slate-600">{row.customer?.name}</span>
                     </div>
-                    <span className="text-[8px] font-medium text-slate-400 truncate max-w-[150px]">{row.customer?.address}</span>
+                    <span className="text-[10px] font-medium text-slate-400 truncate max-w-[150px]">{row.customer?.address}</span>
                 </div>
             )
         },
         {
-            header: 'PICKUP HUB',
+            header: 'PICKUP FROM',
             key: 'franchise',
             render: (franchise) => (
                 <div className="flex flex-col">
                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight">{franchise?.name}</span>
                     <div className="flex items-center gap-1.5 mt-0.5">
                         <Navigation size={10} className="text-indigo-400" />
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">{franchise?.location || 'Staging Area'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{franchise?.location || 'Franchise'}</span>
                     </div>
                 </div>
             )
         },
         {
-            header: 'EXECUTION STATUS',
+            header: 'STATUS',
             key: 'status',
             render: (val, row) => (
                 <div className="flex flex-col gap-2">
@@ -305,7 +305,7 @@ export default function DeliveryMonitoringScreen() {
                         <div className="flex items-center gap-2">
                             <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-100 rounded-full animate-pulse">
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Live Tracking Active</span>
+                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Live Tracking Active</span>
                             </div>
                         </div>
                     }

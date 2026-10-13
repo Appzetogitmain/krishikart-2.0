@@ -54,7 +54,7 @@ export default function BottomNav() {
                                 />
                             </div>
                             <span className={cn(
-                                "text-[9px] sm:text-[10px] font-medium text-center transition-colors duration-200 leading-tight line-clamp-2",
+                                "text-[10px] sm:text-[10px] font-medium text-center transition-colors duration-200 leading-tight line-clamp-2",
                                 isActive ? "text-slate-900" : "text-slate-400"
                             )}>
                                 {label}

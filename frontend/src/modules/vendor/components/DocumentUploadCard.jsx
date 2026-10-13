@@ -101,13 +101,13 @@ export default function DocumentUploadCard({ title, icon: Icon, status: initialS
     const StatusBadge = () => {
         switch (status) {
             case 'verified':
-                return <span className="flex items-center gap-1 text-[8px] font-black text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-tighter"><CheckCircle2 size={10} /> Verified</span>;
+                return <span className="flex items-center gap-1 text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-tighter"><CheckCircle2 size={10} /> Verified</span>;
             case 'pending':
-                return <span className="flex items-center gap-1 text-[8px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-tighter"><Clock size={10} /> Pending</span>;
+                return <span className="flex items-center gap-1 text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-tighter"><Clock size={10} /> Pending</span>;
             case 'expiring_soon':
-                return <span className="flex items-center gap-1 text-[8px] font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md uppercase tracking-tighter"><AlertCircle size={10} /> Expiring</span>;
+                return <span className="flex items-center gap-1 text-[10px] font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded-md uppercase tracking-tighter"><AlertCircle size={10} /> Expiring</span>;
             default:
-                return <span className="flex items-center gap-1 text-[8px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md uppercase tracking-tighter">Not Uploaded</span>;
+                return <span className="flex items-center gap-1 text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md uppercase tracking-tighter">Not Uploaded</span>;
         }
     };
 
@@ -232,7 +232,7 @@ export default function DocumentUploadCard({ title, icon: Icon, status: initialS
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-black text-slate-900 truncate">{fileName || 'Document'}</p>
-                        <p className="text-[8px] font-bold text-slate-400 uppercase">Uploaded on {uploadDate}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Uploaded on {uploadDate}</p>
                     </div>
                 </div>
             )}

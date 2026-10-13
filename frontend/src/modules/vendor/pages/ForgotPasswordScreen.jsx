@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sprout, Mail, Lock, Loader2, ArrowRight, KeyRound, ChevronLeft } from 'lucide-react';
@@ -22,7 +23,7 @@ export default function ForgotPasswordScreen() {
             setStep(2);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Failed to send OTP');
+            toast.error(error.response?.data?.message || 'Failed to send OTP');
         } finally {
             setIsLoading(false);
         }
@@ -38,11 +39,11 @@ export default function ForgotPasswordScreen() {
                 newPassword,
                 confirmPassword: newPassword
             });
-            alert('Password reset successful! Please login.');
+            toast.success('Password reset successful! Please login.');
             navigate('/vendor/login');
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Failed to reset password');
+            toast.error(error.response?.data?.message || 'Failed to reset password');
         } finally {
             setIsLoading(false);
         }
@@ -93,11 +94,11 @@ export default function ForgotPasswordScreen() {
                         <KeyRound size={40} />
                     </motion.div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                        {step === 1 ? 'Forgot Password?' : 'Reset Credentials'}
+                        {step === 1 ? 'Forgot Password?' : 'Reset your password'}
                     </h1>
                     <p className="text-slate-500 font-medium mt-2">
                         {step === 1
-                            ? "Enter your mobile number to receive a recovery code"
+                            ? "Enter your mobile number to get an OTP"
                             : "Enter the code sent to your mobile"}
                     </p>
                 </div>
@@ -138,7 +139,7 @@ export default function ForgotPasswordScreen() {
                                     <Loader2 size={18} className="animate-spin" />
                                 ) : (
                                     <>
-                                        Send Recovery Code
+                                        Send OTP
                                         <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
@@ -154,7 +155,7 @@ export default function ForgotPasswordScreen() {
                             className="space-y-5"
                         >
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Recovery Code</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">OTP</label>
                                 <div className="relative group">
                                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                         <KeyRound size={18} />

@@ -24,7 +24,8 @@ export const exportToCSV = (filename, columns, data) => {
         }).join(',');
     });
 
-    const csvContent = [headers, ...rows].join('\n');
+    // BOM so Excel opens the file as UTF-8 (₹ symbol, Hindi names)
+    const csvContent = '﻿' + [headers, ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
 

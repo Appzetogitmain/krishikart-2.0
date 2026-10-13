@@ -728,6 +728,11 @@ export const franchiseConfirmReceipt = async (req, res) => {
             return handleResponse(res, 403, "Not authorized to update this request");
         }
 
+        // Receiving the same consignment twice would add the stock to inventory twice
+        if (request.status === 'completed') {
+            return handleResponse(res, 400, "This consignment has already been received");
+        }
+
         const { items: auditData } = req.body; // Expecting [{ productId: string, receivedQuantity: number, damagedQuantity: number, rejected: boolean }]
 
         request.status = 'completed';
@@ -928,8 +933,9 @@ export const franchiseConfirmReceipt = async (req, res) => {
             try {
                 const orderId = request.orderId;
                 const order = await Order.findById(orderId);
+                const orderStillOpen = order && !['Cancelled', 'Delivered', 'Received', 'Dispatched', 'Out for Delivery', 'Packed'].includes(order.orderStatus);
 
-                if (order) {
+                if (orderStillOpen) {
                     // 1. Check for damages and notify Admin/Vendor
                     const damagedItems = request.items.filter(i => (i.damagedQuantity || 0) > 0);
                     if (damagedItems.length > 0) {

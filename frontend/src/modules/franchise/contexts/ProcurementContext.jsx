@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '@/lib/axios';
 import { useFranchiseAuth } from '@/modules/franchise/contexts/FranchiseAuthContext';
 
@@ -22,8 +22,12 @@ export const ProcurementProvider = ({ children }) => {
         try {
             const response = await api.post('/procurement/franchise/create', request);
             if (response.data.success) {
-                setProcurementRequests(prev => [response.data.results, ...prev]);
-                return response.data.results;
+                // Single document comes back as `result` (not `results`)
+                const created = response.data.result;
+                if (created) {
+                    setProcurementRequests(prev => [created, ...prev]);
+                }
+                return created;
             }
         } catch (error) {
             console.error('Failed to create procurement request:', error);
@@ -31,17 +35,25 @@ export const ProcurementProvider = ({ children }) => {
         }
     };
 
-    const fetchRequests = async () => {
+    const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+    const [requestsError, setRequestsError] = useState('');
+
+    const fetchRequests = useCallback(async () => {
         if (!isAuthenticated) return;
+        setIsLoadingRequests(true);
+        setRequestsError('');
         try {
             const response = await api.get('/procurement/franchise/my-requests');
             if (response.data.success) {
-                setProcurementRequests(response.data.results);
+                setProcurementRequests(response.data.results || []);
             }
         } catch (error) {
             console.error('Failed to fetch procurement requests:', error);
+            setRequestsError(error.response?.data?.message || 'Could not load your procurement requests');
+        } finally {
+            setIsLoadingRequests(false);
         }
-    };
+    }, [isAuthenticated]);
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -61,6 +73,9 @@ export const ProcurementProvider = ({ children }) => {
     return (
         <ProcurementContext.Provider value={{
             procurementRequests,
+            fetchRequests,
+            isLoadingRequests,
+            requestsError,
             cart,
             setCart,
             clearCart,

@@ -184,13 +184,13 @@ export default function POSScreen() {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
                             <Home size={12} />
                             <ChevronRight size={10} />
-                            <span>Counter 01</span>
+                            <span>Counter</span>
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest leading-none">New Sale</span>
                         </div>
                         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded-sm">
                             <ShieldCheck size={10} className="text-emerald-500" />
-                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest leading-none">System Online</span>
+                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest leading-none">System Online</span>
                         </div>
                     </div>
 
@@ -215,7 +215,7 @@ export default function POSScreen() {
                     {inventoryLoading && inventory.length === 0 ? (
                         <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
                             <RefreshCw className="animate-spin mb-4" size={32} />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Loading Catalog...</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Loading products...</p>
                         </div>
                     ) : filteredItems.length === 0 ? (
                         <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
@@ -263,7 +263,7 @@ export default function POSScreen() {
                                         {/* Promo Badges (Unit moved to price section) */}
                                         <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
                                             {item.bestPrice > 0 && (
-                                                <div className="bg-emerald-600 text-white text-[9px] font-black px-2 py-0.5 rounded-sm shadow-sm uppercase tracking-tighter">
+                                                <div className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-sm shadow-sm uppercase tracking-tighter">
                                                     Best Rate
                                                 </div>
                                             )}
@@ -315,9 +315,9 @@ export default function POSScreen() {
                                     </div>
                                 </div>
                                 {(item.unit === 'Kg' || item.unit === 'kg') && (
-                                    <div className="mt-2 pt-1 border-t border-slate-50 flex items-center gap-1 text-[8px] font-black uppercase text-emerald-600 tracking-widest">
+                                    <div className="mt-2 pt-1 border-t border-slate-50 flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600 tracking-widest">
                                         <Scale size={10} />
-                                        Scalable
+                                        Sold by weight
                                     </div>
                                 )}
                             </div>
@@ -453,7 +453,7 @@ export default function POSScreen() {
                                 </div>
                                 <div className="flex items-center justify-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">Weight ready</span>
+                                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Weight ready</span>
                                 </div>
                             </div>
 
@@ -638,7 +638,7 @@ export default function POSScreen() {
                             <div id="printable-receipt" className="hidden">
                                 <div className="receipt-header">
                                     <h2 style={{ margin: '0', fontSize: '18px' }}>KISAANKART</h2>
-                                    <p style={{ margin: '5px 0', fontSize: '10px' }}>Franchise POS Terminal</p>
+                                    <p style={{ margin: '5px 0', fontSize: '10px' }}>Counter Sale Receipt</p>
                                     <p style={{ margin: '0', fontSize: '10px' }}>Date: {lastSale?.date}</p>
                                     <p style={{ margin: '0', fontSize: '10px' }}>Receipt #: {lastSale?.saleId}</p>
                                 </div>
@@ -668,7 +668,7 @@ export default function POSScreen() {
                                     <CheckCircle2 size={28} />
                                 </div>
                                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-[0.3em] mb-1">Payment Successful</h2>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receipt Prepared</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receipt ready</p>
                             </div>
 
                             <div className="p-8 space-y-4">
@@ -677,11 +677,11 @@ export default function POSScreen() {
                                     <span className="tabular-nums">₹{(lastSale?.total || 0).toLocaleString()}</span>
                                 </div>
                                 <div className="h-px bg-slate-100" />
-                                <div className="flex justify-between text-[9px] font-bold uppercase text-slate-400 tracking-widest">
+                                <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest">
                                     <span>Payment Method</span>
-                                    <span>POS Terminal</span>
+                                    <span>Counter Sale (POS)</span>
                                 </div>
-                                <div className="flex justify-between text-[9px] font-bold uppercase text-slate-400 tracking-widest">
+                                <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest">
                                     <span>Time</span>
                                     <span>{new Date().toLocaleTimeString()}</span>
                                 </div>

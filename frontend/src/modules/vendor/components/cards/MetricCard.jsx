@@ -26,7 +26,7 @@ const MetricCard = ({ label, value, icon: Icon, color = 'slate', index = 0, tren
                 </div>
                 {trend && (
                     <div className={cn(
-                        "text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg",
+                        "text-[10px] sm:text-[10px] font-black px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg",
                         trend.positive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
                     )}>
                         {trend.positive ? '+' : ''}{trend.value}%
@@ -34,11 +34,11 @@ const MetricCard = ({ label, value, icon: Icon, color = 'slate', index = 0, tren
                 )}
             </div>
             <div className="min-w-0">
-                <p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.08em] sm:tracking-[0.1em] leading-snug mb-1 line-clamp-2">{label}</p>
+                <p className="text-[10px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.08em] sm:tracking-[0.1em] leading-snug mb-1 line-clamp-2">{label}</p>
                 <div className="flex flex-col min-w-0">
                     <h3 className="text-lg sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight sm:tracking-tighter tabular-nums break-words leading-none">{value}</h3>
                     {sub && (
-                        <p className="text-[8px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1 truncate">{sub}</p>
+                        <p className="text-[10px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 truncate">{sub}</p>
                     )}
                 </div>
             </div>

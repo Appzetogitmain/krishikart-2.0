@@ -321,6 +321,10 @@ const orderSchema = new mongoose.Schema({
     isPreOrder: {
         type: Boolean,
         default: false
+    },
+    scheduleReminderSentAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true

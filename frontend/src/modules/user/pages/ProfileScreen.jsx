@@ -4,7 +4,7 @@ import {
   User, Package, Wallet,
   ChevronRight, Bell, Heart,
   Info, Power, CreditCard,
-  Trash2
+  Trash2, MapPin
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PageTransition from '../components/layout/PageTransition'
@@ -72,6 +72,7 @@ export default function ProfileScreen() {
       title: "Others",
       items: [
         { icon: User, label: "Profile settings", path: "/edit-profile" },
+        { icon: MapPin, label: "Address book", path: "/address-book" },
         { icon: Bell, label: "Notifications", path: "/notifications" },
         { icon: Heart, label: "My list", path: "/wishlist" },
         { icon: Info, label: "Contact us", path: "/help-support" },
@@ -186,7 +187,7 @@ export default function ProfileScreen() {
         </div>
 
         <p className="text-center text-[10px] font-bold text-slate-300 mt-8 mb-6 uppercase tracking-widest">
-          Build 2.4.0 · Kisaankart Global
+          Version 2.4.0
         </p>
       </div>
 

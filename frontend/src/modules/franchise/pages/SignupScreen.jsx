@@ -247,19 +247,19 @@ export default function SignupScreen() {
               Kisaankart
             </span>
             <span className="text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">
-              Franchise Node
+              Franchise
             </span>
           </div>
         </div>
 
         <div className="space-y-6 max-w-md">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-black uppercase tracking-widest rounded-sm">
-            <Zap size={10} /> v2.4.0 Register
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-sm">
+            <Zap size={10} /> Franchise Registration
           </div>
           <h1 className="text-5xl font-black text-white tracking-tighter leading-[0.9] uppercase">
             Become a <br />
             Franchise <br />
-            Node.
+            Partner.
           </h1>
           <p className="text-slate-400 text-sm font-medium leading-relaxed uppercase tracking-tight">
             Join our network and start managing orders in your area. Quick
@@ -270,17 +270,17 @@ export default function SignupScreen() {
         <div className="flex items-center gap-12 text-slate-500">
           <div className="flex flex-col">
             <span className="text-xs font-black text-white uppercase tabular-nums tracking-widest">
-              Type-A
+              Trusted
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-widest mt-1">
-              Infrastructure
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
+              Platform
             </span>
           </div>
           <div className="flex flex-col">
             <span className="text-xs font-black text-white uppercase tabular-nums tracking-widest">
               Secure
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-widest mt-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
               Onboarding
             </span>
           </div>
@@ -288,7 +288,7 @@ export default function SignupScreen() {
             <span className="text-xs font-black text-white uppercase tabular-nums tracking-widest">
               24/7
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-widest mt-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest mt-1">
               Support
             </span>
           </div>
@@ -338,7 +338,7 @@ export default function SignupScreen() {
                   className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                         Shop Name <span className="text-red-500">*</span>
                       </label>
                       <div className="relative group">
@@ -357,7 +357,7 @@ export default function SignupScreen() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                         Owner Name <span className="text-red-500">*</span>
                       </label>
                       <div className="relative group">
@@ -380,7 +380,7 @@ export default function SignupScreen() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                       Mobile Number <span className="text-red-500">*</span>
                     </label>
                     <div className="relative group">
@@ -403,7 +403,7 @@ export default function SignupScreen() {
 
                   {/* Email + Password */}
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                       Email Address <span className="text-red-500">*</span>
                     </label>
                     <div className="relative group">
@@ -421,7 +421,7 @@ export default function SignupScreen() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                       Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative group">
@@ -444,13 +444,13 @@ export default function SignupScreen() {
                       </button>
                     </div>
                     {formData.password && formData.password.length < 6 && (
-                      <p className="text-[9px] text-red-500 font-bold px-1">Min. 6 characters required</p>
+                      <p className="text-[10px] text-red-500 font-bold px-1">Min. 6 characters required</p>
                     )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                         FSSAI Number
                       </label>
                       <div className="relative group">
@@ -471,11 +471,11 @@ export default function SignupScreen() {
                         />
                       </div>
                       {formData.fssaiNumber && !isValidFssai(formData.fssaiNumber) && (
-                        <p className="text-[9px] text-red-500 font-bold px-1">Must be 14 digits</p>
+                        <p className="text-[10px] text-red-500 font-bold px-1">Must be 14 digits</p>
                       )}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                         GST Number
                       </label>
                       <div className="relative group">
@@ -495,7 +495,7 @@ export default function SignupScreen() {
                         />
                       </div>
                       {formData.gstNumber && !isValidGst(formData.gstNumber) && (
-                        <p className="text-[9px] text-red-500 font-bold px-1">Invalid GSTIN format</p>
+                        <p className="text-[10px] text-red-500 font-bold px-1">Invalid GSTIN format</p>
                       )}
                     </div>
                   </div>
@@ -508,7 +508,7 @@ export default function SignupScreen() {
                   />
 
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] px-1">
                       Product Categories to Serve <span className="text-red-500">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-sm">
@@ -590,10 +590,10 @@ export default function SignupScreen() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex justify-between items-center px-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
-                          Access Verification
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+                          Verify Mobile Number
                         </label>
-                        <span className="text-[9px] font-bold text-slate-400">
+                        <span className="text-[10px] font-bold text-slate-400">
                           {formData.mobile}
                         </span>
                       </div>
@@ -649,11 +649,11 @@ export default function SignupScreen() {
           <div className="pt-12 border-t border-slate-100 flex flex-col items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
-                System Status: Online
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+                All systems working
               </span>
             </div>
-            <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest text-center leading-relaxed">
+            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest text-center leading-relaxed">
                 By registering, you agree to our <button type="button" onClick={() => navigate('/franchise/terms')} className="text-slate-900 border-b border-slate-900">Franchise Terms & Conditions</button>.
             </p>
           </div>

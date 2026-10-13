@@ -32,7 +32,7 @@ export default function CreditOverrideModal({ isOpen, onClose, customer, onSave 
                     <div className="p-8">
                         <div className="flex items-center justify-between mb-8">
                             <div>
-                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Override Limit</h3>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Change Limit</h3>
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">
                                     Updating limit for {customer?.fullName || customer?.mobile}
                                 </p>
@@ -109,7 +109,7 @@ export default function CreditOverrideModal({ isOpen, onClose, customer, onSave 
                             <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-3">
                                 <AlertCircle size={20} className="text-amber-500 shrink-0" />
                                 <p className="text-[11px] font-bold text-amber-700 leading-relaxed">
-                                    Changes will be logged in the system audit trail and effective immediately.
+                                    This change is saved in the history and applies immediately.
                                 </p>
                             </div>
                         </div>

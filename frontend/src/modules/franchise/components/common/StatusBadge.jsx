@@ -42,7 +42,7 @@ export default function StatusBadge({ status, variant = 'default' }) {
 
     return (
         <span className={cn(
-            "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tight inline-flex items-center gap-1.5",
+            "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tight inline-flex items-center gap-1.5",
             config.bg,
             config.text,
             config.pulse && "animate-pulse"

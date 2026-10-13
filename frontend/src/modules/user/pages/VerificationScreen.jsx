@@ -33,7 +33,7 @@ export default function VerificationScreen() {
                         </div>
                         <h2 className="text-xl font-black text-slate-900">Partially Verified</h2>
                         <p className="text-sm text-slate-400 font-medium mt-2 leading-relaxed">
-                            Your basic KYC is complete. Please complete business verification to unlock higher transaction limits.
+                            Your basic details are verified. Upload your business documents to get higher limits.
                         </p>
                     </div>
 

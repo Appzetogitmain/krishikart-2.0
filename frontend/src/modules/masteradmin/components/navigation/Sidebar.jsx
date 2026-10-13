@@ -129,7 +129,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         },
         {
           icon: Star,
-          label: "Loyalty Engine",
+          label: "Loyalty Points",
           path: "/masteradmin/loyalty",
           permissionKey: "loyalty",
         },
@@ -182,7 +182,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         },
         {
           icon: AlertCircle,
-          label: "Rejection Audit",
+          label: "Rejected Stock",
           path: "/masteradmin/rejections",
           permissionKey: "vendor-reports",
         },
@@ -349,7 +349,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
               <span className="font-black text-[13px] tracking-tight text-slate-900 leading-none">
                 KISAANKART
               </span>
-              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                 Admin Panel
               </span>
             </div>
@@ -369,7 +369,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           <div key={group.group} className="space-y-1.5">
             {!isCollapsed && (
               <div className="px-3 mb-2">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">
                   {group.group}
                 </span>
               </div>

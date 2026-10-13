@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sprout, Mail, Lock, Loader2, ArrowRight, User, Phone, MapPin, FileText, CreditCard, Building2, Camera, Upload, X } from 'lucide-react';
@@ -91,17 +92,17 @@ export default function SignupScreen() {
 
         const accNo = (formData.bankAccountNumber || '').trim();
         if (accNo && (accNo.length < 9 || accNo.length > 16)) {
-            alert('Account number must be 9 to 16 digits.');
+            toast.error('Account number must be 9 to 16 digits.');
             return;
         }
         const ifsc = (formData.bankIfscCode || '').trim();
         if (ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
-            alert('Invalid IFSC code. Format: 4 letters, then 0, then 6 alphanumeric (e.g. HDFC0001234).');
+            toast.error('Invalid IFSC code. Format: 4 letters, then 0, then 6 alphanumeric (e.g. HDFC0001234).');
             return;
         }
         const fssai = (formData.fssaiLicense || '').trim();
         if (fssai && !/^\d{14}$/.test(fssai)) {
-            alert('FSSAI License must be exactly 14 digits.');
+            toast.error('FSSAI License must be exactly 14 digits.');
             return;
         }
 
@@ -126,10 +127,10 @@ export default function SignupScreen() {
 
         try {
             await api.post('/vendor/register', data, { headers: { 'Content-Type': 'multipart/form-data' } });
-            alert('Registration successful! Please login.');
+            toast.success('Registration successful! Please login.');
             navigate('/vendor/login');
         } catch (error) {
-            alert(error.response?.data?.message || 'Registration failed');
+            toast.error(error.response?.data?.message || 'Registration failed');
         } finally {
             setIsLoading(false);
         }
@@ -137,7 +138,7 @@ export default function SignupScreen() {
 
     const FileUploadField = ({ label, name, icon: Icon, fileRef }) => (
         <div className="space-y-1">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                 {label} <span className="text-slate-300 font-medium normal-case">(optional)</span>
             </label>
             <div 
@@ -157,9 +158,9 @@ export default function SignupScreen() {
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-bold text-slate-700 truncate">{formData[name]?.name || 'Click to upload document'}</p>
-                        <p className="text-[8px] font-medium text-slate-400">JPG, PNG or PDF (Max 20MB)</p>
+                        <p className="text-[10px] font-medium text-slate-400">JPG, PNG or PDF (Max 20MB)</p>
                     </div>
-                    {formData[name] && <div className="text-[9px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded">SELECTED</div>}
+                    {formData[name] && <div className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded">SELECTED</div>}
                 </div>
             </div>
         </div>
@@ -194,7 +195,7 @@ export default function SignupScreen() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name / Owner Name <span className="text-red-500">*</span></label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name / Owner Name <span className="text-red-500">*</span></label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><User size={14} /></div>
                                     <input name="fullName" type="text" required value={formData.fullName} onChange={handleChange} placeholder="Your Name" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -202,7 +203,7 @@ export default function SignupScreen() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address <span className="text-red-500">*</span></label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address <span className="text-red-500">*</span></label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><Mail size={14} /></div>
                                     <input name="email" type="email" required value={formData.email} onChange={handleChange} placeholder="vendor@kisaankart.com" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -210,7 +211,7 @@ export default function SignupScreen() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number <span className="text-red-500">*</span></label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number <span className="text-red-500">*</span></label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><Phone size={14} /></div>
                                     <input name="mobile" type="tel" required value={formData.mobile} onChange={handleChange} placeholder="9876543210" maxLength={10} className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900 tracking-widest" />
@@ -218,7 +219,7 @@ export default function SignupScreen() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">City <span className="text-red-500">*</span></label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">City <span className="text-red-500">*</span></label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><MapPin size={14} /></div>
                                     <input name="farmCity" type="text" required value={formData.farmCity} onChange={handleChange} placeholder="e.g. Indore" maxLength={50} className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -226,7 +227,7 @@ export default function SignupScreen() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">State <span className="text-red-500">*</span></label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">State <span className="text-red-500">*</span></label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><MapPin size={14} /></div>
                                     <input name="farmState" type="text" required value={formData.farmState} onChange={handleChange} placeholder="e.g. Madhya Pradesh" maxLength={50} className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -244,7 +245,7 @@ export default function SignupScreen() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bank Name</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bank Name</label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><Building2 size={14} /></div>
                                     <input name="bankName" type="text" value={formData.bankName} onChange={handleChange} placeholder="HDFC Bank" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -252,7 +253,7 @@ export default function SignupScreen() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Holder Name</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Holder Name</label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><User size={14} /></div>
                                     <input name="bankAccountHolderName" type="text" value={formData.bankAccountHolderName} onChange={handleChange} placeholder="Name on Passbook" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -260,7 +261,7 @@ export default function SignupScreen() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Number</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Number</label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><CreditCard size={14} /></div>
                                     <input name="bankAccountNumber" type="tel" inputMode="numeric" value={formData.bankAccountNumber} onChange={handleChange} maxLength={16} placeholder="9–16 digits" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -268,7 +269,7 @@ export default function SignupScreen() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">IFSC Code</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">IFSC Code</label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><FileText size={14} /></div>
                                     <input name="bankIfscCode" type="text" value={formData.bankIfscCode} onChange={handleChange} maxLength={11} placeholder="HDFC0001234" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900 uppercase" />
@@ -303,12 +304,12 @@ export default function SignupScreen() {
                     {/* ── Documents & Compliance (optional) ── */}
                     <div className="space-y-3 md:col-span-2">
                         <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">
-                            Documents & Compliance <span className="text-slate-300 font-medium normal-case">(optional)</span>
+                            Documents <span className="text-slate-300 font-medium normal-case">(optional)</span>
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">FSSAI License No.</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">FSSAI License No.</label>
                                 <div className="relative group">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><FileText size={14} /></div>
                                     <input name="fssaiLicense" type="tel" value={formData.fssaiLicense} onChange={handleChange} maxLength={14} placeholder="14-digit FSSAI number" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -326,7 +327,7 @@ export default function SignupScreen() {
 
                     {/* ── Password ── */}
                     <div className="space-y-1 md:col-span-2">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Create Password <span className="text-red-500">*</span></label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Create Password <span className="text-red-500">*</span></label>
                         <div className="relative group">
                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><Lock size={14} /></div>
                             <input name="password" type="password" required value={formData.password} onChange={handleChange} placeholder="••••••••" className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none text-xs font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -346,7 +347,7 @@ export default function SignupScreen() {
                 </form>
 
                 <div className="mt-5 text-center">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Already have a vendor account?</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Already have a vendor account?</p>
                     <button onClick={() => navigate('/vendor/login')} className="mt-1 text-primary font-black text-[10px] hover:underline">Login to Dashboard</button>
                 </div>
             </motion.div>
@@ -389,7 +390,7 @@ export default function SignupScreen() {
                                         <Camera size={22} />
                                     </div>
                                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Take Photo</span>
-                                    <span className="text-[8px] font-medium text-slate-400 text-center">Use Device Camera</span>
+                                    <span className="text-[10px] font-medium text-slate-400 text-center">Use Device Camera</span>
                                 </button>
                                 
                                 <button
@@ -407,7 +408,7 @@ export default function SignupScreen() {
                                         <Upload size={22} />
                                     </div>
                                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Choose File</span>
-                                    <span className="text-[8px] font-medium text-slate-400 text-center">Gallery or Files</span>
+                                    <span className="text-[10px] font-medium text-slate-400 text-center">Gallery or Files</span>
                                 </button>
                             </div>
                         </motion.div>

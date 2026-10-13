@@ -39,26 +39,26 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             group: 'Core Operations', items: [
                 { icon: LayoutDashboard, label: 'Dashboard', path: '/franchise/dashboard' },
                 { icon: ShoppingBag, label: 'Hotel orders', path: '/franchise/orders' },
-                { icon: Monitor, label: 'POS Terminal', path: '/franchise/pos' },
+                { icon: Monitor, label: 'Counter Sale (POS)', path: '/franchise/pos' },
             ]
         },
         {
             group: 'Logistics & Supply', items: [
                 { icon: PackageCheck, label: 'Vendor Receiving', path: '/franchise/receiving' },
-                { icon: Truck, label: 'Delivery Dispatch', path: '/franchise/dispatch' },
+                { icon: Truck, label: 'Deliveries', path: '/franchise/dispatch' },
                 { icon: ShoppingBasket, label: 'Procurement', path: '/franchise/procurement' },
                 { icon: Undo2, label: 'Returns', path: '/franchise/returns' },
             ]
         },
         {
-            group: 'Assets & Ledger', items: [
-                { icon: Package, label: 'Inventory Stock', path: '/franchise/inventory' },
+            group: 'Stock & Reports', items: [
+                { icon: Package, label: 'Stock', path: '/franchise/inventory' },
                 { icon: BarChart3, label: 'Reports', path: '/franchise/reports' },
             ]
         },
         {
             group: 'Configuration', items: [
-                { icon: User, label: 'Node Profile', path: '/franchise/profile' },
+                { icon: User, label: 'My Profile', path: '/franchise/profile' },
                 { icon: CreditCard, label: 'Payment Settings', path: '/franchise/payment-settings' },
                 { icon: Settings, label: 'Documentation', path: '/franchise/documentation' },
                 { icon: HelpCircle, label: 'Help & Support', path: '/franchise/help-support' },
@@ -80,7 +80,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                         </div>
                         <div className="flex flex-col">
                             <span className="font-black text-[13px] tracking-tight text-slate-900 leading-none">KISAANKART</span>
-                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Franchise Node</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Franchise</span>
                         </div>
                     </div>
                 ) : (
@@ -98,7 +98,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                     <div key={group.group} className="space-y-1.5">
                         {!isCollapsed && (
                             <div className="px-3 mb-2">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">
                                     {group.group}
                                 </span>
                             </div>
@@ -157,7 +157,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                     )}
                 >
                     <LogOut size={16} className="group-hover:scale-110 transition-transform" />
-                    {!isCollapsed && <span className="font-black text-[10px] uppercase tracking-[0.2em]">Terminate Session</span>}
+                    {!isCollapsed && <span className="font-black text-[10px] uppercase tracking-[0.2em]">Log Out</span>}
                 </button>
             </div>
 

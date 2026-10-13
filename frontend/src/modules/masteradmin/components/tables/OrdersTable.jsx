@@ -26,7 +26,7 @@ const PaymentBadge = ({ method }) => {
     const { icon: Icon, color, bg, border } = config[method] || config['COD'];
 
     return (
-        <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider border", bg, color, border)}>
+        <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border", bg, color, border)}>
             <Icon size={10} />
             {method}
         </span>
@@ -68,7 +68,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                     <span className="font-bold text-[11px] tracking-widest uppercase text-slate-900">
                                                         {order.franchiseId.franchiseName || order.franchiseId.ownerName}
                                                     </span>
-                                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">
                                                         {order.franchiseId.franchiseName ? order.franchiseId.ownerName : order.franchiseId.mobile}
                                                     </span>
                                                 </>
@@ -77,8 +77,8 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                         if (wasRejected) {
                                             return (
                                                 <>
-                                                    <span className="font-bold text-[11px] tracking-widest uppercase text-orange-600">Awaiting Reassignment</span>
-                                                    <span className="text-[9px] text-orange-400 font-bold uppercase tracking-wide mt-0.5">Rejected — finding store</span>
+                                                    <span className="font-bold text-[11px] tracking-widest uppercase text-orange-600">Waiting for a Franchise</span>
+                                                    <span className="text-[10px] text-orange-400 font-bold uppercase tracking-wide mt-0.5">Rejected — finding another franchise</span>
                                                 </>
                                             );
                                         }
@@ -92,7 +92,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                         {order.userId?.fullName || 
                                          (order.franchiseId?.mobile === order.userId?.mobile ? order.franchiseId?.ownerName : 'Unnamed User')}
                                     </span>
-                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">{order.userId?.mobile || 'No Mobile'}</span>
+                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">{order.userId?.mobile || 'No Mobile'}</span>
                                 </div>
                             </td>
                             <td className="px-4 py-4">
@@ -101,17 +101,17 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                         {order.items?.length || 0} {order.items?.length === 1 ? 'Item' : 'Items'}
                                     </span>
                                     {order.items?.some(i => i.isShortage) && (
-                                        <span className="text-[8px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter animate-pulse">
+                                        <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter animate-pulse">
                                             Stock Shortage
                                         </span>
                                     )}
                                     {order.isPartOfGroup && (
-                                        <span className="text-[8px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+                                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
                                             Split Order
                                         </span>
                                     )}
                                     {Array.isArray(order.assignmentAttempts) && order.assignmentAttempts.some(a => a.reason === 'rejected') && (
-                                        <span className="text-[8px] font-black text-orange-600 bg-orange-50 border border-orange-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+                                        <span className="text-[10px] font-black text-orange-600 bg-orange-50 border border-orange-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
                                             Franchise Rejected ×{order.assignmentAttempts.filter(a => a.reason === 'rejected').length}
                                         </span>
                                     )}
@@ -120,7 +120,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                             <td className="px-4 py-4">
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-slate-700">{order.date || new Date(order.createdAt).toLocaleDateString()}</span>
-                                    <span className="text-[9px] text-slate-400 font-medium tabular-nums mb-1">{order.time || new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="text-[10px] text-slate-400 font-medium tabular-nums mb-1">{order.time || new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     {(order.scheduledDateFormatted || order.scheduledDate) && (
                                         <span className="mt-2 text-[10px] font-black text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1.5 w-fit border-2 border-amber-200 shadow-sm animate-pulse">
                                             <Clock size={10} strokeWidth={3} />
@@ -165,7 +165,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                 )}
                                             >
                                                 <Truck size={13} strokeWidth={3} />
-                                                {order.allowPartialFulfillment ? 'Approved' : 'Allow Available'}
+                                                {order.allowPartialFulfillment ? 'Approved' : 'Allow Partial'}
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -182,7 +182,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                 )}
                                             >
                                                 <Package size={14} strokeWidth={3} className="group-hover/button:scale-110 transition-transform" />
-                                                Procure
+                                                Request Stock
                                             </button>
                                         </>
                                     )}

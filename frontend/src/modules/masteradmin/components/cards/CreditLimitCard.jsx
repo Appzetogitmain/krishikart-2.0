@@ -54,14 +54,14 @@ export default function CreditLimitCard({ hotel, onOverride, onViewHistory, onTo
                     <button
                         onClick={() => onViewHistory(hotel)}
                         className="p-2 text-slate-400 hover:text-primary hover:bg-white rounded-lg transition-all"
-                        title="View Ledger"
+                        title="View Transactions"
                     >
                         <History size={16} />
                     </button>
                     <button
                         onClick={() => onOverride(hotel)}
                         className="p-2 text-slate-400 hover:text-primary hover:bg-white rounded-lg transition-all"
-                        title="Override Limit"
+                        title="Change Limit"
                     >
                         <Edit3 size={16} />
                     </button>
@@ -84,7 +84,7 @@ export default function CreditLimitCard({ hotel, onOverride, onViewHistory, onTo
 
                 <div className="space-y-2">
                     <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest">
-                        <span className="text-slate-400">Utilization Rate</span>
+                        <span className="text-slate-400">Used</span>
                         <span className={getStatusColor(utilizationPercent)}>{utilizationPercent}%</span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -107,7 +107,7 @@ export default function CreditLimitCard({ hotel, onOverride, onViewHistory, onTo
                         : "bg-red-50 text-red-600 hover:bg-red-100"
                 )}
             >
-                {isFrozen ? 'Unfreeze Credit Line' : 'Freeze Credit Line'}
+                {isFrozen ? 'Unfreeze Credit' : 'Freeze Credit'}
             </button>
         </motion.div>
     );

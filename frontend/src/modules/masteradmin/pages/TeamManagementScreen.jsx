@@ -37,7 +37,7 @@ const PERMISSION_GROUPS = [
         title: 'Finance',
         permissions: [
             { key: 'credit', label: 'Credit Management' },
-            { key: 'loyalty', label: 'Loyalty Engine' },
+            { key: 'loyalty', label: 'Loyalty Points' },
             { key: 'delivery-constraints', label: 'Delivery Constraints' },
             { key: 'franchise-payouts', label: 'Franchise Payouts' },
             { key: 'cod-remittance', label: 'COD Remittance' },
@@ -216,7 +216,7 @@ export default function TeamManagementScreen() {
         return (
             <div className="p-8 flex flex-col items-center justify-center h-[80vh]">
                 <Shield size={48} className="text-slate-300 mb-4" />
-                <h1 className="text-xl font-bold text-slate-900">Access Restricted</h1>
+                <h1 className="text-xl font-bold text-slate-900">No Access</h1>
                 <p className="text-slate-500">Only the Super Admin can manage the team.</p>
             </div>
         );
@@ -271,7 +271,7 @@ export default function TeamManagementScreen() {
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                             <th className="px-6 py-4">Full Name</th>
-                            <th className="px-6 py-4">Credentials</th>
+                            <th className="px-6 py-4">Login</th>
                             <th className="px-6 py-4">Permissions</th>
                             <th className="px-6 py-4">Status</th>
                             <th className="px-6 py-4 text-right">Actions</th>
@@ -308,13 +308,13 @@ export default function TeamManagementScreen() {
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-1.5 flex-wrap max-w-xs">
-                                        <span className="bg-slate-100 text-slate-900 text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest">
+                                        <span className="bg-slate-100 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest">
                                             {admin.permissions?.length || 0} Pages
                                         </span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest ${admin.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest ${admin.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
                                         }`}>
                                         {admin.status}
                                     </span>
@@ -366,7 +366,7 @@ export default function TeamManagementScreen() {
                                         {editingAdmin ? 'EDIT TEAM MEMBER' : 'ADD TEAM MEMBER'}
                                     </h2>
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                                        {editingAdmin ? 'Update credentials and access levels' : 'Setup a new sub-admin account'}
+                                        {editingAdmin ? 'Update login details and permissions' : 'Setup a new sub-admin account'}
                                     </p>
                                 </div>
                                 <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-white rounded-full transition-all">
@@ -415,7 +415,7 @@ export default function TeamManagementScreen() {
                                                 placeholder="9876543210"
                                             />
                                             {formData.mobile.length > 0 && (
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                                                     {formData.mobile.length}/10 digits
                                                 </p>
                                             )}
@@ -429,7 +429,7 @@ export default function TeamManagementScreen() {
                                         <div className="p-1.5 bg-slate-900 rounded-sm">
                                             <Lock size={12} className="text-white" />
                                         </div>
-                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.15em]">Login Credentials</h3>
+                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.15em]">Login Details</h3>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="space-y-1.5">
@@ -507,7 +507,7 @@ export default function TeamManagementScreen() {
                                                 key={preset.label}
                                                 type="button"
                                                 onClick={() => applyPreset(preset.action)}
-                                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-sm text-[9px] font-black uppercase tracking-widest hover:border-slate-900 hover:bg-slate-50 transition-all"
+                                                className="px-3 py-1.5 bg-white border border-slate-200 rounded-sm text-[10px] font-black uppercase tracking-widest hover:border-slate-900 hover:bg-slate-50 transition-all"
                                             >
                                                 {preset.label}
                                             </button>

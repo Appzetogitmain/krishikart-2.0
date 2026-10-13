@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sprout, Mail, Lock, Loader2, ArrowRight, Smartphone, ShieldCheck, Eye, EyeOff } from 'lucide-react';
@@ -51,7 +52,7 @@ export default function LoginScreen() {
             const res = await api.post('/vendor/login', { email, password });
             handleLoginSuccess(res.data.result);
         } catch (err) {
-            alert(err.response?.data?.message || 'Authentication failed');
+            toast.error(err.response?.data?.message || 'Authentication failed');
         } finally {
             setIsLoading(false);
         }
@@ -67,7 +68,7 @@ export default function LoginScreen() {
             setOtpStep('otp');
             setTimer(120);
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to send OTP');
+            toast.error(err.response?.data?.message || 'Failed to send OTP');
         } finally {
             setIsLoading(false);
         }
@@ -82,7 +83,7 @@ export default function LoginScreen() {
             const res = await api.post('/vendor/verify-otp', { mobile, otp: otpVal });
             handleLoginSuccess(res.data.result);
         } catch (err) {
-            alert(err.response?.data?.message || 'Login failed');
+            toast.error(err.response?.data?.message || 'Login failed');
         } finally {
             setIsLoading(false);
         }
@@ -96,7 +97,7 @@ export default function LoginScreen() {
             setTimer(120);
             setOtp(['', '', '', '', '', '']);
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to resend OTP');
+            toast.error(err.response?.data?.message || 'Failed to resend OTP');
         } finally {
             setIsLoading(false);
         }
@@ -130,8 +131,8 @@ export default function LoginScreen() {
                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }} className="w-20 h-20 bg-primary rounded-[24px] flex items-center justify-center text-white mb-6 shadow-xl shadow-primary/30">
                         <Sprout size={40} />
                     </motion.div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Vendor HUB</h1>
-                    <p className="text-slate-500 font-medium mt-2">Manage your fresh produce & operations</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Vendor Portal</h1>
+                    <p className="text-slate-500 font-medium mt-2">Manage your products and orders</p>
                 </div>
 
                 {/* Toggle */}
@@ -156,7 +157,7 @@ export default function LoginScreen() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure Password</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
                                 <div className="relative group">
                                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors"><Lock size={18} /></div>
                                     <input type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-14 outline-none text-sm font-bold focus:ring-4 focus:ring-primary/5 transition-all text-slate-900" />
@@ -166,10 +167,10 @@ export default function LoginScreen() {
                                 </div>
                             </div>
                             <div className="flex justify-end">
-                                <button type="button" onClick={() => navigate('/vendor/forgot-password')} className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Forgot Access?</button>
+                                <button type="button" onClick={() => navigate('/vendor/forgot-password')} className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Forgot Password?</button>
                             </div>
                             <button type="submit" disabled={isLoading} className="group w-full bg-slate-900 text-white rounded-2xl py-4 px-6 font-black text-sm flex items-center justify-center gap-3 hover:bg-primary transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
-                                {isLoading ? <Loader2 size={18} className="animate-spin" /> : <>Authenticate <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>}
+                                {isLoading ? <Loader2 size={18} className="animate-spin" /> : <>Log In <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>}
                             </button>
                         </motion.form>
                     )}
@@ -224,7 +225,7 @@ export default function LoginScreen() {
                     </p>
                     <p className="text-[11px] font-bold text-slate-500">
                         Don't have a vendor account?{' '}
-                        <button type="button" onClick={() => navigate('/vendor/signup')} className="text-slate-900 font-black hover:underline">Apply for Partnership</button>
+                        <button type="button" onClick={() => navigate('/vendor/signup')} className="text-slate-900 font-black hover:underline">Register as a Vendor</button>
                     </p>
                 </div>
             </motion.div>

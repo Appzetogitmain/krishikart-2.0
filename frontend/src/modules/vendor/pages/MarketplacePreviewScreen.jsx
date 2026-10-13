@@ -35,7 +35,7 @@ export default function MarketplacePreviewScreen() {
                         <VendorBackBar className="!min-h-[40px] !min-w-[40px]" />
                         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Marketplace Preview</h1>
                     </div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-10">Surveillance of platform rendering</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-10">See how your products look to buyers</p>
                 </div>
 
                 <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm self-start">
@@ -123,8 +123,8 @@ export default function MarketplacePreviewScreen() {
                         <Smartphone size={20} />
                     </div>
                     <div>
-                        <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight">User View Logic</h5>
-                        <p className="text-[10px] font-medium text-slate-400 mt-1 leading-relaxed">Direct user interface rendering with consumer-grade styling and pricing transparency.</p>
+                        <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight">Customer View</h5>
+                        <p className="text-[10px] font-medium text-slate-400 mt-1 leading-relaxed">How customers see your products and prices in the Kisaankart app.</p>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-[32px] border border-slate-100 flex items-start gap-4 shadow-sm">
@@ -132,8 +132,8 @@ export default function MarketplacePreviewScreen() {
                         <Monitor size={20} />
                     </div>
                     <div>
-                        <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight">Franchise Sync</h5>
-                        <p className="text-[10px] font-medium text-slate-400 mt-1 leading-relaxed">B2B inventory dashboard for franchise-led procurement and replenishment requests.</p>
+                        <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight">Franchise View</h5>
+                        <p className="text-[10px] font-medium text-slate-400 mt-1 leading-relaxed">How franchises see your products when they order stock.</p>
                     </div>
                 </div>
             </div>

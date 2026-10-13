@@ -122,7 +122,7 @@ export default function DesktopNavbar() {
     }
 
     const handleUseCurrentLocation = async () => {
-        toast.info("Fetching real-time location...")
+        toast.info("Finding your location...")
         try {
             if (typeof updateFranchiseLocation !== 'function') {
                 toast.error("Location service is unavailable right now.")

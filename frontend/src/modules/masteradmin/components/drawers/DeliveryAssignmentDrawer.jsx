@@ -60,7 +60,7 @@ export default function DeliveryAssignmentDrawer({ isOpen, onClose, assignment, 
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                     <div className="flex items-center justify-between mb-6">
-                        <div className="px-2 py-1 bg-slate-900 text-white text-[9px] font-black rounded-sm uppercase tracking-[0.2em]">Assignment Queue</div>
+                        <div className="px-2 py-1 bg-slate-900 text-white text-[10px] font-black rounded-sm uppercase tracking-[0.2em]">Waiting for Assignment</div>
                         <button onClick={onClose} className="p-1.5 hover:bg-white border border-transparent hover:border-slate-200 rounded-sm text-slate-400 transition-colors">
                             <X size={16} />
                         </button>
@@ -69,7 +69,7 @@ export default function DeliveryAssignmentDrawer({ isOpen, onClose, assignment, 
                     <h2 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-2">Assign Delivery Partner</h2>
                     <div className="flex items-center gap-2 text-slate-500 font-bold text-[10px] uppercase tracking-widest bg-slate-100/50 p-2 rounded-sm border border-slate-200/50">
                         <Info size={12} className="text-slate-400" />
-                        <span>Leg: {assignment?.vendorName || 'Vendor'} → {assignment?.franchiseName || 'Franchise'}</span>
+                        <span>Route: {assignment?.vendorName || 'Vendor'} → {assignment?.franchiseName || 'Franchise'}</span>
                     </div>
 
                     <div className="relative mt-6">
@@ -109,7 +109,7 @@ export default function DeliveryAssignmentDrawer({ isOpen, onClose, assignment, 
                                         <div className="flex items-center gap-2">
                                             <h4 className="font-black text-slate-900 text-[13px] tracking-tight">{partner.name}</h4>
                                             <span className={cn(
-                                                "px-1.5 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest",
+                                                "px-1.5 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest",
                                                 partner.status === 'available' ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"
                                             )}>
                                                 {partner.status}
@@ -125,7 +125,7 @@ export default function DeliveryAssignmentDrawer({ isOpen, onClose, assignment, 
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Success Rate</div>
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Success Rate</div>
                                     <div className="text-xs font-black text-slate-900 tabular-nums leading-none">99.2%</div>
                                 </div>
                             </div>
@@ -148,7 +148,7 @@ export default function DeliveryAssignmentDrawer({ isOpen, onClose, assignment, 
                                         onClick={() => handleAssign(partner)}
                                         className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-sm hover:bg-slate-800 active:scale-[0.98] transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
                                     >
-                                        Assign Node
+                                        Assign
                                         <ArrowRight size={14} />
                                     </button>
                                 )}
@@ -175,8 +175,8 @@ export default function DeliveryAssignmentDrawer({ isOpen, onClose, assignment, 
                                 >
                                     <CheckCircle2 size={40} className="text-slate-900" />
                                 </motion.div>
-                                <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Logistics Locked</h3>
-                                <p className="text-emerald-400 font-bold text-[10px] uppercase tracking-[0.3em]">Partner Notified // Node Synchronized</p>
+                                <h3 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Partner Assigned</h3>
+                                <p className="text-emerald-400 font-bold text-[10px] uppercase tracking-[0.3em]">The delivery partner has been notified</p>
                             </div>
                         </motion.div>
                     )}

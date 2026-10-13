@@ -449,7 +449,7 @@ export default function ProductDetailScreen() {
               })}
               className="flex-1 min-h-[46px] h-11 rounded-xl bg-primary hover:bg-primary/90 text-sm font-black shadow-md shadow-primary/20 transition-all active:scale-[0.98] flex flex-col justify-center items-center gap-0"
             >
-              <span className="text-white/80 text-[9px] font-bold uppercase tracking-[0.18em] leading-none mb-0.5">
+              <span className="text-white/80 text-[10px] font-bold uppercase tracking-[0.18em] leading-none mb-0.5">
                 {cartItem ? 'Update Cart' : 'Add to Cart'}
               </span>
               <span className="leading-none text-[13px]">₹{currentPrice * (Number(quantity) || 1)}</span>

@@ -342,7 +342,7 @@ export const AdminProvider = ({ children }) => {
         try {
             const response = await api.delete(`/masteradmin/franchises/${id}`);
             if (response.data.success) {
-                toast.success('Franchise decommissioned successfully');
+                toast.success('Franchise removed successfully');
                 return true;
             }
             return false;

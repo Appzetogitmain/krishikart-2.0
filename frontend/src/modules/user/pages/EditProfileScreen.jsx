@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-    ArrowLeft, AlertCircle,
-    CircleDollarSign, FileText, Phone, Mail, Edit3,
-    Smartphone, Receipt, X, CheckCircle2,
-    Plus, Briefcase, Trash2, Loader2
+    ArrowLeft, Phone, Mail, Loader2
 } from 'lucide-react'
 import PageTransition from '../components/layout/PageTransition'
 import { Button } from '@/components/ui/button'
@@ -26,17 +23,11 @@ export default function EditProfileScreen() {
         fullName: '',
         mobile: '',
         email: '',
-        panNumber: '',
-        legalEntityName: '',
-        address: ''
     })
 
     const [editData, setEditData] = useState({
         fullName: '',
         email: '',
-        panNumber: '',
-        legalEntityName: '',
-        address: ''
     })
 
 
@@ -66,17 +57,11 @@ export default function EditProfileScreen() {
                 fullName: userData.fullName || '',
                 mobile: userData.mobile || '',
                 email: userData.email || '',
-                panNumber: userData.panNumber || '',
-                legalEntityName: userData.legalEntityName || '',
-                address: userData.address || ''
             })
             localStorage.setItem('userData', JSON.stringify(userData))
             setEditData({
                 fullName: userData.fullName || '',
                 email: userData.email || '',
-                panNumber: userData.panNumber || '',
-                legalEntityName: userData.legalEntityName || '',
-                address: userData.address || ''
             })
             setPreferences({
                 whatsapp: userData.preferences?.whatsappUpdates || false,
@@ -91,22 +76,6 @@ export default function EditProfileScreen() {
         }
     }
 
-    // PAN format: 5 letters + 4 digits + 1 letter (e.g. ABCDE1234F)
-    const formatPanInput = (raw) => {
-        const s = raw.toUpperCase().replace(/\s/g, '')
-        let out = ''
-        for (let i = 0; i < s.length && out.length < 10; i++) {
-            const pos = out.length
-            const ch = s[i]
-            if (pos < 5 && /[A-Z]/.test(ch)) out += ch
-            else if (pos >= 5 && pos < 9 && /\d/.test(ch)) out += ch
-            else if (pos === 9 && /[A-Z]/.test(ch)) out += ch
-        }
-        return out
-    }
-
-    const isValidPan = (pan) => !pan || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)
-
     const handleSaveProfile = async () => {
         // Email Validation (Strict)
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
@@ -114,20 +83,11 @@ export default function EditProfileScreen() {
             alert('Please enter a valid email address (e.g., user@example.com)');
             return;
         }
-        // PAN Validation (format: 5 letters + 4 digits + 1 letter, e.g. ABCDE1234F)
-        if (editData.panNumber && !isValidPan(editData.panNumber)) {
-            alert('Please enter a valid PAN (e.g. ABCDE1234F – 5 letters, 4 digits, 1 letter)');
-            return;
-        }
-
         setIsSaving(true)
         try {
             const response = await api.put('/user/update-profile', {
                 fullName: editData.fullName,
                 email: editData.email,
-                panNumber: editData.panNumber,
-                legalEntityName: editData.legalEntityName,
-                address: editData.address
             })
             const updatedUser = response.data.result
             setUser(updatedUser)
@@ -258,66 +218,6 @@ export default function EditProfileScreen() {
                                     </div>
                                 </div>
 
-                                <hr className="border-slate-100" />
-
-                                {/* Business Details Section */}
-                                <div>
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
-                                            <Briefcase size={20} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-lg font-black text-slate-800 leading-tight">Business Details</h3>
-                                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Official details of your outlet</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Legal Entity Name</label>
-                                                <Input
-                                                    value={editData.legalEntityName}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                                                        setEditData({ ...editData, legalEntityName: val });
-                                                        setUser(prev => ({ ...prev, legalEntityName: val }));
-                                                    }}
-                                                    placeholder="Enter business name"
-                                                    className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4 text-base font-bold focus:bg-white focus:ring-[#10b981]/20 transition-all"
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">PAN Number</label>
-                                                <Input
-                                                    value={editData.panNumber}
-                                                    onChange={(e) => {
-                                                        const val = formatPanInput(e.target.value);
-                                                        setEditData({ ...editData, panNumber: val });
-                                                        setUser(prev => ({ ...prev, panNumber: val }));
-                                                    }}
-                                                    placeholder="ABCDE1234F"
-                                                    maxLength={10}
-                                                    className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4 text-base font-bold uppercase focus:bg-white focus:ring-[#10b981]/20 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Complete Address</label>
-                                            <Input
-                                                value={editData.address}
-                                                onChange={(e) => {
-                                                    setEditData({ ...editData, address: e.target.value });
-                                                    setUser(prev => ({ ...prev, address: e.target.value }));
-                                                }}
-                                                placeholder="Enter full address"
-                                                className="h-12 bg-slate-50 border-slate-200 rounded-xl px-4 text-base font-bold focus:bg-white focus:ring-[#10b981]/20 transition-all"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div className="pt-6 border-t border-slate-100">
                                     <Button
                                         onClick={handleSaveProfile}
@@ -335,11 +235,10 @@ export default function EditProfileScreen() {
                             {/* Profile Preview Card */}
                             <div className="bg-white rounded-2xl md:rounded-[32px] p-6 md:p-8 border border-slate-100 shadow-sm relative group hover:border-emerald-600/20 transition-all duration-300">
                                 <div className="absolute top-6 right-6 px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-full">
-                                    Live Preview
+                                    Preview
                                 </div>
                                 <div className="space-y-1 mb-8 mt-2">
                                     <h2 className="text-2xl font-black text-slate-900 tracking-tight break-words">{user.fullName || 'Guest User'}</h2>
-                                    <p className="text-[14px] font-medium text-slate-500 leading-relaxed break-words">{user.address || 'Address not set'}</p>
                                 </div>
 
                                 <div className="space-y-4 pt-6 border-t border-slate-50">
@@ -354,12 +253,6 @@ export default function EditProfileScreen() {
                                             <Mail size={18} />
                                         </div>
                                         <span className="text-base font-bold text-slate-800 break-all">{user.email || 'Email not set'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-slate-600">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
-                                            <Briefcase size={18} />
-                                        </div>
-                                        <span className="text-base font-bold text-slate-800 break-all">{user.legalEntityName || 'Business not set'}</span>
                                     </div>
                                 </div>
                             </div>

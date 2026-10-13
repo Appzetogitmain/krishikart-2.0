@@ -47,7 +47,7 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
             render: (val, row) => (
                 <div className="flex flex-col">
                     <span className="font-black text-slate-900 text-[11px] tracking-tight">{val}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">Order #{row.id?.slice(-6)}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">Order #{row.id?.slice(-6)}</span>
                 </div>
             )
         },
@@ -66,7 +66,7 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
             key: 'status',
             render: (val) => (
                 <span className={cn(
-                    "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border",
+                    "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
                     val === 'delivered' || val === 'received' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-100"
                 )}>
                     {val}
@@ -106,8 +106,8 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
                                 <History size={20} className="text-emerald-400" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black uppercase tracking-widest">Global Order History</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Reviewing past transactions and performance</p>
+                                <h3 className="text-sm font-black uppercase tracking-widest">Order History</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Your past orders and sales</p>
                             </div>
                         </div>
                         <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
@@ -131,7 +131,7 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={14} />
                             <input
                                 type="text"
-                                placeholder="Search historical orders..."
+                                placeholder="Search past orders..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value.trim())}
                                 className="bg-white border border-slate-200 rounded-sm py-1.5 pl-9 pr-4 outline-none text-[11px] font-black text-slate-900 placeholder:text-slate-400 focus:border-slate-400 transition-all w-full"
@@ -142,11 +142,11 @@ export default function OrderHistoryModal({ isOpen, onClose }) {
 
                         <div className="flex items-center gap-6">
                             <div className="flex flex-col items-end">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Orders</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Orders</span>
                                 <span className="text-xs font-black text-slate-900">{orders.length}</span>
                             </div>
                             <div className="flex flex-col items-end">
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Daily Revenue</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Daily Revenue</span>
                                 <span className="text-xs font-black text-emerald-600">₹{totalRevenue.toLocaleString()}</span>
                             </div>
                         </div>

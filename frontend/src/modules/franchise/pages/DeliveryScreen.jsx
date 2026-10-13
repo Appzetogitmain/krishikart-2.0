@@ -93,11 +93,11 @@ export default function DeliveryScreen() {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
                             <Home size={12} />
                             <ChevronRight size={10} />
-                            <span>Logistics Node</span>
+                            <span>Deliveries</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Dispatch Hub</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Delivery Center</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">Last-Mile Fulfillment Desk</h1>
+                        <h1 className="text-sm font-bold text-slate-900">Send orders out for delivery</h1>
                     </div>
                     <div className="flex items-center gap-2">
                     </div>
@@ -114,7 +114,7 @@ export default function DeliveryScreen() {
                     sub="Couriers on Road"
                 />
                 <MetricRow
-                    label="Staged"
+                    label="Ready"
                     value={readyCount}
                     trend="Stable"
                     icon={Package}
@@ -137,16 +137,16 @@ export default function DeliveryScreen() {
                                 <button
                                     onClick={() => setActiveTab('active')}
                                     className={cn(
-                                        "px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all",
+                                        "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
                                         activeTab === 'active' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
                                     )}
                                 >
-                                    Live Dispatch
+                                    Active Deliveries
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('history')}
                                     className={cn(
-                                        "px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all",
+                                        "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
                                         activeTab === 'history' ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"
                                     )}
                                 >
@@ -210,10 +210,10 @@ export default function DeliveryScreen() {
                                         </div>
                                         {/* Items Section */}
                                         <div className="pt-2">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Package Contents</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Package Contents</p>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {order.items?.map((item, idx) => (
-                                                    <span key={idx} className="bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-100 text-[9px] font-bold text-slate-600 uppercase">
+                                                    <span key={idx} className="bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-100 text-[10px] font-bold text-slate-600 uppercase">
                                                         {item.qty} {item.unit} {item.name}
                                                     </span>
                                                 ))}
@@ -225,7 +225,7 @@ export default function DeliveryScreen() {
                                         {activeTab === 'active' ? (
                                             order.status === 'packed' ? (
                                                 <div className="space-y-3">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Protocol: Assign Fleet Operational Partner</p>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Choose a delivery partner</p>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         {deliveryPartners.length > 0 ? deliveryPartners.map((dp) => (
                                                             <button
@@ -238,11 +238,11 @@ export default function DeliveryScreen() {
                                                                 </div>
                                                                 <div className="min-w-0 flex-1">
                                                                     <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight truncate">{dp.fullName}</p>
-                                                                    <p className="text-[8px] font-bold text-slate-400 tabular-nums uppercase tracking-wider">{dp.mobile || dp.phone || 'No Contact'}</p>
+                                                                    <p className="text-[10px] font-bold text-slate-400 tabular-nums uppercase tracking-wider">{dp.mobile || dp.phone || 'No Contact'}</p>
                                                                 </div>
                                                             </button>
                                                         )) : (
-                                                            <p className="col-span-2 text-[9px] font-bold text-slate-400 uppercase p-4 text-center border border-dashed border-slate-200 rounded-sm">No active partners found in zone</p>
+                                                            <p className="col-span-2 text-[10px] font-bold text-slate-400 uppercase p-4 text-center border border-dashed border-slate-200 rounded-sm">No delivery partners are available in your area right now</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -252,7 +252,7 @@ export default function DeliveryScreen() {
                                                         <User size={20} />
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-2">Transit Operations: Active</p>
+                                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-2">Out for delivery</p>
                                                         <h4 className="text-[13px] font-black text-slate-900 uppercase tracking-tight">
                                                             {order.deliveryPartner?.fullName || 'Assigned Partner'}
                                                         </h4>
@@ -262,7 +262,7 @@ export default function DeliveryScreen() {
                                                     </div>
                                                     <div className="w-px h-10 bg-emerald-200" />
                                                     <div className="flex flex-col items-end">
-                                                        <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Est. Completion</span>
+                                                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Est. Completion</span>
                                                         <span className="text-[11px] font-black text-slate-900 tabular-nums">30 MINS</span>
                                                     </div>
                                                 </div>
@@ -281,20 +281,20 @@ export default function DeliveryScreen() {
                                                         {isFranchiseDelivered ? <Settings2 size={20} /> : <User size={20} />}
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-2">Manifest Completed</p>
+                                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none mb-2">Delivery Completed</p>
                                                         <h4 className="text-[13px] font-black text-slate-900 uppercase tracking-tight">
                                                             {delivererName}
                                                         </h4>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-[0.1em]">Verification:</span>
+                                                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.1em]">Verification:</span>
                                                             <span className="text-[10px] font-bold text-slate-500 uppercase">
-                                                                {isFranchiseDelivered ? 'Confirmed by Node' : 'Partner Authenticated'}
+                                                                {isFranchiseDelivered ? 'Confirmed by franchise' : 'Partner verified'}
                                                             </span>
                                                         </div>
                                                     </div>
                                                     <div className="w-px h-10 bg-slate-200" />
                                                     <div className="text-right shrink-0">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Order Finalized</p>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">Order completed</p>
                                                         <div className="flex items-center gap-1 text-emerald-600">
                                                             <CheckCircle2 size={12} />
                                                             <span className="text-[11px] font-black uppercase tracking-tight">Delivered</span>
@@ -307,12 +307,12 @@ export default function DeliveryScreen() {
 
                                     <div className="col-span-12 lg:col-span-3 flex lg:flex-col items-center lg:items-end justify-between lg:justify-start gap-4 h-full">
                                         <div className={cn(
-                                            "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border",
+                                            "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border",
                                             order.status === 'packed' ? "bg-amber-50 text-amber-600 border-amber-100" :
                                                 order.status === 'dispatched' ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
                                                     "bg-emerald-50 text-emerald-600 border-emerald-100"
                                         )}>
-                                            {order.status === 'packed' ? 'Staged' : order.status === 'dispatched' ? 'In-Transit' : 'Delivered'}
+                                            {order.status === 'packed' ? 'Ready' : order.status === 'dispatched' ? 'In-Transit' : 'Delivered'}
                                         </div>
 
                                         <div className="flex-1 lg:flex-none" />
@@ -327,7 +327,7 @@ export default function DeliveryScreen() {
                                         )}
                                         {(order.status === 'packed' || activeTab === 'history') && (
                                             <div className="text-right">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Manifest Value</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Order Value</p>
                                                 <p className="text-[14px] font-black text-slate-900 tabular-nums">₹{order.total.toLocaleString()}</p>
                                             </div>
                                         )}
@@ -337,8 +337,8 @@ export default function DeliveryScreen() {
                         ) : (
                             <div className="py-32 flex flex-col items-center justify-center text-center opacity-40">
                                 <Ghost size={64} strokeWidth={1} className="mb-4 text-slate-200" />
-                                <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Shipment Inactive</h3>
-                                <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Awaiting Stage Transition from Orders Pipeline</p>
+                                <h3 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">No active delivery</h3>
+                                <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Orders appear here once they are packed</p>
                             </div>
                         )}
                     </AnimatePresence>

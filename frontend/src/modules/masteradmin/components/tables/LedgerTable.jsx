@@ -10,7 +10,7 @@ export default function LedgerTable({ transactions, type }) {
                     <Calendar size={32} />
                 </div>
                 <h3 className="font-bold text-slate-900">No transactions recorded</h3>
-                <p className="text-xs text-slate-400 mt-1 font-medium">Select a different date range or entity.</p>
+                <p className="text-xs text-slate-400 mt-1 font-medium">Try a different date range.</p>
             </div>
         );
     }
@@ -54,7 +54,7 @@ export default function LedgerTable({ transactions, type }) {
                                             {txn.hotelName || txn.vendorName || txn.franchiseName || txn.source}
                                         </span>
                                         <span className="text-[10px] text-slate-400 font-medium">
-                                            Reference: {txn.orderId || txn.poId || 'System Entry'}
+                                            Reference: {txn.orderId || txn.poId || 'Automatic Entry'}
                                         </span>
                                     </div>
                                 </td>

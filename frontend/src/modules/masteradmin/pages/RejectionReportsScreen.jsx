@@ -87,7 +87,7 @@ export default function RejectionReportsScreen() {
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Loading Quality Audit...</p>
+                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Loading...</p>
                 </div>
             </div>
         );
@@ -97,9 +97,9 @@ export default function RejectionReportsScreen() {
         <div className="space-y-8 pb-20">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Stock Rejection Audit</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Rejected Stock</h1>
                     <p className="text-xs font-bold text-slate-500 mt-2 uppercase tracking-[0.3em] flex items-center gap-2">
-                        <AlertCircle size={14} className="text-red-500" /> Center Quality & Vendor Performance Logs
+                        <AlertCircle size={14} className="text-red-500" /> Items rejected or damaged at franchises
                     </p>
                 </div>
                 <div className="flex gap-3">
@@ -151,10 +151,10 @@ export default function RejectionReportsScreen() {
                         <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-100">
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Procurement Ref</th>
-                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Entity Context</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Vendor / Franchise</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Product Details</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Quality Issue</th>
-                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Audit Timestamp</th>
+                                <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Date</th>
                                 <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Action</th>
                             </tr>
                         </thead>
@@ -198,7 +198,7 @@ export default function RejectionReportsScreen() {
                                     <td className="px-8 py-7">
                                         <div className="flex flex-col gap-2">
                                             <span className={cn(
-                                                "inline-flex self-start px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border",
+                                                "inline-flex self-start px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border",
                                                 row.type === 'Rotten/Rejected' ? "bg-red-50 text-red-700 border-red-100" : "bg-amber-50 text-amber-700 border-amber-100"
                                             )}>
                                                 {row.type}
@@ -229,7 +229,7 @@ export default function RejectionReportsScreen() {
                                             <ShoppingBag size={40} />
                                         </div>
                                         <h3 className="text-lg font-black text-slate-900 tracking-tight">No Quality Issues Found</h3>
-                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">All supply logs are within acceptable parameters</p>
+                                        <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">No rejected or damaged items</p>
                                     </td>
                                 </tr>
                             )}

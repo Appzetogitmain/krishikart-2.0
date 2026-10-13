@@ -99,8 +99,8 @@ export default function POCreationDrawer({ isOpen, onClose, onSave }) {
                                 </div>
 
                                 <div className="bg-primary/5 p-6 rounded-[32px] border border-primary/10 flex items-center justify-between">
-                                    <span className="font-bold text-primary italic">Stock Requirement Meta:</span>
-                                    <span className="font-black text-primary uppercase text-xs tracking-widest">3 items below MBQ</span>
+                                    <span className="font-bold text-primary italic">Stock Note:</span>
+                                    <span className="font-black text-primary uppercase text-xs tracking-widest">3 items below minimum stock</span>
                                 </div>
                             </div>
                         )}

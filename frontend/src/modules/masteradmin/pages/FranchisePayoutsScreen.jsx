@@ -167,7 +167,7 @@ export default function FranchisePayoutsScreen() {
                     </div>
                     <div className="flex flex-col">
                         <span className="font-bold text-slate-900 text-[11px] leading-none mb-1">{val}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{row.ownerName}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{row.ownerName}</span>
                     </div>
                 </div>
             )
@@ -203,13 +203,13 @@ export default function FranchisePayoutsScreen() {
                     {(categories || []).slice(0, 3).map((c) => (
                         <span
                             key={c.categoryId}
-                            className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-bold uppercase tracking-wider"
+                            className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-bold uppercase tracking-wider"
                         >
                             {c.categoryName}: {c.commissionPercentage}%
                         </span>
                     ))}
                     {(categories || []).length > 3 && (
-                        <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[9px] font-bold uppercase tracking-wider">
+                        <span className="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold uppercase tracking-wider">
                             +{categories.length - 3}
                         </span>
                     )}
@@ -233,7 +233,7 @@ export default function FranchisePayoutsScreen() {
                                 franchiseName: row.franchiseName,
                             })
                         }
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-sm border border-slate-200 bg-white text-[9px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-sm border border-slate-200 bg-white text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50"
                     >
                         <History size={12} />
                         History
@@ -246,7 +246,7 @@ export default function FranchisePayoutsScreen() {
                                 franchiseName: row.franchiseName,
                             })
                         }
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-sm bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-700"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-sm bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-700"
                     >
                         <PlusCircle size={12} />
                         Record
@@ -278,7 +278,7 @@ export default function FranchisePayoutsScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Franchise Payouts</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">Franchise Payout Ledger</h1>
+                        <h1 className="text-sm font-bold text-slate-900">Franchise payments</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -344,7 +344,7 @@ export default function FranchisePayoutsScreen() {
                 <div className="bg-white">
 
                     <DataGrid
-                        title="Commission-Based Franchise Payables"
+                        title="What each franchise is owed (commission)"
                         columns={payoutColumns}
                         data={filteredRows}
                         density="compact"
@@ -506,7 +506,7 @@ export default function FranchisePayoutsScreen() {
                                                 <p className="text-slate-500 mt-0.5">{item.note}</p>
                                             ) : null}
                                             {item.recordedBy?.fullName ? (
-                                                <p className="text-[9px] text-slate-400 mt-1 uppercase tracking-wider">
+                                                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">
                                                     By {item.recordedBy.fullName}
                                                 </p>
                                             ) : null}

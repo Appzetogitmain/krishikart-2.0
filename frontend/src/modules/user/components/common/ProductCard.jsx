@@ -123,7 +123,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
 
                     <div className="flex-1 min-w-0 pr-2">
                         <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight line-clamp-1 md:text-sm md:font-bold md:normal-case md:tracking-normal">{product.name}</h3>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 md:text-[10px] md:normal-case md:tracking-normal">{product.supplier}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 md:text-[10px] md:normal-case md:tracking-normal">{product.supplier}</p>
 
                         <div className="flex items-center justify-between mt-3">
                             <div>
@@ -133,30 +133,31 @@ export default function ProductCard({ product, layout = 'grid' }) {
                                         <span className="text-[11px] font-bold text-slate-400 line-through">₹{strikePrice}</span>
                                     )}
                                 </div>
-                                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1 md:text-[10px] md:normal-case md:tracking-normal">{product.unit}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 md:text-[10px] md:normal-case md:tracking-normal">{product.unit}</p>
                             </div>
 
-                            <div className="h-8 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="shrink-0 ml-auto min-h-8 flex items-center" onClick={(e) => e.stopPropagation()}>
                                 <AnimatePresence mode="wait">
                                     {quantity === 0 ? (
                                         <button
                                             type="button"
                                             onClick={handleAddToCart}
-                                            className="h-8 px-4 rounded-lg bg-slate-900 border border-slate-800 text-white text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all md:bg-white md:text-primary md:border-primary md:hover:bg-primary/5 md:font-bold md:text-[11px] md:normal-case md:tracking-normal md:px-6"
+                                            className="size-8 rounded-lg bg-slate-900 border border-slate-800 text-white active:scale-95 transition-all flex items-center justify-center p-0 md:bg-white md:text-primary md:border-primary md:hover:bg-primary/5"
+                                            aria-label="Add to cart"
                                         >
-                                            Add
+                                            <Plus size={14} strokeWidth={3} />
                                         </button>
                                     ) : (
-                                        <div className="flex items-center gap-0.5 h-7 bg-slate-50 rounded-lg px-0.5 text-slate-900 border border-slate-100 md:bg-white md:border-primary md:px-2 md:gap-2.5 md:px-1.5">
-                                            <button type="button" onClick={handleDecrement} className="p-0.5 hover:text-red-500 transition-colors md:text-primary"><Minus size={11} strokeWidth={3} /></button>
+                                        <div className="inline-flex items-center bg-slate-50 rounded-lg text-slate-900 border border-slate-100 md:bg-white md:border-primary overflow-hidden">
+                                            <button type="button" onClick={handleDecrement} className="size-8 flex items-center justify-center p-0 hover:text-red-500 transition-colors md:text-primary"><Minus size={12} strokeWidth={3} /></button>
                                             <input
                                                 type="number"
                                                 value={localQuantity}
                                                 onChange={handleQuantityInput}
                                                 onBlur={handleBlur}
-                                                className="text-[10px] font-black w-6 text-center bg-transparent border-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none md:font-bold md:w-8"
+                                                className="text-[10px] font-black w-5 text-center bg-transparent border-none focus:outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none md:font-bold md:w-6"
                                             />
-                                            <button type="button" onClick={handleIncrement} className="p-0.5 hover:text-primary transition-colors md:text-primary"><Plus size={11} strokeWidth={3} /></button>
+                                            <button type="button" onClick={handleIncrement} className="size-8 flex items-center justify-center p-0 hover:text-primary transition-colors md:text-primary"><Plus size={12} strokeWidth={3} /></button>
                                         </div>
                                     )}
                                 </AnimatePresence>
@@ -231,7 +232,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
 
                     {/* Best Price Overlay (Optional, if we want it on image) */}
                     {(product.bestPrice || displayPrice) && (
-                        <div className="absolute bottom-2 left-2 bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm uppercase tracking-tighter">
+                        <div className="absolute bottom-2 left-2 bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm uppercase tracking-tighter">
                             Best Rate
                         </div>
                     )}
@@ -263,16 +264,17 @@ export default function ProductCard({ product, layout = 'grid' }) {
                                     <button
                                         type="button"
                                         onClick={handleAddToCart}
-                                        className="h-8 px-4 rounded-lg bg-emerald-600 text-white font-black text-[10px] shadow-sm hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1 uppercase tracking-wider"
+                                        className="size-8 rounded-lg bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center p-0"
+                                        aria-label="Add to cart"
                                     >
-                                        ADD <Plus size={12} strokeWidth={3} />
+                                        <Plus size={14} strokeWidth={3} />
                                     </button>
                                 ) : (
-                                    <div className="flex items-center h-8 bg-emerald-600 rounded-lg text-white shadow-sm overflow-hidden">
+                                    <div className="inline-flex items-center bg-emerald-600 rounded-lg text-white shadow-sm overflow-hidden">
                                         <button
                                             type="button"
                                             onClick={handleDecrement}
-                                            className="w-7 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
+                                            className="size-8 flex items-center justify-center p-0 hover:bg-black/10 transition-colors"
                                         >
                                             <Minus size={12} strokeWidth={3} />
                                         </button>
@@ -281,12 +283,12 @@ export default function ProductCard({ product, layout = 'grid' }) {
                                             value={localQuantity}
                                             onChange={handleQuantityInput}
                                             onBlur={handleBlur}
-                                            className="text-[11px] font-black w-6 text-center bg-transparent border-none text-white focus:outline-none px-0"
+                                            className="text-[11px] font-black w-5 text-center bg-transparent border-none text-white focus:outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                         <button
                                             type="button"
                                             onClick={handleIncrement}
-                                            className="w-7 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
+                                            className="size-8 flex items-center justify-center p-0 hover:bg-black/10 transition-colors"
                                         >
                                             <Plus size={12} strokeWidth={3} />
                                         </button>

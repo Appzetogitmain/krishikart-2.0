@@ -71,7 +71,7 @@ export default function InventoryScreen() {
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="font-black text-slate-900 text-[11px] tracking-tight leading-none mb-1 truncate">{val}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">#{row.id?.slice(-8).toUpperCase()}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">#{row.id?.slice(-8).toUpperCase()}</span>
                     </div>
                 </div>
             )
@@ -92,7 +92,7 @@ export default function InventoryScreen() {
                         "text-[11px] font-black tabular-nums text-right",
                         val < 10 ? "text-rose-600" : "text-slate-900"
                     )}>
-                        {val} <span className="text-[9px] font-bold text-slate-400 ml-0.5">{row.unit}</span>
+                        {val} <span className="text-[10px] font-bold text-slate-400 ml-0.5">{row.unit}</span>
                     </span>
                     <span className="w-4 flex justify-center shrink-0">{val < 10 ? <AlertTriangle size={10} className="text-rose-500 animate-pulse" /> : null}</span>
                 </div>
@@ -113,7 +113,7 @@ export default function InventoryScreen() {
                                 style={{ width: `${Math.min(percentage, 100)}%` }}
                             />
                         </div>
-                        <span className="text-[9px] font-bold text-slate-400 tabular-nums w-8 text-right shrink-0">{Math.min(percentage, 100)}%</span>
+                        <span className="text-[10px] font-bold text-slate-400 tabular-nums w-8 text-right shrink-0">{Math.min(percentage, 100)}%</span>
                     </div>
                 );
             }

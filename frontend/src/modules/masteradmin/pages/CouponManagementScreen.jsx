@@ -197,7 +197,7 @@ export default function CouponManagementScreen() {
                             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                                     <Ticket size={14} className="text-slate-900" />
-                                    {isEditing ? 'Modify Coupon Protocol' : 'New Coupon Induction'}
+                                    {isEditing ? 'Edit Coupon' : 'New Coupon'}
                                 </h3>
                                 <button onClick={() => { setShowModal(false); resetForm(); }} className="text-slate-400 hover:text-slate-900">
                                     <X size={16} />
@@ -208,7 +208,7 @@ export default function CouponManagementScreen() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Coupon Code</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Coupon Code</label>
                                             <input
                                                 type="text"
                                                 value={form.code}
@@ -218,7 +218,7 @@ export default function CouponManagementScreen() {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Title / Display Name</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Title / Display Name</label>
                                             <input
                                                 type="text"
                                                 value={form.title}
@@ -228,7 +228,7 @@ export default function CouponManagementScreen() {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Type</label>
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Type</label>
                                             <select
                                                 value={form.type}
                                                 onChange={(e) => setForm(prev => ({ ...prev, type: e.target.value }))}
@@ -241,7 +241,7 @@ export default function CouponManagementScreen() {
                                         </div>
                                         {['percentage', 'fixed', 'bulk_discount', 'min_order_value', 'new_partner', 'category_based', 'monthly_volume'].includes(form.type) && (
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">
                                                     {form.type === 'fixed' ? 'Discount Amount' : 'Percentage Value (%)'}
                                                 </label>
                                                 <input
@@ -256,7 +256,7 @@ export default function CouponManagementScreen() {
                                             <div className="space-y-4">
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Buy Quantity</label>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Buy Quantity</label>
                                                         <input
                                                             type="number"
                                                             value={form.buyQty}
@@ -265,7 +265,7 @@ export default function CouponManagementScreen() {
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Buy Unit</label>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Buy Unit</label>
                                                         <select
                                                             value={form.buyUnit}
                                                             onChange={(e) => setForm(prev => ({ ...prev, buyUnit: e.target.value }))}
@@ -279,7 +279,7 @@ export default function CouponManagementScreen() {
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Get Quantity (Free)</label>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Get Quantity (Free)</label>
                                                         <input
                                                             type="number"
                                                             value={form.getQty}
@@ -288,7 +288,7 @@ export default function CouponManagementScreen() {
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Get Unit</label>
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Get Unit</label>
                                                         <select
                                                             value={form.getUnit}
                                                             onChange={(e) => setForm(prev => ({ ...prev, getUnit: e.target.value }))}
@@ -307,7 +307,7 @@ export default function CouponManagementScreen() {
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Start Date *</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Start Date *</label>
                                                 <input
                                                     type="date"
                                                     min={new Date().toISOString().split('T')[0]}
@@ -326,7 +326,7 @@ export default function CouponManagementScreen() {
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">End Date *</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">End Date *</label>
                                                 <input
                                                     type="date"
                                                     min={form.startDate || new Date().toISOString().split('T')[0]}
@@ -338,7 +338,7 @@ export default function CouponManagementScreen() {
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Min Order (₹)</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Min Order (₹)</label>
                                                 <input
                                                     type="number"
                                                     value={form.minOrderValue}
@@ -347,7 +347,7 @@ export default function CouponManagementScreen() {
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Usage Limit</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Usage Limit</label>
                                                 <input
                                                     type="number"
                                                     value={form.usageLimit}
@@ -383,7 +383,7 @@ export default function CouponManagementScreen() {
                                 </div>
 
                                 <div className="mt-6 space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Description / Terms</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-0.5">Description / Terms</label>
                                     <textarea
                                         rows={2}
                                         value={form.description}
@@ -398,7 +398,7 @@ export default function CouponManagementScreen() {
                                     disabled={isSubmitting}
                                     className="w-full mt-8 py-3.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-sm hover:bg-slate-800 transition-all shadow-xl disabled:opacity-50"
                                 >
-                                    {isSubmitting ? 'Syncing...' : isEditing ? 'Update Configuration' : 'Authorize Deployment'}
+                                    {isSubmitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Coupon'}
                                 </button>
                             </div>
                         </motion.div>
@@ -418,8 +418,8 @@ export default function CouponManagementScreen() {
                             <span className="text-slate-900">Campaigns</span>
                         </div>
                         <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                            Coupon Control Center
-                            <span className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-black rounded-full uppercase tracking-tighter">Live Protocol</span>
+                            Coupons
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-600 text-[10px] font-black rounded-full uppercase tracking-tighter">Active</span>
                         </h1>
                     </div>
 
@@ -428,7 +428,7 @@ export default function CouponManagementScreen() {
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                             <input
                                 type="text"
-                                placeholder="Search Ledger..."
+                                placeholder="Search coupons..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value.replace(/\s/g, ''))}
                                 className="bg-slate-50/50 border border-slate-200 rounded-sm pl-10 pr-4 py-2 text-[11px] font-bold focus:bg-white focus:ring-1 focus:ring-slate-900 outline-none w-64 transition-all"
@@ -439,7 +439,7 @@ export default function CouponManagementScreen() {
                             className="bg-slate-900 text-white px-6 py-2 rounded-sm text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 hover:bg-slate-800 transition-all shadow-lg active:scale-95"
                         >
                             <Plus size={14} />
-                            New Entry
+                            New Coupon
                         </button>
                     </div>
                 </div>
@@ -454,7 +454,7 @@ export default function CouponManagementScreen() {
                                 <div className="flex items-center gap-4">
                                     <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Active Campaigns</h3>
                                     <div className="h-4 w-px bg-slate-200" />
-                                    <span className="text-[10px] font-bold text-slate-400 tabular-nums">INDEXED: {filteredCoupons.length}</span>
+                                    <span className="text-[10px] font-bold text-slate-400 tabular-nums">TOTAL: {filteredCoupons.length}</span>
                                 </div>
                                 <button
                                     onClick={fetchCoupons}
@@ -468,12 +468,12 @@ export default function CouponManagementScreen() {
                                 <table className="w-full text-left">
                                     <thead>
                                         <tr className="border-b border-slate-100">
-                                            <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Coupon Intel</th>
-                                            <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Offer Metrics</th>
-                                            <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Usage Status</th>
-                                            <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Author</th>
-                                            <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Visibility</th>
-                                            <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30 text-right">Actions</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Coupon</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Offer</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Usage Status</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Created By</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30">Visibility</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/30 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
@@ -499,7 +499,7 @@ export default function CouponManagementScreen() {
                                                                     coupon.type === 'buyXgetY' ? `BUY ${coupon.buyQty}${coupon.buyUnit?.toUpperCase()} GET ${coupon.getQty}${coupon.getUnit?.toUpperCase()}` :
                                                                         `${coupon.value}% OFF`}
                                                         </span>
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
                                                             MIN: ₹{coupon.minOrderValue || 0}
                                                         </span>
                                                     </div>
@@ -512,7 +512,7 @@ export default function CouponManagementScreen() {
                                                                 style={{ width: coupon.usageLimit ? `${(coupon.timesUsed / coupon.usageLimit) * 100}%` : '5%' }}
                                                             />
                                                         </div>
-                                                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest tabular-nums">
+                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest tabular-nums">
                                                             {coupon.timesUsed} / {coupon.usageLimit || '∞'} USES
                                                         </span>
                                                     </div>
@@ -520,17 +520,17 @@ export default function CouponManagementScreen() {
                                                 <td className="px-6 py-5">
                                                     <div className="flex flex-col">
                                                         <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">{coupon.createdBy?.adminName || 'ROOT'}</span>
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{coupon.createdBy?.adminRole || 'SUPER'}</span>
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{coupon.createdBy?.adminRole || 'SUPER'}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     {coupon.isVisible ? (
-                                                        <span className="flex items-center gap-1.5 text-emerald-600 text-[9px] font-black uppercase tracking-widest">
+                                                        <span className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
                                                             <Eye size={10} />
                                                             Public
                                                         </span>
                                                     ) : (
-                                                        <span className="flex items-center gap-1.5 text-amber-500 text-[9px] font-black uppercase tracking-widest">
+                                                        <span className="flex items-center gap-1.5 text-amber-500 text-[10px] font-black uppercase tracking-widest">
                                                             <EyeOff size={10} />
                                                             Private
                                                         </span>
@@ -560,8 +560,8 @@ export default function CouponManagementScreen() {
                                                     <div className="flex flex-col items-center gap-4">
                                                         <Ticket size={40} className="text-slate-100" />
                                                         <div className="space-y-1">
-                                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">No Coupons Identified</h4>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authorize a new campaign to begin</p>
+                                                            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">No coupons yet</h4>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Create a coupon to get started</p>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -577,20 +577,20 @@ export default function CouponManagementScreen() {
                         <div className="bg-white rounded-sm border border-slate-200 p-6 space-y-6 shadow-sm">
                             <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <Info size={14} className="text-slate-900" />
-                                Operation Intel
+                                Tips
                             </h4>
                             <div className="space-y-4">
                                 <div className="p-4 bg-slate-50 rounded-sm space-y-2">
-                                    <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest block">Visibility Override</span>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tight leading-relaxed">
-                                        Private coupons remain active but won't be indexed in the user's promo list. Share codes manually via WhatsApp.
+                                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest block">Public vs Private Coupons</span>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight leading-relaxed">
+                                        Private coupons work but don't appear in the customer's coupon list. Share the code yourself, e.g. on WhatsApp.
                                     </p>
                                 </div>
                                 <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-sm flex items-start gap-3">
                                     <Trophy size={14} className="text-emerald-600 mt-0.5" />
                                     <div className="space-y-1">
-                                        <span className="text-[9px] font-black text-emerald-900 uppercase tracking-widest block">Performance Tip</span>
-                                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight leading-relaxed block">
+                                        <span className="text-[10px] font-black text-emerald-900 uppercase tracking-widest block">Performance Tip</span>
+                                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight leading-relaxed block">
                                             First-time buyer coupons increase conversion by 42%.
                                         </span>
                                     </div>
@@ -600,7 +600,7 @@ export default function CouponManagementScreen() {
                                 <ul className="space-y-3">
                                     {['Audit Logs', 'Analytics Export', 'Archive Policy'].map(item => (
                                         <li key={item} className="flex items-center justify-between group cursor-pointer">
-                                            <span className="text-[9px] font-bold text-slate-400 group-hover:text-slate-900 uppercase tracking-widest transition-colors">{item}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 group-hover:text-slate-900 uppercase tracking-widest transition-colors">{item}</span>
                                             <ChevronRight size={12} className="text-slate-200 group-hover:text-slate-900 transition-colors" />
                                         </li>
                                     ))}

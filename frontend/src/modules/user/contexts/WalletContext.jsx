@@ -128,7 +128,7 @@ export function WalletProvider({ children }) {
             if (!Number.isFinite(value) || value <= 0) return { success: false, message: 'Invalid amount' };
 
             const sdkLoaded = await loadRazorpay();
-            if (!sdkLoaded) return { success: false, message: 'Razorpay SDK failed to load' };
+            if (!sdkLoaded) return { success: false, message: 'Could not open the payment page. Please check your internet connection.' };
 
             const createRes = await api.post('/user/wallet/recharge/create-order', { amount: value });
             if (!createRes.data?.success || !createRes.data?.result?.id) {
@@ -177,7 +177,7 @@ export function WalletProvider({ children }) {
     const repayCredit = useCallback(async () => {
         try {
             const sdkLoaded = await loadRazorpay();
-            if (!sdkLoaded) return { success: false, message: 'Razorpay SDK failed to load' };
+            if (!sdkLoaded) return { success: false, message: 'Could not open the payment page. Please check your internet connection.' };
 
             const createRes = await api.post('/user/wallet/repay-credit/create-order');
             if (!createRes.data?.success || !createRes.data?.result?.id) {

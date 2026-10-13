@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 
 // Enterprise Components
 import DataGrid from '../components/tables/DataGrid';
+import TablePagination from '../components/tables/TablePagination';
 
 export default function CustomerManagementScreen() {
     const [isLoading, setIsLoading] = useState(true);
@@ -29,16 +30,35 @@ export default function CustomerManagementScreen() {
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
+    // Server-side pagination: only one page of customers is loaded at a time
+    const PAGE_SIZE = 20;
+    const [page, setPage] = useState(1);
+    const [totalCustomers, setTotalCustomers] = useState(0);
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    useEffect(() => {
+        const t = setTimeout(() => {
+            setDebouncedSearch(searchTerm.trim());
+            setPage(1);
+        }, 350);
+        return () => clearTimeout(t);
+    }, [searchTerm]);
+
     useEffect(() => {
         fetchCustomers();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, debouncedSearch]);
 
     const fetchCustomers = async () => {
         setIsLoading(true);
         try {
-            const response = await api.get('/masteradmin/customers');
+            const response = await api.get('/masteradmin/customers', {
+                params: { page, limit: PAGE_SIZE, search: debouncedSearch || undefined }
+            });
             if (response.data.success) {
-                setCustomers(response.data.results || []);
+                const result = response.data.result || {};
+                setCustomers(result.items || response.data.results || []);
+                setTotalCustomers(result.total ?? (response.data.results || []).length);
             }
         } catch (error) {
             console.error('Error fetching customers:', error);
@@ -48,18 +68,15 @@ export default function CustomerManagementScreen() {
         }
     };
 
-    const filteredCustomers = customers.filter(customer =>
-        (customer.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (customer.mobile || '').includes(searchTerm) ||
-        (customer.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Search is applied on the server; this is the current page
+    const filteredCustomers = customers;
 
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
         try {
             await api.delete(`/masteradmin/customers/${id}`);
             toast.success("Customer deleted successfully");
-            setCustomers(prev => prev.filter(c => c._id !== id));
+            fetchCustomers();
         } catch (error) {
             console.error("Failed to delete customer:", error);
             toast.error("Failed to delete customer");
@@ -79,7 +96,7 @@ export default function CustomerManagementScreen() {
                         <span className="font-black text-slate-900 text-xs tracking-tight">{val || 'Anonymous User'}</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                             <ShieldCheck size={10} className="text-emerald-500" />
-                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Verified Account</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Verified Account</span>
                         </div>
                     </div>
                 </div>
@@ -134,7 +151,7 @@ export default function CustomerManagementScreen() {
             header: 'Status',
             key: 'isActive',
             render: (isActive) => (
-                <div className={`px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border w-fit ${isActive !== false ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                <div className={`px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border w-fit ${isActive !== false ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
                     {isActive !== false ? 'Active' : 'Inactive'}
                 </div>
             )
@@ -147,7 +164,7 @@ export default function CustomerManagementScreen() {
                     <button 
                         onClick={() => setSelectedCustomer(row)}
                         className="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
-                        title="View Full Data"
+                        title="View Details"
                     >
                         <Eye size={14} />
                     </button>
@@ -172,9 +189,9 @@ export default function CustomerManagementScreen() {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
                             <Home size={12} />
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Customer Intelligence</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Customers</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900 font-black">User Registry</h1>
+                        <h1 className="text-sm font-bold text-slate-900 font-black">All registered customers</h1>
                     </div>
 
                     <button 
@@ -182,7 +199,7 @@ export default function CustomerManagementScreen() {
                         className="px-3 py-1.5 bg-slate-900 text-white rounded-sm text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
                     >
                         <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
-                        Sync Data
+                        Refresh
                     </button>
                 </div>
             </div>
@@ -205,14 +222,21 @@ export default function CustomerManagementScreen() {
 
                     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                         <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Live Database Connection</span>
-                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Total Users: {filteredCustomers.length}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Customers</span>
+                            <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Total Users: {totalCustomers}</span>
                         </div>
                         <DataGrid
                             columns={customerColumns.filter(col => col.key !== 'address' || filteredCustomers.some(c => c.address))}
                             data={filteredCustomers}
+                            pageSize={0}
                             density="compact"
                             isLoading={isLoading}
+                        />
+                        <TablePagination
+                            page={page}
+                            pageSize={PAGE_SIZE}
+                            totalItems={totalCustomers}
+                            onPageChange={setPage}
                         />
                     </div>
                 </div>
@@ -235,7 +259,7 @@ export default function CustomerManagementScreen() {
                         >
                             <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
                                 <div>
-                                    <h3 className="text-lg font-black text-slate-900">User Dossier</h3>
+                                    <h3 className="text-lg font-black text-slate-900">Customer Details</h3>
                                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">ID: {selectedCustomer._id}</p>
                                 </div>
                                 <button
@@ -267,7 +291,7 @@ export default function CustomerManagementScreen() {
                                 </div>
 
                                 <div className="flex flex-col gap-3">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">Financial & Usage</h4>
+                                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">Wallet & Credit</h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="flex flex-col gap-1">
                                             <span className="text-[10px] font-bold text-slate-500 uppercase">Wallet Balance</span>

@@ -73,7 +73,7 @@ export default function ReturnsScreen() {
                 <div>
                     <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
                         <Undo2 size={16} />
-                        Return Monitoring
+                        Returns
                     </h1>
                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-1">
                         {rows.length} total return requests

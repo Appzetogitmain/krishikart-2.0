@@ -12,17 +12,17 @@ export default function TermsScreen() {
             content: 'Delivery Partners must maintain a minimum service rating of 4.5. Professionalism, punctuality, and careful handling of products are core requirements of the Kisaankart network.'
         },
         {
-            title: '2. Logistics Protocol',
+            title: '2. Delivery Rules',
             icon: Truck,
             content: 'All pickups must be verified through the app or terminal. You are responsible for the items from the point of pickup until they are officially handed over to the customer or franchise node.'
         },
         {
-            title: '3. Real-time Tracking',
+            title: '3. Live Location Tracking',
             icon: MapPin,
             content: 'By using the Delivery Partner App, you agree to provide real-time location data while on-duty. This data is used to optimize delivery routes and provide live tracking to customers.'
         },
         {
-            title: '4. TAT Compliance',
+            title: '4. On-Time Delivery',
             icon: Clock,
             content: 'Turnaround Time (TAT) for deliveries must adhere to the assigned slot. Intentional delays or unauthorized diversions from the logistics path may result in payout deductions.'
         }
@@ -35,7 +35,7 @@ export default function TermsScreen() {
                     <button onClick={() => navigate(-1)} className="p-2 hover:bg-blue-50 text-blue-400 hover:text-blue-900 transition-all rounded-full border border-blue-50">
                         <ChevronLeft size={20} />
                     </button>
-                    <h1 className="text-[12px] font-black text-blue-900 uppercase tracking-[0.2em]">Logistics Partner Protocol</h1>
+                    <h1 className="text-[12px] font-black text-blue-900 uppercase tracking-[0.2em]">Delivery Partner Guidelines</h1>
                 </div>
             </header>
 
@@ -45,10 +45,10 @@ export default function TermsScreen() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-4"
                 >
-                    <div className="px-3 py-1 bg-blue-500 text-white inline-flex rounded-md text-[9px] font-black uppercase tracking-widest">v2.4 Ready</div>
+                    <div className="px-3 py-1 bg-blue-500 text-white inline-flex rounded-md text-[10px] font-black uppercase tracking-widest">Guidelines</div>
                     <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Deliver <br/> with Trust</h2>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-sm">
-                        Guidelines for our logistics engine. Your commitment ensures thousands of families get fresh produce every day.
+                        Simple rules for delivering with Kisaankart. Your work helps thousands of families get fresh produce every day.
                     </p>
                 </motion.div>
 
@@ -82,7 +82,7 @@ export default function TermsScreen() {
                     <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-200">Acknowledgment</p>
                         <p className="text-xs font-bold leading-relaxed text-blue-50 uppercase tracking-widest">
-                            By continuing, you certify that you have a valid vehicle registration and license, and you agree to follow the Kisaankart safety protocol.
+                            By continuing, you confirm that you have a valid vehicle registration and driving licence, and you agree to follow the Kisaankart safety rules.
                         </p>
                     </div>
                 </div>

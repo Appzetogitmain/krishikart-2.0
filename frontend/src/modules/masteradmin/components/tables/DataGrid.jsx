@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { MoreHorizontal, ArrowUpDown, ChevronRight } from 'lucide-react';
+import TablePagination from './TablePagination';
 
 export default function DataGrid({
     columns = [],
@@ -10,8 +11,20 @@ export default function DataGrid({
     actions,
     footer,
     density = 'compact', // compact, standard
-    stickyHeader = true
+    stickyHeader = true,
+    pageSize = 25 // rows per page; 0 disables paging (e.g. when the server already paginates)
 }) {
+    const [page, setPage] = useState(1);
+    const isPaged = pageSize > 0 && data.length > pageSize;
+    const totalPages = isPaged ? Math.ceil(data.length / pageSize) : 1;
+
+    // Go back to a valid page when the data shrinks (search / filter / delete)
+    useEffect(() => {
+        if (page > totalPages) setPage(1);
+    }, [page, totalPages]);
+
+    const visibleRows = isPaged ? data.slice((page - 1) * pageSize, page * pageSize) : data;
+
     return (
         <div className="w-full bg-white border-t border-slate-200 flex flex-col">
             {/* Grid Header Info (Optional) */}
@@ -58,8 +71,8 @@ export default function DataGrid({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {data.length > 0 ? (
-                            data.map((row, rowIdx) => (
+                        {visibleRows.length > 0 ? (
+                            visibleRows.map((row, rowIdx) => (
                                 <tr
                                     key={rowIdx}
                                     onClick={() => onRowClick?.(row)}
@@ -93,6 +106,10 @@ export default function DataGrid({
                     </tbody>
                 </table>
             </div>
+
+            {isPaged && (
+                <TablePagination page={page} pageSize={pageSize} totalItems={data.length} onPageChange={setPage} />
+            )}
 
             {/* Footer / Aggregation Row */}
             {footer && (

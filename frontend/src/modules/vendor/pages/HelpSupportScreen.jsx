@@ -41,9 +41,9 @@ export default function HelpSupportScreen() {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">Support System v2.0</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none">Help Center</p>
                         </div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Merchant Protocol</h1>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic">Vendor Help</h1>
                     </div>
                 </div>
             </div>
@@ -54,17 +54,17 @@ export default function HelpSupportScreen() {
                     <div className="flex items-center justify-between px-4 mb-4">
                         <div className="flex items-center gap-3">
                             <div className="w-2 h-8 bg-slate-900 rounded-full" />
-                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Operating Guidelines</h3>
+                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Common Questions</h3>
                         </div>
-                        <div className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                            {faqs.length} Records Found
+                        <div className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            {faqs.length} questions
                         </div>
                     </div>
                     
                     {isLoading ? (
                         <div className="py-24 text-center space-y-4">
                             <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mx-auto" />
-                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Accessing Ledger...</p>
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Loading...</p>
                         </div>
                     ) : faqs.length > 0 ? (
                         <div className="space-y-4">
@@ -117,8 +117,8 @@ export default function HelpSupportScreen() {
                     ) : (
                         <div className="bg-white rounded-[40px] p-24 text-center border border-slate-100 border-dashed">
                             <HelpCircle size={48} className="text-slate-100 mx-auto mb-6" />
-                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">Knowledge Base Vacant</h4>
-                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Protocols will appear once deployed by central admin</p>
+                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">No help articles yet</h4>
+                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">Answers will appear here once the admin adds them</p>
                         </div>
                     )}
                 </div>

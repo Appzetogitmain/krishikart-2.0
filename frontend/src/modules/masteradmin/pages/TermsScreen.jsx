@@ -7,7 +7,7 @@ export default function TermsScreen() {
 
     const sections = [
         {
-            title: '1. Administrative Integrity',
+            title: '1. Honest Use',
             icon: ShieldAlert,
             content: 'Access to the Master Console is strictly limited to authorized personnel. Sharing of credentials or providing unauthorized access to the network dashboard is a high-level security breach.'
         },
@@ -17,12 +17,12 @@ export default function TermsScreen() {
             content: 'Admins have access to sensitive network data, including PII (Personally Identifiable Information) of users and vendors. Unauthorized extraction, storage, or distribution of this data is strictly prohibited.'
         },
         {
-            title: '3. System Modifications',
+            title: '3. Making Changes',
             icon: Cpu,
             content: 'Any changes to commission rates, service zones, or system constraints must be logged through the internal change-management protocol. Actions taken in the console are immutable and fully audited.'
         },
         {
-            title: '4. Real-time Monitoring',
+            title: '4. Activity Monitoring',
             icon: Eye,
             content: 'Administrator activity is monitored in real-time. Continuous deviations from standard operating procedures (SOPs) may trigger automated session termination and investigation by the security cell.'
         }
@@ -37,7 +37,7 @@ export default function TermsScreen() {
                             <ChevronLeft size={20} />
                         </button>
                         <div>
-                            <h1 className="text-[12px] font-black text-white uppercase tracking-[0.3em]">Network Authority Terminal</h1>
+                            <h1 className="text-[12px] font-black text-white uppercase tracking-[0.3em]">Admin Terms</h1>
                         </div>
                     </div>
                 </div>
@@ -51,11 +51,11 @@ export default function TermsScreen() {
                 >
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
                         <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">Secure Protocol L-4</span>
+                        <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">For Kisaankart staff</span>
                     </div>
-                    <h2 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Administration <br/> Protocol</h2>
+                    <h2 className="text-5xl font-black text-white tracking-tighter uppercase leading-none">Administration <br/> Terms</h2>
                     <p className="text-sm text-slate-400 font-medium leading-relaxed max-w-lg">
-                        Legal framework for administrative staff managing the Kisaankart Core Infrastructure. Access implies unconditional agreement to these protocols.
+                        Rules for Kisaankart admin staff. By logging in, you agree to them.
                     </p>
                 </motion.div>
 
@@ -88,7 +88,7 @@ export default function TermsScreen() {
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">Acknowledgment</p>
                     </div>
                     <p className="text-xs font-bold leading-relaxed text-slate-400 uppercase tracking-[0.15em]">
-                        Logging into this terminal signifies your understanding of the privacy laws and your commitment to preserving network security and integrity. Any breaches will be prosecuted to the maximum extent of the law.
+                        By logging in, you agree to keep customer and business data private and secure. Misuse can lead to legal action.
                     </p>
                 </div>
             </div>

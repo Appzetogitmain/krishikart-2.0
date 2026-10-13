@@ -201,7 +201,7 @@ export default function DataTable({
                             Showing <span className="text-slate-900">{(currentPage - 1) * pageSize + 1}</span> to <span className="text-slate-900">{Math.min(currentPage * pageSize, filteredData.length)}</span> of <span className="text-slate-900">{filteredData.length}</span> entries
                         </p>
                         <div className="hidden md:flex items-center gap-2 ml-4">
-                            <span className="text-[11px] font-bold text-slate-500 uppercase">Density:</span>
+                            <span className="text-[11px] font-bold text-slate-500 uppercase">Row size:</span>
                             <div className="flex items-center bg-white border border-slate-200 rounded p-0.5">
                                 {['compact', 'comfortable', 'spacious'].map(d => (
                                     <button

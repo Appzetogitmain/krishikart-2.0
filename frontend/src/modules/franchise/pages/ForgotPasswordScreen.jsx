@@ -85,7 +85,7 @@ export default function ForgotPasswordScreen() {
                         <KeyRound className="text-blue-600 w-8 h-8" />
                     </motion.div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">
-                        {step === 1 ? 'Reset Access' : 'Secure Reset'}
+                        {step === 1 ? 'Reset Password' : 'Reset your password'}
                     </h2>
                     <p className="text-slate-400 font-bold text-[10px] mt-2 uppercase tracking-[0.2em] text-center">
                         {step === 1
@@ -105,7 +105,7 @@ export default function ForgotPasswordScreen() {
                             className="space-y-6"
                         >
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Franchise Mobile</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mobile Number</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                                         <Phone size={18} />
@@ -130,7 +130,7 @@ export default function ForgotPasswordScreen() {
                                     <Loader2 className="w-5 h-5 animate-spin" />
                                 ) : (
                                     <>
-                                        Send Recovery Code
+                                        Send OTP
                                         <ArrowRight size={18} className="ml-1 opacity-50" />
                                     </>
                                 )}
@@ -146,7 +146,7 @@ export default function ForgotPasswordScreen() {
                             className="space-y-6"
                         >
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Secure Code</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">OTP</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                                         <KeyRound size={18} />
@@ -211,7 +211,7 @@ export default function ForgotPasswordScreen() {
 
                 <div className="mt-12 pt-8 border-t border-slate-50 text-center">
                     <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em]">
-                        Node Recovery Protocol
+                        Kisaankart Franchise
                     </p>
                 </div>
             </motion.div>

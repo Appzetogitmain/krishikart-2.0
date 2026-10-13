@@ -28,7 +28,7 @@ export default function NewAssignmentAlert({ isOpen, onClose, data }) {
                                 <h2 className="text-3xl font-black uppercase tracking-tighter">
                                     New Order!
                                 </h2>
-                                <p className="text-white/60 font-medium">New assignment from Master Admin</p>
+                                <p className="text-white/60 font-medium">The admin has sent you a new order</p>
                             </div>
                         </div>
                         <button
@@ -51,7 +51,7 @@ export default function NewAssignmentAlert({ isOpen, onClose, data }) {
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Notice</p>
                                 <span className="bg-amber-100 text-amber-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase ring-2 ring-amber-50">
-                                    Urgent Action
+                                    Action Needed
                                 </span>
                             </div>
                         </div>
@@ -60,7 +60,7 @@ export default function NewAssignmentAlert({ isOpen, onClose, data }) {
                                 onClick={onClose}
                                 className="w-full bg-white text-slate-400 py-4 rounded-2xl font-bold hover:text-slate-600 transition-colors"
                             >
-                                DISMISS
+                                Close
                             </button>
                         </div>
                     </div>

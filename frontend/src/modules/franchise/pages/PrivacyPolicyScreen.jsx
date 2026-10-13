@@ -35,7 +35,7 @@ export default function PrivacyPolicyScreen() {
             id: 'data-collection',
             title: 'Data Collection & Usage',
             icon: Shield,
-            content: 'We collect franchise business details, owner information, KYC documents, and operational data for node verification, order management, and settlement purposes.'
+            content: 'We collect franchise business details, owner information, KYC documents, and order data to verify your franchise, manage orders and make payments.'
         },
         {
             id: 'customer-data',
@@ -45,9 +45,9 @@ export default function PrivacyPolicyScreen() {
         },
         {
             id: 'security',
-            title: 'Security Protocols',
+            title: 'Security',
             icon: ScrollText,
-            content: 'All franchise data is encrypted and stored securely. Access to the franchise terminal is protected with authentication and session management.'
+            content: 'All franchise data is encrypted and stored securely. Only you can log in to your franchise account.'
         }
     ]
 
@@ -116,7 +116,7 @@ export default function PrivacyPolicyScreen() {
                     <div className="space-y-4">
                         <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none uppercase">Data Protection</h2>
                         <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                            This policy governs how KisaanKart Network handles franchise node information and customer data access.
+                            This policy explains how Kisaankart handles your franchise information and customer data.
                         </p>
                     </div>
 
@@ -145,7 +145,7 @@ export default function PrivacyPolicyScreen() {
                     <div className="p-8 bg-slate-900 rounded-sm text-white space-y-4">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">Acknowledgment</h4>
                         <p className="text-xs font-bold leading-relaxed text-slate-400 uppercase tracking-wider">
-                            By using the franchise terminal, you agree to handle all customer and platform data in accordance with this Privacy Policy.
+                            By using the franchise portal, you agree to handle customer data as described in this Privacy Policy.
                         </p>
                     </div>
 
@@ -154,7 +154,7 @@ export default function PrivacyPolicyScreen() {
                             onClick={() => navigate(-1)}
                             className="text-[11px] font-black uppercase text-slate-900 border-b-2 border-slate-900 pb-1"
                         >
-                            Back to Franchise Portal
+                            Back
                         </button>
                     </div>
                 </motion.div>

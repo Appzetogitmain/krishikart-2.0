@@ -17,7 +17,7 @@ export default function FAQManagementScreen() {
     const [editFaq, setEditFaq] = useState({ id: '', question: '', answer: '', category: 'General', displayOrder: 0, status: 'active', audience: 'all' });
 
     const audiences = [
-        { value: 'all', label: 'All Ecosystem' },
+        { value: 'all', label: 'Everyone' },
         { value: 'user', label: 'Customers' },
         { value: 'vendor', label: 'Vendors' },
         { value: 'franchise', label: 'Franchise/Admin' },
@@ -100,7 +100,7 @@ export default function FAQManagementScreen() {
     };
 
     if (isLoading) {
-        return <div className="p-8 animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest text-center py-20">Syncing Knowledge Base...</div>;
+        return <div className="p-8 animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest text-center py-20">Loading FAQs...</div>;
     }
 
     return (
@@ -185,7 +185,7 @@ export default function FAQManagementScreen() {
                                     disabled={isSubmitting}
                                     className="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all shadow-lg"
                                 >
-                                    {isSubmitting ? 'Processing...' : 'Deploy FAQ'}
+                                    {isSubmitting ? 'Processing...' : 'Save FAQ'}
                                 </button>
                             </div>
                         </motion.div>
@@ -272,7 +272,7 @@ export default function FAQManagementScreen() {
                                     disabled={isSubmitting}
                                     className="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all shadow-lg"
                                 >
-                                    {isSubmitting ? 'Syncing...' : 'Update Protocol'}
+                                    {isSubmitting ? 'Saving...' : 'Save Changes'}
                                 </button>
                             </div>
                         </motion.div>
@@ -291,7 +291,7 @@ export default function FAQManagementScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">FAQs</span>
                         </div>
-                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Knowledge Base</h1>
+                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Help Center FAQs</h1>
                     </div>
 
                     <button
@@ -325,10 +325,10 @@ export default function FAQManagementScreen() {
                                         <div className="flex items-start justify-between">
                                             <div className="space-y-1 flex-1">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="px-2 py-0.5 bg-slate-100 text-[8px] font-black uppercase text-slate-500 rounded-sm">
+                                                    <span className="px-2 py-0.5 bg-slate-100 text-[10px] font-black uppercase text-slate-500 rounded-sm">
                                                         {faq.category || 'General'}
                                                     </span>
-                                                    <span className="px-2 py-0.5 bg-blue-50 text-[8px] font-black uppercase text-blue-500 rounded-sm">
+                                                    <span className="px-2 py-0.5 bg-blue-50 text-[10px] font-black uppercase text-blue-500 rounded-sm">
                                                         Target: {faq.audience || 'All'}
                                                     </span>
                                                     <h4 className="text-xs font-black text-slate-900">{faq.question}</h4>
@@ -362,10 +362,10 @@ export default function FAQManagementScreen() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Order: {faq.displayOrder}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Order: {faq.displayOrder}</span>
                                             <span className="w-1 h-1 rounded-full bg-slate-200" />
                                             <span className={cn(
-                                                "text-[9px] font-bold uppercase tracking-tighter",
+                                                "text-[10px] font-bold uppercase tracking-tighter",
                                                 faq.status === 'active' ? "text-emerald-600" : "text-rose-600"
                                             )}>
                                                 {faq.status === 'active' ? 'Live on App' : 'Offline'}
@@ -375,7 +375,7 @@ export default function FAQManagementScreen() {
                                 )) : (
                                     <div className="p-20 text-center space-y-4">
                                         <MessageSquare size={40} className="text-slate-200 mx-auto" strokeWidth={1} />
-                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">No FAQs Records</h3>
+                                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">No FAQs yet</h3>
                                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Start building your help center.</p>
                                     </div>
                                 )}
@@ -390,28 +390,28 @@ export default function FAQManagementScreen() {
                                 <div className="w-8 h-8 bg-blue-50 text-blue-600 flex items-center justify-center rounded-sm">
                                     <Info size={16} />
                                 </div>
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Knowledge Management</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Tips</h4>
                             </div>
 
                             <ul className="space-y-4">
                                 {[
                                     { label: 'Display Order', detail: 'Determines the sequence in user app' },
                                     { label: 'Active Status', detail: 'Only active FAQs are visible to users' },
-                                    { label: 'Categorization', detail: 'Group FAQs for better organization' }
+                                    { label: 'Category', detail: 'Group FAQs for better organization' }
                                 ].map((item, i) => (
                                     <li key={i} className="space-y-1">
                                         <div className="flex items-center gap-2">
                                             <div className="w-1 h-1 bg-slate-950 rounded-full" />
                                             <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{item.label}</span>
                                         </div>
-                                        <p className="pl-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">{item.detail}</p>
+                                        <p className="pl-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">{item.detail}</p>
                                     </li>
                                 ))}
                             </ul>
 
                             <div className="p-4 bg-slate-50 border border-slate-200 rounded-sm">
-                                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                                    "Help systems reduce customer support volume by up to 30%. Keep it concise."
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                                    "Good FAQs answer common questions quickly. Keep answers short and simple."
                                 </p>
                             </div>
                         </div>

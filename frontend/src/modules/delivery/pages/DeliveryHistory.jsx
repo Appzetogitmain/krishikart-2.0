@@ -134,8 +134,8 @@ const DeliveryHistory = () => {
                                     </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end gap-1">
-                                    <span className="text-xs font-black text-primary">{item.numberOfPackages || 0} PKGS</span>
-                                    <span className="text-[8px] bg-green-500 text-white px-2 py-0.5 rounded-sm font-black uppercase tracking-tighter">Delivered</span>
+                                    <span className="text-xs font-black text-primary">{item.numberOfPackages || 0} Packages</span>
+                                    <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-sm font-black uppercase tracking-tighter">Delivered</span>
                                 </div>
                             </motion.div>
                         ))}

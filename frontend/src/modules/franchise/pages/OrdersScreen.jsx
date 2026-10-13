@@ -106,7 +106,7 @@ export default function OrdersScreen() {
             await updateOrderStatus(orderId, 'procuring');
             setProcessingOrderId(null);
             navigate('/franchise/procurement');
-            toast.info("Stock shortage reported. Opening procurement screen...");
+            toast.info("Not enough stock. Opening the stock request screen...");
             return;
         }
 
@@ -187,9 +187,9 @@ export default function OrdersScreen() {
     const filterOptions = [
         { id: 'all', label: 'All Orders' },
         { id: 'auto-assigned', label: 'Auto Assigned' },
-        { id: 'procurement-needed', label: 'Needs Procurement' },
+        { id: 'procurement-needed', label: 'Needs Stock' },
         { id: 'delivery-assigned', label: 'Delivery Assigned' },
-        { id: 'partial-fulfillment', label: 'Partial Fulfillment' },
+        { id: 'partial-fulfillment', label: 'Partial Delivery Allowed' },
     ];
 
     const activeFilterLabel = filterOptions.find((option) => option.id === quickFilter)?.label || 'All Orders';
@@ -222,7 +222,7 @@ export default function OrdersScreen() {
                         <span className="font-bold text-slate-900 text-sm tracking-tight">{displayDate}</span>
                         <span className="text-xs text-slate-400 font-bold uppercase tracking-[0.05em] mt-0.5">{displayTime}</span>
                         {row.scheduledDateFormatted || row.scheduledDate ? (
-                             <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded-md mt-2 w-fit border-2 border-amber-200 shadow-sm flex items-center gap-1.5 animate-pulse uppercase tracking-wider">
+                             <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded-md mt-2 w-fit border-2 border-amber-200 shadow-sm flex items-center gap-1.5 animate-pulse uppercase tracking-wider">
                                 <Clock size={10} strokeWidth={3} />
                                 Target: {row.scheduledDateFormatted || new Date(row.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
                              </span>
@@ -270,7 +270,7 @@ export default function OrdersScreen() {
                 const isCredit = method.includes('CREDIT');
                 return (
                     <span className={cn(
-                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border',
+                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border',
                         isCOD ? 'bg-amber-50 text-amber-700 border-amber-200' :
                         isUPI ? 'bg-blue-50 text-blue-700 border-blue-200' :
                         isWallet ? 'bg-purple-50 text-purple-700 border-purple-200' :
@@ -291,7 +291,7 @@ export default function OrdersScreen() {
                     {row.status === 'procuring' && (
                         <div className="flex items-center gap-2 mr-4 bg-amber-50 px-2 py-1 rounded-sm border border-amber-200">
                             <RefreshCw size={12} className="text-amber-600 animate-spin" />
-                            <span className="text-[10px] font-black text-amber-700 uppercase">Under Procurement</span>
+                            <span className="text-[10px] font-black text-amber-700 uppercase">Waiting for Stock</span>
                         </div>
                     )}
                     {activeTab === 'ready' && row.status === 'dispatched' && row.deliveryPartner && (
@@ -331,7 +331,7 @@ export default function OrdersScreen() {
                                         onClick={() => handleAction(row.id, 'procure')}
                                         className="p-1.5 px-3 text-[10px] font-black uppercase text-amber-600 border-2 border-amber-600 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"
                                     >
-                                        <Info size={12} /> Request Procurement
+                                        <Info size={12} /> Request Stock
                                     </button>
                                 ) : (
                                     <button
@@ -398,7 +398,7 @@ export default function OrdersScreen() {
                             onClick={() => {
                                 refreshOrders();
                                 refreshInventory();
-                                toast.info("Syncing order data...");
+                                toast.info("Loading orders...");
                             }}
                             className="p-2 text-slate-400 hover:text-slate-900 transition-colors border border-slate-200 rounded-sm bg-white"
                         >
@@ -617,7 +617,7 @@ export default function OrdersScreen() {
                                                     </div>
                                                     <div className="text-left">
                                                         <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{partner.fullName}</p>
-                                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{partner.vehicleNumber} • {partner.vehicleType}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{partner.vehicleNumber} • {partner.vehicleType}</p>
                                                     </div>
                                                 </div>
                                                 <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
@@ -662,9 +662,9 @@ export default function OrdersScreen() {
                                 <div>
                                     <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
                                         <Package size={16} className="text-emerald-400" />
-                                        Shipment Packaging
+                                        Pack Order
                                     </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Finalizing Manifest</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Enter package count</p>
                                 </div>
                                 <button onClick={() => setIsPackageModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <X size={20} />
@@ -693,8 +693,8 @@ export default function OrdersScreen() {
                                             <button type="button" onClick={() => setPackageCount(p => Math.max(0, p - 1))} className="p-1 hover:bg-white border border-slate-200 rounded text-slate-400 hover:text-slate-900 shadow-sm transition-all"><ArrowDownRight size={12} /></button>
                                         </div>
                                     </div>
-                                    <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-tight leading-relaxed">
-                                        Enter total number of physical packages for this consignment. This count will be printed on the Bilty.
+                                    <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tight leading-relaxed">
+                                        How many boxes/bags is this order packed in? This number is printed on the delivery slip (Bilty).
                                     </p>
                                 </div>
 

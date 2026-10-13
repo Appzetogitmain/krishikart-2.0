@@ -72,12 +72,12 @@ export default function ForgotPasswordScreen() {
                         <KeyRound className="text-primary w-8 h-8" />
                     </motion.div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                        {step === 1 ? 'Recovery Access' : 'Secure Reset'}
+                        {step === 1 ? 'Forgot Password?' : 'Secure Reset'}
                     </h2>
                     <p className="text-slate-400 font-medium text-sm mt-2 uppercase tracking-widest text-center">
                         {step === 1
                             ? "Enter your admin email for verification"
-                            : "Enter the code sent to your secure email"}
+                            : "Enter the code sent to your email"}
                     </p>
                 </div>
 
@@ -92,7 +92,7 @@ export default function ForgotPasswordScreen() {
                             className="space-y-6"
                         >
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Admin Identity</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Admin Email</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
                                         <Mail size={18} />
@@ -156,7 +156,7 @@ export default function ForgotPasswordScreen() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">New Access Key</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">New Password</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
                                         <Lock size={18} />
@@ -199,7 +199,7 @@ export default function ForgotPasswordScreen() {
 
                 <div className="mt-12 pt-8 border-t border-slate-50 text-center">
                     <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em]">
-                        Part of Appzeto Kisaankart Ecosystem
+                        Kisaankart Admin
                     </p>
                 </div>
             </motion.div>

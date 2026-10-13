@@ -88,7 +88,7 @@ const ActiveDelivery = () => {
                         <div className="flex items-center justify-between">
                             <p className="text-sm font-bold text-primary">On Your Way</p>
                             {order.isPreOrder && (
-                                <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100 uppercase tracking-tight">
+                                <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100 uppercase tracking-tight">
                                     Scheduled
                                 </span>
                             )}
@@ -171,7 +171,7 @@ const ActiveDelivery = () => {
                 {/* Order Items & Bilty */}
                 <div className="bg-white rounded-2xl border border-border overflow-hidden">
                     <div className="px-4 py-3 border-b border-border bg-muted/20 flex justify-between items-center">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Consignment Details</h4>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Package Details</h4>
                         <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                             {order?.numberOfPackages || 0} Packages
                         </span>
@@ -184,15 +184,15 @@ const ActiveDelivery = () => {
                                     <Package size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none mb-1">Logistics Bilty</p>
-                                    <p className="text-[9px] font-bold text-amber-600 uppercase tracking-tight">{order.bilty.numberOfPackages} Packages • {order.bilty.biltyNumber}</p>
+                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none mb-1">Delivery Slip (Bilty)</p>
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">{order.bilty.numberOfPackages} Packages • {order.bilty.biltyNumber}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setIsDocOpen(true)}
                                 className="w-full py-3 bg-white border border-amber-200 rounded-xl text-xs font-black text-amber-600 uppercase tracking-widest shadow-sm active:scale-95 transition-all text-center"
                             >
-                                View Consignment Note
+                                View Delivery Slip
                             </button>
                         </div>
                     )}

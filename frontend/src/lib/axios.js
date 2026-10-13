@@ -1,5 +1,10 @@
 
 import axios from 'axios';
+import { toast } from 'sonner';
+
+const alertSessionExpired = () => {
+    toast.error('Your session has expired. Please log in again.');
+};
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
@@ -101,8 +106,20 @@ api.interceptors.response.use(
                     localStorage.removeItem('franchiseData');
                 }
             } else if (currentPath.startsWith('/vendor')) {
-                localStorage.removeItem('vendorToken');
-                localStorage.removeItem('vendorData');
+                const isPublicVendorPage = /\/vendor\/(login|signup|forgot-password|terms|privacy|help-support)/.test(currentPath);
+                if (!isPublicVendorPage) {
+                    localStorage.removeItem('vendorToken');
+                    localStorage.removeItem('vendorData');
+                    // Session expired: send the vendor to login once instead of leaving them on a
+                    // page where every request fails ("Dashboard Sync Failed", etc.)
+                    if (!window.__kkVendorSessionRedirect) {
+                        window.__kkVendorSessionRedirect = true;
+                        alertSessionExpired();
+                        window.dispatchEvent(new Event('kk:vendor-session-expired'));
+                        window.location.href = '/#/vendor/login';
+                        setTimeout(() => { window.__kkVendorSessionRedirect = false; }, 3000);
+                    }
+                }
             } else if (currentPath.startsWith('/delivery')) {
                 // Same principle as franchise: only clear auth when session validation fails.
                 // Otherwise any unrelated 401 would wipe auth and cause refresh → login loops.

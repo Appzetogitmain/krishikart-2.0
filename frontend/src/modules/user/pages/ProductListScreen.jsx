@@ -734,7 +734,7 @@ export default function ProductListScreen() {
                                             {searchQuery !== debouncedSearch && (
                                                 <div className="flex items-center gap-3 text-slate-400 text-sm font-bold uppercase tracking-widest bg-slate-50 p-4 rounded-2xl border border-slate-100 animate-pulse">
                                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                                    Searching Network SKUs...
+                                                    Searching products...
                                                 </div>
                                             )}
                                             {filteredProducts.length === 0 ? (

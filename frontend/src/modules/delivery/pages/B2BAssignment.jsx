@@ -37,7 +37,7 @@ const B2BAssignment = () => {
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Order Delivery Node</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Delivery Details</span>
                     <span className="text-xs font-bold">{assignment.id}</span>
                 </div>
                 <button className="p-2 -mr-2 text-primary">
@@ -56,9 +56,9 @@ const B2BAssignment = () => {
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-4">
                             <ShieldCheck className="text-emerald-400" size={18} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Verified Logistics</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Verified Delivery</span>
                         </div>
-                        <h2 className="text-2xl font-black tracking-tight mb-2 uppercase">Order Payload</h2>
+                        <h2 className="text-2xl font-black tracking-tight mb-2 uppercase">Order Items</h2>
                         <div className="flex items-center gap-4 text-slate-400">
                             <div className="flex items-center gap-1.5 font-bold text-xs uppercase tracking-widest">
                                 <Package size={14} /> {assignment.payloadWeight}
@@ -103,7 +103,7 @@ const B2BAssignment = () => {
                 {/* Items Manifest */}
                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                     <div className="px-5 py-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Order Manifest</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Item List</h4>
                         <span className="text-[10px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-sm">{assignment.items.length} Units</span>
                     </div>
                     <div className="divide-y divide-slate-50">
@@ -123,7 +123,7 @@ const B2BAssignment = () => {
                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-4">
                     <AlertCircle className="text-amber-500 shrink-0" size={20} />
                     <p className="text-xs font-bold text-amber-700 leading-relaxed uppercase tracking-wide">
-                        Verify manifest quantity at pickup. Report any discrepancies to support before leaving franchise site.
+                        Check the item quantities at pickup. If anything is missing, tell support before you leave the franchise.
                     </p>
                 </div>
             </div>

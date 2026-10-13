@@ -92,7 +92,7 @@ export default function AnalyticsScreen() {
             }
         },
         {
-            header: 'Performance Index', key: 'index', render: (_, row) => (
+            header: 'Performance Score', key: 'index', render: (_, row) => (
                 <div className="flex items-center gap-2">
                     <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden max-w-[80px]">
                         <div className="h-full bg-slate-400" style={{ width: `${(row.amount / 65000) * 100}%` }} />
@@ -105,9 +105,9 @@ export default function AnalyticsScreen() {
 
     const regionalColumns = [
         { header: 'Market Region', key: 'region', render: (val) => <span className="font-bold text-slate-900">{val}</span> },
-        { header: 'Node Count', key: 'nodes', render: (val) => <span className="text-slate-600 font-medium">{val || 1}</span> },
+        { header: 'Franchises', key: 'nodes', render: (val) => <span className="text-slate-600 font-medium">{val || 1}</span> },
         {
-            header: 'SLA Efficiency', key: 'efficiency', align: 'right', render: (val) => (
+            header: 'On-Time Rate', key: 'efficiency', align: 'right', render: (val) => (
                 <div className="flex items-center justify-end gap-3">
                     <span className={cn(
                         "text-xs font-bold tabular-nums",
@@ -146,9 +146,9 @@ export default function AnalyticsScreen() {
                             <ChevronRight size={10} />
                             <span>Master Admin</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900">Analytics Intelligence</span>
+                            <span className="text-slate-900">Analytics</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">Performance Matrix</h1>
+                        <h1 className="text-sm font-bold text-slate-900">Performance</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -159,7 +159,7 @@ export default function AnalyticsScreen() {
                         </button>
                         <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors">
                             <Download size={13} />
-                            Export Dataset
+                            Download Data
                         </button>
                     </div>
                 </div>
@@ -168,7 +168,7 @@ export default function AnalyticsScreen() {
             {/* KPI scorecard - Inline Row */}
             <div className="bg-white border-b border-slate-200 grid grid-cols-1 lg:grid-cols-3">
                 <MetricRow
-                    label="Aggregate Revenue"
+                    label="Total Revenue"
                     value={analyticsData.kpis?.revenue?.value || '₹0.00'}
                     change={analyticsData.kpis?.revenue?.change || 0}
                     trend="up"
@@ -176,15 +176,15 @@ export default function AnalyticsScreen() {
                     sparklineData={[30, 35, 32, 38, 42, 45, 48].map(v => ({ value: v }))}
                 />
                 <MetricRow
-                    label="Network Capacity"
-                    value={analyticsData.kpis?.nodes?.value || '0 Nodes'}
+                    label="Capacity"
+                    value={analyticsData.kpis?.nodes?.value || '0 Franchises'}
                     change={analyticsData.kpis?.nodes?.change || 0}
                     trend="up"
                     icon={Users}
                     sparklineData={[1100, 1150, 1180, 1200, 1220, 1240, 1248].map(v => ({ value: v }))}
                 />
                 <MetricRow
-                    label="Operational Uptime"
+                    label="Uptime"
                     value={analyticsData.kpis?.uptime?.value || '98.2%'}
                     change={analyticsData.kpis?.uptime?.change || 0}
                     trend="up"
@@ -207,13 +207,13 @@ export default function AnalyticsScreen() {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-px bg-slate-200">
                     <div className="bg-white flex flex-col">
                         <DataGrid
-                            title="Revenue Momentum Ledger"
+                            title="Revenue Over Time"
                             columns={revenueColumns}
                             data={revenueGrowth}
                             density="compact"
                         />
                         <ChartPanel
-                            title="Visual Momentum Trajectory"
+                            title="Revenue trend"
                             height={250}
                             collapsible={false}
                         >
@@ -270,7 +270,7 @@ export default function AnalyticsScreen() {
                         </ChartPanel>
 
                         <DataGrid
-                            title="Regional Market Penetration"
+                            title="Sales by Region"
                             columns={regionalColumns}
                             data={regionalPerformance}
                             density="compact"
@@ -283,7 +283,7 @@ export default function AnalyticsScreen() {
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                             <Activity size={14} className="text-blue-400" />
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-white/90">Market Sentiment: Bullish</span>
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-white/90">Sales trend</span>
                         </div>
                         <div className="flex items-center gap-2 text-white/50">
                             <TrendingUp size={14} />
@@ -292,12 +292,12 @@ export default function AnalyticsScreen() {
                     </div>
                     <div className="flex items-center gap-4">
                         <button className="text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors">
-                            Strategic Reports
+                            Reports
                         </button>
                         <div className="h-3 w-px bg-white/10" />
                         <button className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[#0284c7]">
                             <Layers size={12} />
-                            Deep Intel
+                            Details
                         </button>
                     </div>
                 </div>

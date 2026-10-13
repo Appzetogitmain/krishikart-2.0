@@ -59,7 +59,7 @@ export default function ProfileScreen() {
             group: 'Settings',
             items: [
                 { id: 'notifications', label: 'Notifications', icon: Bell, sub: 'Manage order alerts', toggle: true },
-                { id: 'terms', label: 'Terms & Conditions', icon: ScrollText, sub: 'Review franchise protocol', onClick: () => navigate('/franchise/terms') }
+                { id: 'terms', label: 'Terms & Conditions', icon: ScrollText, sub: 'Read the franchise rules', onClick: () => navigate('/franchise/terms') }
             ]
         }
     ];
@@ -143,8 +143,8 @@ export default function ProfileScreen() {
                 <div className="relative z-10 text-center md:text-left">
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center justify-center md:justify-start gap-3">
-                            <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{franchise?.franchiseName || 'Franchise Node'}</h2>
-                            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black uppercase tracking-widest rounded-sm">
+                            <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{franchise?.franchiseName || 'Franchise'}</h2>
+                            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest rounded-sm">
                                 {franchise?.isVerified ? 'Verified' : 'Pending'}
                             </span>
                         </div>
@@ -157,12 +157,12 @@ export default function ProfileScreen() {
                     {(franchise?.servedCategories?.length > 0 || franchise?.requestedCategories?.length > 0) && (
                         <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
                             {franchise.servedCategories?.map(cat => (
-                                <span key={cat._id} className="px-2 py-0.5 bg-slate-800 text-slate-300 text-[8px] font-bold uppercase tracking-wider rounded-sm border border-slate-700">
+                                <span key={cat._id} className="px-2 py-0.5 bg-slate-800 text-slate-300 text-[10px] font-bold uppercase tracking-wider rounded-sm border border-slate-700">
                                     {cat.name}
                                 </span>
                             ))}
                             {franchise.requestedCategories?.map(cat => (
-                                <span key={cat._id} className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[8px] font-bold uppercase tracking-wider rounded-sm border border-amber-500/30 flex items-center gap-1">
+                                <span key={cat._id} className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider rounded-sm border border-amber-500/30 flex items-center gap-1">
                                     {cat.name}
                                     <Clock size={8} />
                                 </span>
@@ -235,10 +235,10 @@ export default function ProfileScreen() {
                         className="w-full h-14 bg-white border border-rose-200 text-rose-500 hover:bg-rose-50 rounded-xl flex items-center justify-center gap-3 font-black uppercase text-[10px] tracking-[0.2em] transition-all"
                     >
                         <LogOut size={16} />
-                        Logout
+                        Log Out
                     </button>
                     <div className="text-center">
-                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Version 2.4.0</p>
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Version 2.4</p>
                     </div>
                 </div>
             </div>
@@ -396,7 +396,7 @@ const EditProfileModal = ({ isOpen, onClose, franchiseData, onUpdate }) => {
                     {/* Category Selection */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ownership & Requests</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categories & Requests</label>
                             {isLoadingCats && <Loader2 size={12} className="animate-spin text-slate-300" />}
                         </div>
                         
@@ -425,7 +425,7 @@ const EditProfileModal = ({ isOpen, onClose, franchiseData, onUpdate }) => {
                                         </div>
                                         <div className="min-w-0 pr-6">
                                             <p className={cn(
-                                                "text-[9px] font-black uppercase tracking-tight truncate",
+                                                "text-[10px] font-black uppercase tracking-tight truncate",
                                                 isSelected ? "text-white" : "text-slate-700"
                                             )}>
                                                 {cat.name}
@@ -445,8 +445,8 @@ const EditProfileModal = ({ isOpen, onClose, franchiseData, onUpdate }) => {
                                 );
                             })}
                         </div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">
-                            * New category selections require administrative approval before activation.
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
+                            * New categories start working after the admin approves them.
                         </p>
                     </div>
                 </div>

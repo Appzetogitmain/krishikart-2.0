@@ -460,11 +460,11 @@ export default function DocumentationScreen() {
                         <FileText size={20} />
                     </div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
-                        Node Documentation
+                        My Documents
                     </h1>
                 </div>
                 <p className="text-slate-500 text-sm font-medium">
-                    Verify your franchise identity by providing required legal documentation.
+                    Upload your documents so the admin can verify your franchise.
                 </p>
             </header>
 
@@ -517,7 +517,7 @@ export default function DocumentationScreen() {
                         <DocUploadZone
                             preview={previews.aadhaar}
                             disabled={readOnly}
-                            title={<>National ID Image <span className="text-red-500">*</span></>}
+                            title={<>Aadhaar Card Photo <span className="text-red-500">*</span></>}
                             subtitle="Upload Aadhaar Front/Back"
                             inputId="doc-aadhaar"
                             docName="aadhaar_card"
@@ -658,7 +658,7 @@ export default function DocumentationScreen() {
                                 autoComplete="off"
                                 placeholder="27ABCDE1234F1Z5"
                                 maxLength={15}
-                                title="Valid GSTIN format: 2 digits + PAN + entity code + Z + checksum"
+                                title="GSTIN has 15 characters, e.g. 27ABCDE1234F1Z5"
                                 value={formData.gstNumber}
                                 readOnly={readOnly}
                                 onChange={(e) => handleFieldChange('gstNumber', normalizeGstInput(e.target.value))}
@@ -672,7 +672,7 @@ export default function DocumentationScreen() {
                             ) : (
                                 <>
                                     <p className="text-[10px] text-slate-400 font-medium mt-1">
-                                        Format: state code + PAN + entity code + Z + checksum
+                                        GSTIN has 15 characters, e.g. 27ABCDE1234F1Z5
                                     </p>
                                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest font-bold">
                                         Progress: {formData.gstNumber.length}/15 chars
@@ -732,11 +732,10 @@ export default function DocumentationScreen() {
                         </div>
                         <div className="space-y-1">
                             <h4 className="text-[11px] font-black text-emerald-900 uppercase tracking-widest">
-                                Verification Protocol
+                                Verification
                             </h4>
                             <p className="text-xs text-emerald-800/80 font-medium leading-relaxed">
-                                Our KYC team will verify these documents within 24-48 business hours. Ensure images
-                                are clear and numbers match the uploaded certificates for faster activation.
+                                Our team checks your documents within 24–48 working hours. Make sure photos are clear and numbers match the certificates so we can approve you faster.
                             </p>
                         </div>
                     </div>
@@ -744,9 +743,9 @@ export default function DocumentationScreen() {
                     <div className="flex items-center justify-between gap-4 py-6 border-t border-slate-100">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                Legal Finality
+                                Please Note
                             </span>
-                            <span className="text-[11px] font-bold text-slate-900">Mandatory for Node Settlement</span>
+                            <span className="text-[11px] font-bold text-slate-900">Required before you can receive payments</span>
                         </div>
 
                         <button
@@ -761,7 +760,7 @@ export default function DocumentationScreen() {
                             {isSubmitting ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    Synchronizing...
+                                    Saving...
                                 </>
                             ) : isVerified ? (
                                 <>
@@ -776,7 +775,7 @@ export default function DocumentationScreen() {
                             ) : (
                                 <>
                                     <CheckCircle2 size={16} />
-                                    Transmit Documentation
+                                    Submit Documents
                                 </>
                             )}
                         </button>

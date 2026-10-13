@@ -98,7 +98,7 @@ export default function CodRemittanceScreen() {
             header: 'Status',
             key: 'status',
             render: (st) => (
-                <span className={`px-2 py-1 text-[9px] font-bold uppercase rounded border ${st === 'verified'
+                <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${st === 'verified'
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                         : st === 'submitted'
                             ? 'bg-blue-50 text-blue-600 border-blue-100'
@@ -152,7 +152,7 @@ export default function CodRemittanceScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">COD Remittance</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">COD Settlement Review</h1>
+                        <h1 className="text-sm font-bold text-slate-900">Verify cash submitted by delivery partners</h1>
                     </div>
 
                     <button
@@ -178,7 +178,7 @@ export default function CodRemittanceScreen() {
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Records: {filteredRows.length}</span>
                     </div>
                     <DataGrid
-                        title="Delivery COD Remittance Queue"
+                        title="Cash Submissions"
                         columns={columns}
                         data={filteredRows}
                         density="compact"
@@ -191,7 +191,7 @@ export default function CodRemittanceScreen() {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
                         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
-                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Rejection Subject</h3>
+                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Reason</h3>
                             <button onClick={() => setRejectionModal({ open: false, id: null })} className="text-slate-400 hover:text-rose-500 transition-colors">
                                 <XCircle size={20} />
                             </button>

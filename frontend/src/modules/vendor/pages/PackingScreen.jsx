@@ -73,8 +73,8 @@ export default function PackingScreen() {
     function formatOrder(foundOrder) {
         return {
             id: foundOrder._id,
-            franchiseName: foundOrder.franchiseId?.shopName || foundOrder.franchiseId?.ownerName || 'Franchise Node',
-            franchiseLocation: foundOrder.franchiseId?.cityArea || foundOrder.franchiseId?.address || 'Main Hub',
+            franchiseName: foundOrder.franchiseId?.franchiseName || foundOrder.franchiseId?.shopName || foundOrder.franchiseId?.ownerName || 'Franchise',
+            franchiseLocation: [foundOrder.franchiseId?.area, foundOrder.franchiseId?.city].filter(Boolean).join(', ') || foundOrder.franchiseId?.address || '',
             items: foundOrder.items.map(i => ({
                 productId: i.productId,
                 name: i.name,
@@ -115,34 +115,58 @@ export default function PackingScreen() {
     const isPackingComplete = order?.items && Object.values(checkedItems).some(v => v === true);
 
     const [actualWeight, setActualWeight] = useState(0);
-    const [isWeightLocked, setIsWeightLocked] = useState(false);
-    const [isReadingFromScale, setIsReadingFromScale] = useState(false);
+    const [isWeightEdited, setIsWeightEdited] = useState(false);
 
-    const simulateScaleReading = () => {
-        setIsReadingFromScale(true);
-        let count = 0;
+    // Deterministic weight of the items being sent, in KG. Items sold by count (pcs, dozen, ...)
+    // can't be converted to weight and are listed separately.
+    const weightSummary = useMemo(() => {
+        const KG_FACTORS = { kg: 1, kgs: 1, g: 0.001, gm: 0.001, gms: 0.001, gram: 0.001, grams: 0.001, quintal: 100, q: 100, ton: 1000, tonne: 1000 };
+        let kg = 0;
+        const countItems = [];
+        (order?.items || []).forEach(item => {
+            const id = item.productId || item.name;
+            if (!checkedItems[id]) return;
+            const qty = Number(itemQuantities[id]) || 0;
+            const factor = KG_FACTORS[String(item.unit || '').trim().toLowerCase()];
+            if (factor) kg += qty * factor;
+            else countItems.push(`${qty} ${item.unit} ${item.name}`);
+        });
+        return { kg: +kg.toFixed(2), countItems };
+    }, [order, checkedItems, itemQuantities]);
 
-        // Calculate target weight based on real order quantities
-        const totalItemsQty = order.items?.reduce((sum, i) => sum + (Number(itemQuantities[i.productId]) || 0), 0) || 0;
-        const target = +(totalItemsQty * (0.95 + Math.random() * 0.1)).toFixed(2); // +/- 5% variance
+    // Keep the weight in sync with the packed quantities until the vendor types their own value
+    useEffect(() => {
+        if (!isWeightEdited) setActualWeight(weightSummary.kg);
+    }, [weightSummary.kg, isWeightEdited]);
 
-        const interval = setInterval(() => {
-            setActualWeight(prev => {
-                const diff = target - prev;
-                if (Math.abs(diff) < 0.1 || count > 20) {
-                    clearInterval(interval);
-                    setIsReadingFromScale(false);
-                    return target;
-                }
-                return +(prev + diff * 0.3).toFixed(2);
-            });
-            count++;
-        }, 100);
+    const isWeightValid = Number.isFinite(actualWeight) && actualWeight >= 0;
+
+    const goToStep = (target) => {
+        if (target === step || step === 4) return;
+        if (target < step) {
+            setStep(target);
+            return;
+        }
+        if (!isPackingComplete) {
+            toast.error('Tick at least one item you are sending to continue');
+            return;
+        }
+        if (target === 3 && !isWeightValid) {
+            toast.error('Please enter a valid total weight');
+            setStep(2);
+            return;
+        }
+        setStep(target);
     };
 
     const handleFinalDispatch = async () => {
         if (!order || !order.id) {
             toast.error("No active order selected for dispatch");
+            return;
+        }
+        if (!isWeightValid) {
+            toast.error("Please enter a valid total weight");
+            setStep(2);
             return;
         }
 
@@ -169,11 +193,11 @@ export default function PackingScreen() {
             if (response.data.success) {
                 setStep(4);
             } else {
-                toast.error(response.data.message || "Finalization failed");
+                toast.error(response.data.message || "Could not confirm the dispatch. Please try again.");
             }
         } catch (error) {
             console.error("Finalization error", error);
-            toast.error(error.response?.data?.message || "Internal server error during finalization");
+            toast.error(error.response?.data?.message || "Could not confirm the dispatch. Please try again.");
         } finally {
             setIsDispatching(false);
         }
@@ -187,7 +211,8 @@ export default function PackingScreen() {
 
     if (!order && !isLoading) return (
         <div className="text-center py-20">
-            <h2 className="text-xl font-black text-slate-900">Order Not Found</h2>
+            <h2 className="text-xl font-black text-slate-900">No orders waiting for dispatch</h2>
+            <p className="text-sm text-slate-500 mt-2">Orders appear here after the admin approves your quotation.</p>
             <button onClick={() => navigate('/vendor/orders')} className="text-primary font-bold mt-4">Back to Orders</button>
         </div>
     );
@@ -202,9 +227,9 @@ export default function PackingScreen() {
                             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                                 <span className="opacity-60">Order #{order.id?.slice(-8).toUpperCase()}</span>
                                 <ChevronRight size={10} className="shrink-0 opacity-40" />
-                                <span className="text-primary">Fulfillment Cycle</span>
+                                <span className="text-primary">Packing</span>
                             </div>
-                            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none mt-1">Assembly & Dispatch</h1>
+                            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none mt-1">Pack & Dispatch</h1>
                         </div>
                     </div>
                 </header>
@@ -214,18 +239,23 @@ export default function PackingScreen() {
             {step < 4 && (
                 <div className="flex gap-3 px-1">
                     {[1, 2, 3].map(i => (
-                        <div key={i} className="flex-1">
+                        <button
+                            key={i}
+                            type="button"
+                            onClick={() => goToStep(i)}
+                            className="flex-1 text-left cursor-pointer group"
+                        >
                             <div className={cn(
                                 "h-1.5 rounded-full transition-all duration-500",
-                                step >= i ? "bg-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.1)]" : "bg-slate-100"
+                                step >= i ? "bg-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.1)]" : "bg-slate-100 group-hover:bg-slate-200"
                             )} />
                             <p className={cn(
-                                "text-[9px] font-black uppercase tracking-widest text-center mt-3",
-                                step === i ? "text-slate-900" : "text-slate-400"
+                                "text-[10px] font-black uppercase tracking-widest text-center mt-3",
+                                step === i ? "text-slate-900" : "text-slate-400 group-hover:text-slate-600"
                             )}>
-                                {i === 1 ? 'Verification' : i === 2 ? 'Calibration' : 'Authorization'}
+                                {i === 1 ? '1. Check Items' : i === 2 ? '2. Weight' : '3. Confirm Dispatch'}
                             </p>
-                        </div>
+                        </button>
                     ))}
                 </div>
             )}
@@ -248,13 +278,13 @@ export default function PackingScreen() {
                                         <Target size={24} />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">SKU Checkout</h3>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Audit batch for quality</p>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Check Items</h3>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tick each item you are sending</p>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end">
                                     <span className="text-[11px] font-black text-slate-900 tabular-nums">{Object.values(checkedItems).filter(Boolean).length}/{order.items.length}</span>
-                                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-0.5">Checked</span>
+                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-0.5">Checked</span>
                                 </div>
                             </div>
                             
@@ -320,7 +350,7 @@ export default function PackingScreen() {
                                                         <div className="pt-4 mt-4 border-t border-emerald-100/50 flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">Quantity for Manifest</span>
+                                                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">Quantity to send</span>
                                                             </div>
                                                             <div className="flex items-center bg-white border-2 border-emerald-100 rounded-2xl px-3 py-1.5 shadow-sm">
                                                                 <span className="text-[10px] font-black text-emerald-400 mr-2 uppercase">Send</span>
@@ -330,7 +360,7 @@ export default function PackingScreen() {
                                                                     onChange={(e) => setItemQuantities(prev => ({ ...prev, [id]: Number(e.target.value) }))}
                                                                     className="w-14 bg-transparent text-sm font-black text-emerald-700 outline-none tabular-nums text-right"
                                                                 />
-                                                                <span className="text-[9px] font-black text-emerald-300 ml-1 uppercase">{item.unit}</span>
+                                                                <span className="text-[10px] font-black text-emerald-300 ml-1 uppercase">{item.unit}</span>
                                                             </div>
                                                         </div>
                                                     </motion.div>
@@ -343,13 +373,18 @@ export default function PackingScreen() {
                         </div>
 
                         <button
-                            disabled={!isPackingComplete}
-                            onClick={() => setStep(2)}
-                            className="w-full bg-slate-900 text-white py-5 rounded-[28px] font-black text-[13px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] active:scale-[0.98] transition-all disabled:opacity-20 disabled:pointer-events-none group"
+                            onClick={() => goToStep(2)}
+                            className={cn(
+                                "w-full bg-slate-900 text-white py-5 rounded-[28px] font-black text-[13px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] active:scale-[0.98] transition-all group",
+                                !isPackingComplete && "opacity-40"
+                            )}
                         >
-                            Logistics Calibration
+                            Next: Enter Weight
                             <ChevronRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
                         </button>
+                        {!isPackingComplete && (
+                            <p className="text-center text-[11px] font-semibold text-slate-400">Tick the items you are sending to continue.</p>
+                        )}
                     </motion.div>
                 )}
 
@@ -369,37 +404,46 @@ export default function PackingScreen() {
                                     <Scale size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Scale Calibration</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Weight Synchronization</p>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Total Weight</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Weight of the goods you are sending</p>
                                 </div>
                             </div>
 
                             <div className="space-y-8 relative">
                                 <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 text-center transition-all hover:bg-white hover:shadow-2xl hover:shadow-slate-100/50">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Gross Consignment Payload</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total weight (edit if your scale shows a different value)</label>
                                     <div className="flex items-center justify-center gap-3 mt-6">
                                         <input
                                             type="number"
-                                            value={actualWeight}
-                                            onChange={(e) => setActualWeight(parseFloat(e.target.value))}
+                                            min="0"
+                                            value={Number.isFinite(actualWeight) ? actualWeight : ''}
+                                            onChange={(e) => {
+                                                setIsWeightEdited(true);
+                                                setActualWeight(e.target.value === '' ? NaN : parseFloat(e.target.value));
+                                            }}
                                             step="0.01"
                                             className="bg-transparent border-none p-0 outline-none text-6xl font-black text-slate-900 w-48 text-right tabular-nums focus:text-blue-600 transition-colors"
                                         />
                                         <span className="text-2xl font-black text-slate-300 uppercase mt-5">KG</span>
                                     </div>
-                                    <div className="mt-10 flex flex-col items-center gap-5">
-                                        <button
-                                            onClick={simulateScaleReading}
-                                            disabled={isReadingFromScale}
-                                            className="px-10 py-3 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
-                                        >
-                                            {isReadingFromScale ? <Loader2 size={16} className="animate-spin" /> : <Activity size={16} />}
-                                            {isReadingFromScale ? "Capturing..." : "Capture from Scale"}
-                                        </button>
-                                        <div className="px-5 py-2 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border border-blue-100">
-                                            <div className={cn("w-2 h-2 rounded-full", isReadingFromScale ? "bg-blue-500 animate-pulse" : "bg-blue-300")} />
-                                            {isReadingFromScale ? "Transmitting Waveform" : "Ready for Calibration"}
-                                        </div>
+                                    <div className="mt-8 flex flex-col items-center gap-3">
+                                        <p className="text-[11px] font-semibold text-slate-500">
+                                            Calculated from packed quantities: <span className="font-black text-slate-900">{weightSummary.kg} KG</span>
+                                        </p>
+                                        {weightSummary.countItems.length > 0 && (
+                                            <p className="text-[11px] font-semibold text-amber-600 max-w-sm">
+                                                Not included (sold by count): {weightSummary.countItems.join(', ')}
+                                            </p>
+                                        )}
+                                        {isWeightEdited && actualWeight !== weightSummary.kg && (
+                                            <button
+                                                onClick={() => { setIsWeightEdited(false); setActualWeight(weightSummary.kg); }}
+                                                className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
+                                            >
+                                                <Activity size={14} />
+                                                Use calculated weight
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -407,17 +451,17 @@ export default function PackingScreen() {
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl -mr-12 -mt-12 transition-all group-hover:bg-emerald-500/30" />
                                     <ShieldCheck size={24} className="text-emerald-400 shrink-0 mt-0.5" />
                                     <div className="relative">
-                                        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-400 mb-1">Compliance Check</p>
-                                        <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-tight">Weight data is synchronized with the digital manifest for Node audit.</p>
+                                        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-400 mb-1">Good to know</p>
+                                        <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-tight">This weight is printed on the dispatch invoice and stays fixed once you confirm.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex gap-4">
-                            <button onClick={() => setStep(1)} className="flex-1 bg-white border border-slate-100 py-5 rounded-[28px] font-black text-[12px] uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all active:scale-95">Previous</button>
-                            <button onClick={() => setStep(3)} className="flex-[2] bg-slate-900 text-white py-5 rounded-[28px] font-black text-[12px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] active:scale-[0.98] transition-all group">
-                                Authorize Cycle
+                            <button onClick={() => setStep(1)} className="flex-1 bg-white border border-slate-100 py-5 rounded-[28px] font-black text-[12px] uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all active:scale-95">Back</button>
+                            <button onClick={() => goToStep(3)} className="flex-[2] bg-slate-900 text-white py-5 rounded-[28px] font-black text-[12px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] active:scale-[0.98] transition-all group">
+                                Next: Review
                                 <Truck size={18} className="group-hover:translate-x-2 transition-transform" />
                             </button>
                         </div>
@@ -441,21 +485,21 @@ export default function PackingScreen() {
                         </div>
  
                         <div className="relative">
-                            <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-tight">Authorize Node Transfer?</h3>
-                            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-4 px-6 leading-relaxed">Initiating logistics leg to <span className="text-slate-900">{order.franchiseName}</span> node. Manifest will be locked.</p>
+                            <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-tight">Confirm Dispatch?</h3>
+                            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-4 px-6 leading-relaxed">These goods will be marked as ready for pickup for <span className="text-slate-900">{order.franchiseName}</span>. You can't change the items after confirming.</p>
                         </div>
  
                         <div className="bg-slate-50/80 backdrop-blur-sm p-8 rounded-[40px] space-y-5 border border-slate-100 relative">
                             <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
-                                <span className="text-slate-400">Payload Weight</span>
+                                <span className="text-slate-400">Total Weight</span>
                                 <span className="text-slate-950 tabular-nums font-black text-sm">{actualWeight} KG</span>
                             </div>
                             <div className="w-full h-px bg-slate-200/50" />
                             <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
-                                <span className="text-slate-400">Digital Seal</span>
+                                <span className="text-slate-400">Invoice</span>
                                 <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
                                     <ShieldCheck size={14} />
-                                    <span>ENCRYPTED</span>
+                                    <span>AUTO-GENERATED</span>
                                 </div>
                             </div>
                         </div>
@@ -466,9 +510,9 @@ export default function PackingScreen() {
                                 disabled={isDispatching}
                                 className="w-full bg-primary text-white py-6 rounded-[32px] font-black text-[13px] uppercase tracking-[0.3em] flex items-center justify-center gap-4 shadow-[0_25px_60px_-15px_rgba(22,163,74,0.4)] active:scale-[0.98] transition-all disabled:opacity-50"
                             >
-                                {isDispatching ? <Loader2 size={24} className="animate-spin" /> : <>Final Authorization <ArrowRight size={22} /></>}
+                                {isDispatching ? <Loader2 size={24} className="animate-spin" /> : <>Confirm Dispatch <ArrowRight size={22} /></>}
                             </button>
-                            <button onClick={() => setStep(2)} className="w-full text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] hover:text-slate-900 transition-colors py-2">Return to Calibration</button>
+                            <button onClick={() => setStep(2)} className="w-full text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] hover:text-slate-900 transition-colors py-2">Back to Weight</button>
                         </div>
                     </motion.div>
                 )}
@@ -499,13 +543,13 @@ export default function PackingScreen() {
  
                             <div className="space-y-4 relative">
                                 <div className="space-y-3">
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase leading-tight">Cycle Synchronized</h3>
-                                    <p className="text-slate-400 text-[11px] font-black uppercase tracking-[0.4em] px-4">Consignment Ref: <span className="text-slate-900">KK-IX-{order.id?.slice(-8).toUpperCase()}</span></p>
+                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase leading-tight">Dispatch Confirmed</h3>
+                                    <p className="text-slate-400 text-[11px] font-black uppercase tracking-[0.4em] px-4">Reference: <span className="text-slate-900">KK-IX-{order.id?.slice(-8).toUpperCase()}</span></p>
                                 </div>
-                                {orders.find(o => o._id === orderId)?.invoice && (
+                                {orders.find(o => o._id === order.id)?.invoice && (
                                     <div className="bg-emerald-50/50 py-2.5 px-6 rounded-2xl inline-flex items-center gap-3 border border-emerald-100/50">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest">Invoice Generated: {orders.find(o => o._id === orderId).invoice.invoiceNumber}</p>
+                                        <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest">Invoice Generated: {orders.find(o => o._id === order.id).invoice.invoiceNumber}</p>
                                     </div>
                                 )}
                             </div>
@@ -513,15 +557,15 @@ export default function PackingScreen() {
                             <div className="bg-slate-50/80 backdrop-blur-sm p-8 rounded-[48px] border border-slate-100 text-left space-y-8 relative shadow-sm">
                                 <div className="space-y-5">
                                     <div className="flex items-center justify-between border-b border-slate-200/50 pb-3">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Dispatch Manifest</p>
-                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{order.items.filter(item => checkedItems[item.productId || item.name]).length} SKU</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Items Sent</p>
+                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{order.items.filter(item => checkedItems[item.productId || item.name]).length} items</p>
                                     </div>
                                     <div className="space-y-3">
                                         {order.items.filter(item => checkedItems[item.productId || item.name]).map((item, idx) => (
                                             <div key={idx} className="flex justify-between items-center group">
                                                 <span className="text-[12px] font-black text-slate-600 uppercase tracking-tight group-hover:text-slate-900 transition-colors">{item.name}</span>
                                                 <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
-                                                    <span className="text-slate-400 text-[9px] font-black">SENT</span>
+                                                    <span className="text-slate-400 text-[10px] font-black">SENT</span>
                                                     <span className="text-slate-900 tabular-nums font-black text-[11px]">{itemQuantities[item.productId || item.name] || 0} {item.unit}</span>
                                                 </div>
                                             </div>
@@ -531,15 +575,15 @@ export default function PackingScreen() {
  
                                 <div className="space-y-4 pt-2">
                                     <div className="flex justify-between items-center border-t border-slate-200/50 pt-5">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Consignment</span>
+                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Weight</span>
                                         <span className="text-2xl font-black text-slate-950 tabular-nums">{actualWeight} KG</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Target Node</span>
+                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Franchise</span>
                                         <span className="text-[13px] font-black text-slate-900 uppercase tracking-tight">{order.franchiseName}</span>
                                     </div>
                                     <div className="flex justify-between items-center pt-2">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Network Status</span>
+                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Status</span>
                                         <div className="flex items-center gap-2.5 px-4 py-1.5 bg-emerald-100/50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200/50 shadow-sm shadow-emerald-100/20">
                                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
                                             In Transit

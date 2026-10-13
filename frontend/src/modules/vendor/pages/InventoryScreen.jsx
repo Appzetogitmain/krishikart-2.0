@@ -18,7 +18,13 @@ import DataGrid from '../components/tables/DataGrid';
 import VendorBackBar from '../components/navigation/VendorBackBar';
 
 export default function InventoryScreen() {
-    const { inventory, loading, updateStock, toggleAvailability } = useVendorInventory();
+    const { inventory, loading, updateStock, toggleAvailability, refreshInventory } = useVendorInventory();
+
+    // Pick up products the admin assigned since the portal was opened
+    useEffect(() => {
+        refreshInventory();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
     const [activeMenuId, setActiveMenuId] = useState(null);
@@ -41,7 +47,7 @@ export default function InventoryScreen() {
 
     const columns = [
         {
-            header: 'Produce',
+            header: 'Product',
             key: 'name',
             render: (val, row) => (
                 <div className="flex items-center gap-3">
@@ -55,7 +61,7 @@ export default function InventoryScreen() {
                     </div>
                     <div>
                         <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{val}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{row.category}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{row.category}</p>
                     </div>
                 </div>
             )
@@ -67,7 +73,7 @@ export default function InventoryScreen() {
                 <div className="flex items-center gap-1 text-slate-900 tabular-nums">
                     <IndianRupee size={10} className="text-slate-400" />
                     <span className="text-[11px] font-black">{(val || 0).toLocaleString()}</span>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">/{row.unit}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter ml-1">/{row.unit}</span>
                 </div>
             )
         },
@@ -80,7 +86,7 @@ export default function InventoryScreen() {
                 <button
                     onClick={(e) => { e.stopPropagation(); toggleAvailability(row.id); }}
                     className={cn(
-                        "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2",
+                        "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all inline-flex items-center gap-2",
                         val ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-100 text-slate-400 border border-slate-200"
                     )}
                 >
@@ -109,8 +115,8 @@ export default function InventoryScreen() {
                 <div className="flex items-start gap-3 min-w-0">
                     <VendorBackBar className="mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Supply Inventory</h1>
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Matrix Verified: {inventory.length} Stock SKU</p>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Products</h1>
+                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Total: {inventory.length} products</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -137,7 +143,7 @@ export default function InventoryScreen() {
                 onCategoryChange={setActiveCategory}
                 searchTerm={searchTerm}
                 onSearchChange={(v) => setSearchTerm(typeof v === 'string' ? v.trim() : v)}
-                placeholder="Locate produce by SKU or Name..."
+                placeholder="Search products by name..."
             />
 
             {viewMode === 'list' ? (
@@ -209,7 +215,7 @@ export default function InventoryScreen() {
                                                                 className="absolute right-0 mt-2 w-32 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden"
                                                             >
                                                                 <button className="w-full flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-colors">
-                                                                    <Edit2 size={14} /> Edit SKU
+                                                                    <Edit2 size={14} /> Edit Stock
                                                                 </button>
                                                                 <button className="w-full flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 transition-colors">
                                                                     <Trash2 size={14} /> Remove
@@ -223,7 +229,7 @@ export default function InventoryScreen() {
                                         <div className="flex items-center gap-1.5 mt-3 text-slate-900">
                                             <IndianRupee size={12} className="text-slate-400" />
                                             <span className="text-sm font-black tabular-nums">{(item.price || 0).toLocaleString()}</span>
-                                            <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest ml-1">/{item.unit}</span>
+                                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">/{item.unit}</span>
                                         </div>
                                     </div>
 
@@ -247,18 +253,30 @@ export default function InventoryScreen() {
                 </div>
             )}
 
-            {filteredInventory.length === 0 && (
+            {!loading && inventory.length === 0 && (
+                <div className="col-span-full py-20 flex flex-col items-center justify-center text-center px-6">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4 border border-dashed border-slate-200">
+                        <ImageIcon size={32} />
+                    </div>
+                    <h4 className="text-slate-900 font-black tracking-tight">No products assigned yet</h4>
+                    <p className="text-slate-500 text-xs font-semibold mt-2 max-w-sm leading-relaxed">
+                        Your inventory shows the products the admin has assigned to you. Once the admin assigns products to your account, they will appear here and you can update their stock.
+                    </p>
+                </div>
+            )}
+
+            {inventory.length > 0 && filteredInventory.length === 0 && (
                 <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4 border border-dashed border-slate-200">
                         <ImageIcon size={32} />
                     </div>
-                    <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">No Produce Indexed</h4>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Matrix search returned zero results</p>
+                    <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">No matching products</h4>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">No products match your search</p>
                     <button
                         onClick={() => { setSearchTerm(''); setActiveCategory('All'); }}
                         className="text-primary text-[10px] font-black uppercase tracking-widest mt-6 hover:underline"
                     >
-                        Reset Archive Search
+                        Clear Search
                     </button>
                 </div>
             )}

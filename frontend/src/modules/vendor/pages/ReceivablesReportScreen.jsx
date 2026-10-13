@@ -53,7 +53,7 @@ export default function ReceivablesReportScreen() {
             render: (val, row) => (
                 <div>
                     <p className="text-[11px] font-black text-slate-900 tracking-tight">#{val}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
                         {row.franchiseName}
                         {row.cityArea ? ` · ${row.cityArea}` : ''}
                     </p>
@@ -66,7 +66,7 @@ export default function ReceivablesReportScreen() {
             render: (val) => (
                 <span
                     className={cn(
-                        'inline-flex px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest border',
+                        'inline-flex px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border',
                         val === 'completed'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                             : 'bg-sky-50 text-sky-700 border-sky-100'
@@ -150,7 +150,7 @@ export default function ReceivablesReportScreen() {
                             </span>
                         </div>
                         <p className="text-[11px] text-slate-500 mt-2">
-                            {count} procurement line{count !== 1 ? 's' : ''} (for your account)
+                            {count} supply order{count !== 1 ? 's' : ''} (for your account)
                         </p>
                     </div>
                 </div>

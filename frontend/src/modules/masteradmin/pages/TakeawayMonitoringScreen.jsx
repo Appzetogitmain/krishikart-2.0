@@ -54,7 +54,7 @@ export default function TakeawayMonitoringScreen() {
             render: (val) => <span className="font-bold text-slate-900 tabular-nums">#{val}</span>
         },
         {
-            header: 'Terminal',
+            header: 'Counter',
             key: 'franchise',
             render: (val) => (
                 <div className="flex items-center gap-2">
@@ -64,12 +64,12 @@ export default function TakeawayMonitoringScreen() {
             )
         },
         {
-            header: 'Consumer',
+            header: 'Customer',
             key: 'customer',
             render: (val) => <span className="font-medium text-slate-800">{val}</span>
         },
         {
-            header: 'Fulfillment Loop',
+            header: 'Status',
             key: 'status',
             render: () => (
                 <div className="flex items-center gap-3">
@@ -80,9 +80,9 @@ export default function TakeawayMonitoringScreen() {
             )
         },
         {
-            header: 'Protocol',
+            header: 'Type',
             key: 'type',
-            render: () => <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-100 uppercase">Rapid-Route</span>
+            render: () => <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-100 uppercase">Quick</span>
         },
         {
             header: 'Invoice',
@@ -113,19 +113,19 @@ export default function TakeawayMonitoringScreen() {
                             <ChevronRight size={10} />
                             <span>Master Admin</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Kiosk Network</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Counter Sales</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">Tactical Takeaway Surveillance</h1>
+                        <h1 className="text-sm font-bold text-slate-900">Takeaway Orders</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-sm text-[10px] font-bold text-slate-600 hover:bg-slate-50 transition-colors">
                             <Terminal size={13} className="text-slate-400" />
-                            <span>System Diagnostics</span>
+                            <span>Status</span>
                         </button>
                         <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors">
                             <Zap size={13} />
-                            Force Flush Queue
+                            Clear Queue
                         </button>
                     </div>
                 </div>
@@ -171,7 +171,7 @@ export default function TakeawayMonitoringScreen() {
                 <FilterBar
                     actions={
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-100">KIOSK MONITOR ACTIVE</span>
+                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-sm border border-blue-100">LIVE</span>
                         </div>
                     }
                 />
@@ -180,7 +180,7 @@ export default function TakeawayMonitoringScreen() {
                     {/* Main Queue Ledger */}
                     <div className="xl:col-span-3 bg-white">
                         <DataGrid
-                            title="Rapid Fulfillment Operational Queue"
+                            title="Takeaway Order Queue"
                             columns={queueColumns}
                             data={takeawayOrders}
                             density="compact"
@@ -190,7 +190,7 @@ export default function TakeawayMonitoringScreen() {
                     {/* Kiosk Health Summary */}
                     <div className="bg-white flex flex-col">
                         <ChartPanel
-                            title="System Node Status"
+                            title="Franchise Status"
                             collapsible={false}
                         >
                             <div className="p-4 space-y-4">
@@ -198,11 +198,11 @@ export default function TakeawayMonitoringScreen() {
                                     <div key={kiosk.id} className="border border-slate-200 rounded-sm p-3 hover:bg-slate-50 transition-colors">
                                         <div className="flex items-start justify-between mb-3">
                                             <div>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{kiosk.id}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{kiosk.id}</p>
                                                 <h4 className="text-xs font-bold text-slate-900">{kiosk.name}</h4>
                                             </div>
                                             <div className={cn(
-                                                "px-1.5 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest border",
+                                                "px-1.5 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border",
                                                 kiosk.status === 'online'
                                                     ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                                                     : "bg-rose-50 text-rose-600 border-rose-100"
@@ -212,7 +212,7 @@ export default function TakeawayMonitoringScreen() {
                                         </div>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-center text-[10px]">
-                                                <span className="text-slate-500 font-medium">Node Load</span>
+                                                <span className="text-slate-500 font-medium">Busy Level</span>
                                                 <span className="text-slate-900 font-bold tabular-nums">{kiosk.load}%</span>
                                             </div>
                                             <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
@@ -221,7 +221,7 @@ export default function TakeawayMonitoringScreen() {
                                                     style={{ width: `${kiosk.load}%` }}
                                                 />
                                             </div>
-                                            <div className="flex items-center justify-between text-[9px] text-slate-400 pt-1">
+                                            <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
                                                 <div className="flex items-center gap-1">
                                                     <Wifi size={10} />
                                                     <span>{kiosk.uptime} Stability</span>
@@ -236,24 +236,24 @@ export default function TakeawayMonitoringScreen() {
 
                         <div className="mt-auto p-4 bg-slate-900">
                             <div className="flex items-center justify-between mb-4">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Network Telemetry</span>
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Live Status</span>
                                 <div className="flex items-center gap-1">
                                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                    <span className="text-[9px] font-bold text-white uppercase tracking-widest">Live Feed</span>
+                                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">Live Feed</span>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-slate-400">Total Loop Time</span>
+                                    <span className="text-[10px] text-slate-400">Total Time</span>
                                     <span className="text-[10px] font-bold text-white tabular-nums">1.4s</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-slate-400">Packet Integrity</span>
+                                    <span className="text-[10px] text-slate-400">Connection</span>
                                     <span className="text-[10px] font-bold text-white tabular-nums">99.98%</span>
                                 </div>
                                 <div className="h-px bg-white/5 my-2" />
-                                <button className="w-full py-2 bg-white/5 border border-white/10 rounded-sm text-[9px] font-bold text-slate-400 uppercase tracking-widest hover:bg-white/10 hover:text-white transition-colors">
-                                    Access Relay Console
+                                <button className="w-full py-2 bg-white/5 border border-white/10 rounded-sm text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:bg-white/10 hover:text-white transition-colors">
+                                    Open Details
                                 </button>
                             </div>
                         </div>

@@ -68,7 +68,7 @@ export default function BottomNav() {
                         </div>
                         <span
                             className={cn(
-                                'text-[8px] font-black uppercase tracking-widest transition-colors duration-300',
+                                'text-[10px] font-black uppercase tracking-widest transition-colors duration-300',
                                 isActive ? 'text-primary' : 'text-slate-400'
                             )}
                         >

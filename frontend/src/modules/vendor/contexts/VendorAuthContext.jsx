@@ -58,8 +58,15 @@ export function VendorAuthProvider({ children }) {
                 logout();
             }
         };
+        // Fired by the axios interceptor when an API call returns 401 (token expired)
+        const handleSessionExpired = () => setVendor(null);
+
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        window.addEventListener('kk:vendor-session-expired', handleSessionExpired);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('kk:vendor-session-expired', handleSessionExpired);
+        };
     }, []);
 
     // Socket Setup
@@ -132,7 +139,7 @@ export function VendorAuthProvider({ children }) {
             {loading ? (
                 <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50">
                     <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin mb-4" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Initialising Secure Session...</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Signing you in...</p>
                 </div>
             ) : children}
         </VendorAuthContext.Provider>

@@ -119,7 +119,7 @@ export default function SubcategoryManagementScreen() {
                                         ) : (
                                             <>
                                                 <Upload size={20} className="text-slate-400 group-hover/upload:text-emerald-500 transition-colors" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Upload Icon/Image</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Upload Icon/Image</span>
                                                 <input
                                                     type="file"
                                                     className="absolute inset-0 opacity-0 cursor-pointer"
@@ -140,7 +140,7 @@ export default function SubcategoryManagementScreen() {
                                     onClick={handleAdd}
                                     className="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all shadow-lg"
                                 >
-                                    Initialize Branch
+                                    Create Subcategory
                                 </button>
                             </div>
                         </motion.div>
@@ -204,7 +204,7 @@ export default function SubcategoryManagementScreen() {
                                         onChange={(e) => setEditSub(prev => ({ ...prev, isVisible: e.target.checked }))}
                                         className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                                     />
-                                    <label htmlFor="edit-sub-visible" className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Visible Globally</label>
+                                    <label htmlFor="edit-sub-visible" className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Visible to Customers</label>
                                 </div>
 
                                 <div className="space-y-1.5">
@@ -223,7 +223,7 @@ export default function SubcategoryManagementScreen() {
                                         ) : (
                                             <>
                                                 <Upload size={20} className="text-slate-400 group-hover/upload:text-emerald-500 transition-colors" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Update Asset</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Change Image</span>
                                                 <input
                                                     type="file"
                                                     className="absolute inset-0 opacity-0 cursor-pointer"
@@ -245,7 +245,7 @@ export default function SubcategoryManagementScreen() {
                                     disabled={isSubmitting}
                                     className="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-2"
                                 >
-                                    {isSubmitting ? 'Syncing...' : 'Update Branch'}
+                                    {isSubmitting ? 'Saving...' : 'Save Changes'}
                                 </button>
                             </div>
                         </motion.div>
@@ -264,7 +264,7 @@ export default function SubcategoryManagementScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Subcategories</span>
                         </div>
-                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Secondary Hierarchy</h1>
+                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Subcategories</h1>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -282,7 +282,7 @@ export default function SubcategoryManagementScreen() {
             <div className="max-w-[1400px] mx-auto p-8">
                 <div className="bg-white rounded-sm border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Mapping Directory ({subcategories.length})</h3>
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">All Subcategories ({subcategories.length})</h3>
                     </div>
 
                     <div className="divide-y divide-slate-100">
@@ -308,14 +308,14 @@ export default function SubcategoryManagementScreen() {
                                         <div className="flex flex-col">
                                             <div className="flex items-center gap-2">
                                                 <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">{sub.name}</h4>
-                                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[8px] font-black uppercase tracking-widest rounded-sm border border-slate-200">
+                                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-sm border border-slate-200">
                                                     ID: {sub._id}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2 mt-1.5">
                                                 <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
                                                     <LayoutGrid size={10} />
-                                                    <span className="text-[9px] font-black uppercase tracking-tighter">Mapped to: {parent?.name || 'Unknown'}</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-tighter">Mapped to: {parent?.name || 'Unknown'}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -340,14 +340,14 @@ export default function SubcategoryManagementScreen() {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                if (window.confirm('Purge this secondary branch?')) {
+                                                if (window.confirm('Delete this subcategory?')) {
                                                     deleteSubcategory(sub._id);
                                                 }
                                             }}
                                             className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-all border border-transparent hover:border-rose-100 shadow-sm text-xs font-black uppercase tracking-widest flex items-center gap-2"
                                         >
                                             <Trash2 size={14} />
-                                            Purge
+                                            Delete
                                         </button>
                                     </div>
                                 </motion.div>
@@ -355,9 +355,9 @@ export default function SubcategoryManagementScreen() {
                         }) : (
                             <div className="p-24 text-center space-y-4">
                                 <GitBranch size={48} className="text-slate-200 mx-auto" />
-                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">No Secondary Branches Inducted</h3>
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">No subcategories yet</h3>
                                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest max-w-xs mx-auto">
-                                    Subcategories allow for granular inventory sorting and filtering.
+                                    Subcategories help customers find products faster.
                                 </p>
                             </div>
                         )}

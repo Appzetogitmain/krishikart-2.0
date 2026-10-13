@@ -27,7 +27,7 @@ const DeliveryRequests = () => {
             <div className="px-6 pt-8 pb-4 bg-white sticky top-0 z-10 border-b border-border/50">
                 <div className="flex justify-between items-center mb-6">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground">Task Feed</h1>
+                        <h1 className="text-2xl font-bold text-foreground">Delivery Requests</h1>
                         <p className="text-muted-foreground text-sm">{requests.length} available requests</p>
                     </div>
                     <button

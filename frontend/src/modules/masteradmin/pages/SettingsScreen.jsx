@@ -109,7 +109,7 @@ export default function SettingsScreen() {
     }, []);
 
     const sections = [
-        { id: 'profile', label: 'Identity Protocol', icon: User },
+        { id: 'profile', label: 'Profile', icon: User },
         { id: 'security', label: 'Change Password', icon: ShieldCheck },
     ];
 
@@ -137,15 +137,15 @@ export default function SettingsScreen() {
                             <ChevronRight size={10} />
                             <span>System</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Configuration</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Settings</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900 whitespace-nowrap">Core Protocol Settings</h1>
+                        <h1 className="text-sm font-bold text-slate-900 whitespace-nowrap">Settings</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 text-white text-[9px] font-black rounded-sm uppercase tracking-widest">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 text-white text-[10px] font-black rounded-sm uppercase tracking-widest">
                             <Activity size={12} className="text-emerald-400" />
-                            Security Integrity: 100%
+                            Account secure
                         </div>
                     </div>
                 </div>
@@ -154,7 +154,7 @@ export default function SettingsScreen() {
             <div className="flex flex-col lg:flex-row min-h-[calc(100vh-42px)]">
                 {/* Secondary Navigation (Sidebar) */}
                 <div className="w-full lg:w-64 bg-white border-r border-slate-200 p-6 space-y-1">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-2">Administrative Scope</h3>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 ml-2">Account</h3>
                     {sections.map((section) => (
                         <button
                             key={section.id}
@@ -176,10 +176,10 @@ export default function SettingsScreen() {
 
                     <div className="pt-8 mt-8 border-t border-slate-100">
                         <div className="bg-slate-50 p-3 rounded-sm border border-slate-200">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em] block mb-2">Build Manifest</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] block mb-2">Version</span>
                             <div className="flex flex-col gap-1.5">
-                                <span className="text-[10px] font-bold text-slate-900 tabular-nums uppercase">v2.4.8-Enterprise</span>
-                                <span className="text-[9px] text-slate-400 font-medium italic">Synchronized 4m ago</span>
+                                <span className="text-[10px] font-bold text-slate-900 tabular-nums uppercase">2.4.8</span>
+                                <span className="text-[10px] text-slate-400 font-medium italic">Up to date</span>
                             </div>
                         </div>
                     </div>
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
                         <div className="bg-white border border-slate-200 rounded-sm shadow-sm overflow-hidden">
                             <div className="px-8 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                                 <h2 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">{sections.find(s => s.id === activeSection).label}</h2>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Parameter ID: {activeSection.toUpperCase()}_SET</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">Section: {activeSection.toUpperCase()}_SET</span>
                             </div>
 
                             <div className="p-8">
@@ -207,35 +207,35 @@ export default function SettingsScreen() {
                                                 <div className="w-20 h-20 bg-slate-100 border border-slate-200 rounded-sm flex items-center justify-center text-slate-400 relative group overflow-hidden">
                                                     <User size={32} />
                                                     <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                                                        <span className="text-[9px] font-black text-white uppercase tracking-widest">Override</span>
+                                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">Edit</span>
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">{formData.fullName || "Master Administrator"}</h3>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">System Governance Level 10</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Full access</p>
                                                     <div className="flex items-center gap-2 mt-4 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-sm border border-emerald-100 w-fit">
                                                         <ShieldCheck size={12} />
-                                                        IDENTITY VERIFIED
+                                                        VERIFIED
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                                                 <SettingsField
-                                                    label="Core Principal"
+                                                    label="Name"
                                                     name="fullName"
                                                     value={formData.fullName}
                                                     onChange={handleProfileChange}
                                                 />
                                                 <SettingsField
-                                                    label="Primary Signaling Email"
+                                                    label="Email"
                                                     name="email"
                                                     value={formData.email}
                                                     onChange={handleProfileChange}
                                                     isVerified
                                                 />
                                                 <SettingsField
-                                                    label="Emergency Uplink"
+                                                    label="Phone"
                                                     name="mobile"
                                                     value={formData.mobile}
                                                     onChange={handleProfileChange}
@@ -248,7 +248,7 @@ export default function SettingsScreen() {
                                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                                                 <div className="md:col-span-2">
-                                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide mb-1">Update Credentials</h3>
+                                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide mb-1">Change Password</h3>
                                                     <p className="text-[10px] font-medium text-slate-500">Secure your account with a new strong password.</p>
                                                 </div>
 
@@ -284,14 +284,14 @@ export default function SettingsScreen() {
                             <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Settings Synchronized // 0 SEC AGO</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">All changes saved</span>
                                 </div>
                                 <button
                                     onClick={activeSection === 'profile' ? handleUpdateProfile : handleChangePassword}
                                     className="bg-slate-900 text-white px-6 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-sm active:scale-[0.98]"
                                 >
                                     <Save size={14} />
-                                    {activeSection === 'profile' ? 'Push Changes' : 'Update Credentials'}
+                                    {activeSection === 'profile' ? 'Save' : 'Update Password'}
                                 </button>
                             </div>
                         </div>
@@ -305,7 +305,7 @@ export default function SettingsScreen() {
 function SettingsField({ label, value, name, onChange, isVerified, type = "text" }) {
     return (
         <div className="space-y-2">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block ml-1">{label}</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">{label}</label>
             <div className="relative group">
                 <input
                     type={type}

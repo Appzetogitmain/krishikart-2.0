@@ -42,7 +42,7 @@ const MobileBottomNav = () => {
                                             className={`w-5 h-5 mb-1.5 transition-transform duration-300 ${isActive ? 'stroke-[2.5px] scale-110' : 'stroke-[1.5px]'}`}
                                         />
                                         {item.badge && (
-                                            <span className={`absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full ${item.badgeColor} text-[8px] font-black text-white ring-2 ring-white animate-bounce`}>
+                                            <span className={`absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full ${item.badgeColor} text-[10px] font-black text-white ring-2 ring-white animate-bounce`}>
                                                 {item.badge}
                                             </span>
                                         )}

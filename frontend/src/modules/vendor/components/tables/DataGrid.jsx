@@ -48,7 +48,7 @@ const DataGrid = ({ columns, data, onRowClick, className }) => {
             </table>
             {data.length === 0 && (
                 <div className="py-20 text-center">
-                    <p className="text-xs font-black text-slate-300 uppercase tracking-widest">No entries found in ledger</p>
+                    <p className="text-xs font-black text-slate-300 uppercase tracking-widest">No records found</p>
                 </div>
             )}
         </div>

@@ -98,7 +98,7 @@ export function CartProvider({ children }) {
                 fetchCart(); // Sync with backend to be safe
             } catch (error) {
                 console.error("API add to cart error:", error);
-                toast.error("Failed to sync cart with server");
+                toast.error("Could not update your cart. Please check your internet connection.");
             }
         }
     };

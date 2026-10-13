@@ -106,7 +106,7 @@ export default function CategoryManagementScreen() {
                                         rows={3}
                                         value={newCat.description}
                                         onChange={(e) => setNewCat(prev => ({ ...prev, description: e.target.value }))}
-                                        placeholder="Briefly define the scope of this category..."
+                                        placeholder="Short description of this category..."
                                         className="w-full bg-slate-50/50 border border-slate-200 rounded-sm px-4 py-3 text-sm font-medium focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 resize-none"
                                     ></textarea>
                                 </div>
@@ -137,7 +137,7 @@ export default function CategoryManagementScreen() {
                                         ) : (
                                             <>
                                                 <Upload size={20} className="text-slate-400 group-hover/upload:text-emerald-500 transition-colors" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Upload Icon/Image</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Upload Icon/Image</span>
                                                 <input
                                                     type="file"
                                                     className="absolute inset-0 opacity-0 cursor-pointer"
@@ -158,7 +158,7 @@ export default function CategoryManagementScreen() {
                                     onClick={handleAdd}
                                     className="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all shadow-lg"
                                 >
-                                    Initialize Protocol
+                                    Create Category
                                 </button>
                             </div>
                         </motion.div>
@@ -206,7 +206,7 @@ export default function CategoryManagementScreen() {
                                         rows={3}
                                         value={editCat.description}
                                         onChange={(e) => setEditCat(prev => ({ ...prev, description: e.target.value }))}
-                                        placeholder="Briefly define the scope..."
+                                        placeholder="Short description..."
                                         className="w-full bg-slate-50/50 border border-slate-200 rounded-sm px-4 py-3 text-sm font-medium focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all resize-none"
                                     ></textarea>
                                 </div>
@@ -248,7 +248,7 @@ export default function CategoryManagementScreen() {
                                         ) : (
                                             <>
                                                 <Upload size={20} className="text-slate-400 group-hover/upload:text-emerald-500 transition-colors" />
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Update Asset</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Change Image</span>
                                                 <input
                                                     type="file"
                                                     className="absolute inset-0 opacity-0 cursor-pointer"
@@ -270,7 +270,7 @@ export default function CategoryManagementScreen() {
                                     disabled={isSubmitting}
                                     className="w-full py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-emerald-600 transition-all shadow-lg flex items-center justify-center gap-2"
                                 >
-                                    {isSubmitting ? 'Syncing...' : 'Update Protocol'}
+                                    {isSubmitting ? 'Saving...' : 'Save Changes'}
                                 </button>
                             </div>
                         </motion.div>
@@ -289,7 +289,7 @@ export default function CategoryManagementScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Categories</span>
                         </div>
-                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">System Taxonomy</h1>
+                        <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">All product categories</h1>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -335,12 +335,12 @@ export default function CategoryManagementScreen() {
                                                 <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">{cat.name}</h4>
                                                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight max-w-md">{cat.description || 'No description assigned.'}</p>
                                                 <div className="flex items-center gap-2 pt-1">
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: {cat._id}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">ID: {cat._id}</span>
                                                     <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                    <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">Comm: {cat.adminCommission || 0}%</span>
+                                                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">Commission: {cat.adminCommission || 0}%</span>
                                                     <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                    <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">
-                                                        {cat.isVisible ? 'Visible Globally' : 'Hidden'}
+                                                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tighter">
+                                                        {cat.isVisible ? 'Visible to Customers' : 'Hidden'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -365,7 +365,7 @@ export default function CategoryManagementScreen() {
                                             </button>
                                             <button
                                                 onClick={() => {
-                                                    if (window.confirm('Purge this category from system taxonomy?')) {
+                                                    if (window.confirm('Delete this category?')) {
                                                         deleteCategory(cat._id);
                                                     }
                                                 }}
@@ -379,7 +379,7 @@ export default function CategoryManagementScreen() {
                                     <div className="p-20 text-center space-y-4">
                                         <Layers size={40} className="text-slate-200 mx-auto" />
                                         <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">No Categories Found</h3>
-                                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest transition-all">Resetting primary taxonomy...</p>
+                                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest transition-all">Loading categories...</p>
                                     </div>
                                 )}
                             </div>
@@ -393,13 +393,13 @@ export default function CategoryManagementScreen() {
                                 <div className="w-8 h-8 bg-blue-50 text-blue-600 flex items-center justify-center rounded-sm">
                                     <Info size={16} />
                                 </div>
-                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Deployment Guide</h4>
+                                <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Tips</h4>
                             </div>
 
                             <ul className="space-y-4">
                                 {[
                                     { label: 'Category Name', detail: 'Public-facing label for the store' },
-                                    { label: 'Global Visibility', detail: 'Toggles visibility across all regions' },
+                                    { label: 'Visible to Customers', detail: 'Toggles visibility across all regions' },
                                     { label: 'Commission Rate', detail: 'Standardized rate for this branch' }
                                 ].map((item, i) => (
                                     <li key={i} className="space-y-1">
@@ -407,14 +407,14 @@ export default function CategoryManagementScreen() {
                                             <div className="w-1 h-1 rounded-full bg-slate-900" />
                                             <span className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{item.label}</span>
                                         </div>
-                                        <p className="pl-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.detail}</p>
+                                        <p className="pl-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.detail}</p>
                                     </li>
                                 ))}
                             </ul>
 
                             <div className="p-4 bg-slate-900 rounded-sm">
                                 <p className="text-[10px] font-bold text-white uppercase tracking-widest leading-relaxed">
-                                    "Taxonomy changes affect global search rankings. Proceed with caution."
+                                    "Changing categories affects how customers find products. Please double-check before saving."
                                 </p>
                             </div>
                         </div>

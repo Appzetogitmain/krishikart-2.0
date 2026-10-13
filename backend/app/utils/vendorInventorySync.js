@@ -64,7 +64,9 @@ export async function syncInventoryToAssignedProducts(vendorId) {
 
     const prevSig = inventory.items.map((i) => normalizeId(i.productId)).join("|");
     const nextSig = newItems.map((i) => normalizeId(i.productId)).join("|");
-    if (prevSig !== nextSig || inventory.items.length !== newItems.length) {
+    // Also persist a brand-new (possibly empty) inventory doc; otherwise the lookup below
+    // returns null for vendors with no assigned products and the API answered "Vendor not found".
+    if (inventory.isNew || prevSig !== nextSig || inventory.items.length !== newItems.length) {
         inventory.items = newItems;
         await inventory.save();
     }

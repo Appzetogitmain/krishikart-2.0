@@ -114,7 +114,7 @@ const Profile = () => {
                     onClick={logout}
                     className="w-full mt-10 p-4 rounded-2xl bg-rose-50 text-rose-500 font-bold flex items-center justify-center gap-2 border border-rose-100 active:scale-95 transition-all"
                 >
-                    <LogOut className="w-5 h-5" /> Logout Session
+                    <LogOut className="w-5 h-5" /> Log Out
                 </button>
 
                 <button

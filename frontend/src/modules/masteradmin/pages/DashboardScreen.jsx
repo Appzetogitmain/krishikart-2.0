@@ -130,7 +130,7 @@ export default function DashboardScreen() {
                     </div>
                     <div className="flex flex-col">
                         <span className="font-bold text-slate-900 text-[11px] leading-tight">{val}</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">ENT-{row.id.split('-')[1]}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ENT-{row.id.split('-')[1]}</span>
                     </div>
                 </div>
             )
@@ -141,7 +141,7 @@ export default function DashboardScreen() {
             width: '20%',
             render: (val) => (
                 <div className={cn(
-                    "px-2 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-widest border w-fit",
+                    "px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest border w-fit",
                     val === 'Paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
                 )}>
                     {val}
@@ -201,7 +201,7 @@ export default function DashboardScreen() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="flex items-center bg-slate-100 p-0.5 rounded-sm mr-2 px-3 py-1 font-bold text-slate-900 shadow-sm uppercase tracking-widest text-[9px]">
+                        <div className="flex items-center bg-slate-100 p-0.5 rounded-sm mr-2 px-3 py-1 font-bold text-slate-900 shadow-sm uppercase tracking-widest text-[10px]">
                             Live
                         </div>
                         <button
@@ -346,7 +346,7 @@ export default function DashboardScreen() {
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 border border-amber-100 rounded-sm">
                                 <AlertCircle size={10} className="text-amber-500" />
-                                <span className="text-[9px] font-bold text-amber-600 uppercase tracking-widest">
+                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">
                                     {recentSettlements.filter(s => s.status === 'Pending').length} Pending Items
                                 </span>
                             </div>
@@ -388,21 +388,21 @@ export default function DashboardScreen() {
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">System Status // <span className="text-white">Active</span></span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">System Status: <span className="text-white">Active</span></span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Cpu size={11} className="text-blue-400" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Server Load // <span className="text-white">{dashboardData.system?.load || '12%'}</span></span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Server Load: <span className="text-white">{dashboardData.system?.load || '12%'}</span></span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Terminal size={11} className="text-purple-400" />
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Server // <span className="text-white">{dashboardData.system?.hostname || 'UK-42-B'}</span></span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Server: <span className="text-white">{dashboardData.system?.hostname || 'UK-42-B'}</span></span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <span className="text-[9px] font-bold text-slate-500 tabular-nums">Uptime: {dashboardData.system?.uptime || '142d 12h 42m'}</span>
+                        <span className="text-[10px] font-bold text-slate-500 tabular-nums">Uptime: {dashboardData.system?.uptime || '142d 12h 42m'}</span>
                         <div className="h-3 w-px bg-slate-800" />
-                        <button className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
+                        <button className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
                             View Details
                         </button>
                     </div>

@@ -139,7 +139,7 @@ export default function WishlistScreen() {
                                                 )}
                                             </div>
                                             <span className={cn(
-                                                "text-[9px] font-black uppercase text-center leading-tight tracking-wider transition-colors px-1",
+                                                "text-[10px] font-black uppercase text-center leading-tight tracking-wider transition-colors px-1",
                                                 isActive ? "text-slate-900" : "text-slate-400"
                                             )}>
                                                 {cat.name}

@@ -84,7 +84,7 @@ export default function PurchaseManagerScreen() {
                             <ChevronRight size={10} />
                             <span>Procurement</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Workspace</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Purchases</span>
                         </div>
                         <h1 className="text-sm font-bold text-slate-900">Purchase Order Management</h1>
                     </div>
@@ -139,7 +139,7 @@ export default function PurchaseManagerScreen() {
                                     <div className="flex items-center gap-3">
                                         <span className="font-bold text-slate-900 text-sm uppercase tracking-tight">{po.id}</span>
                                         <div className={cn(
-                                            "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border",
+                                            "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border",
                                             po.status === 'approved' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                                                 po.status === 'pending_approval' ? "bg-amber-50 text-amber-600 border-amber-100" :
                                                     "bg-slate-50 text-slate-500 border-slate-100"
@@ -163,19 +163,19 @@ export default function PurchaseManagerScreen() {
 
                             <div className="flex items-center gap-10 lg:px-10 lg:border-x border-slate-100">
                                 <div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] block mb-1">Valuation</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] block mb-1">Value</span>
                                     <div className="text-sm font-black text-slate-900 tabular-nums">
                                         ₹{po.totalAmount.toLocaleString()}
                                     </div>
                                 </div>
                                 <div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] block mb-1">Payload</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] block mb-1">Items</span>
                                     <div className="text-sm font-black text-slate-900 tabular-nums uppercase">
                                         {po.items.length} Units
                                     </div>
                                 </div>
                                 <div className="hidden xl:block">
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] block mb-1">Origin Date</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] block mb-1">Origin Date</span>
                                     <div className="text-sm font-black text-slate-900 tabular-nums">
                                         {new Date(po.createdAt).toLocaleDateString('en-GB')}
                                     </div>
@@ -219,7 +219,7 @@ export default function PurchaseManagerScreen() {
                     <div className="py-20 flex flex-col items-center justify-center text-center opacity-40">
                         <FileText size={40} className="text-slate-300 mb-4" />
                         <h3 className="text-sm font-bold text-slate-900">No Purchase Records</h3>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mt-1">Refine your search parameters</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest mt-1">Try a different search</p>
                     </div>
                 )}
             </div>
@@ -227,14 +227,14 @@ export default function PurchaseManagerScreen() {
             {/* System Context Footer */}
             <div className="px-4 py-1.5 bg-slate-900 text-white/50 flex items-center justify-between border-t border-slate-800">
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest">
+                    <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest">
                         <div className="w-1 h-1 rounded-full bg-emerald-400" />
-                        Logic Layer: Finalizing
+                        Kisaankart
                     </div>
                     <div className="h-3 w-px bg-slate-700" />
-                    <div className="text-[9px] font-bold tabular-nums">API Latency: 42ms</div>
+                    <div className="text-[10px] font-bold tabular-nums"></div>
                 </div>
-                <div className="text-[9px] font-bold uppercase tracking-widest">Global Sourcing Desk</div>
+                <div className="text-[10px] font-bold uppercase tracking-widest">Purchases</div>
             </div>
 
             <POCreationDrawer

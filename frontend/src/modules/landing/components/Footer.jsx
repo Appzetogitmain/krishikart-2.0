@@ -36,7 +36,7 @@ export default function Footer() {
                     <ul className="flex flex-col gap-4 text-white/60 font-semibold">
                         <li><Link to="/login" className="hover:text-white transition-colors">User Login</Link></li>
                         <li><Link to="/vendor/login" className="hover:text-white transition-colors">Vendor Portal</Link></li>
-                        <li><Link to="/franchise/login" className="hover:text-white transition-colors">Franchise Hub</Link></li>
+                        <li><Link to="/franchise/login" className="hover:text-white transition-colors">Franchise Login</Link></li>
                         <li><Link to="/delivery/login" className="hover:text-white transition-colors">Delivery Partner</Link></li>
                         <li><Link to="/masteradmin/login" className="hover:text-white transition-colors">Master Admin</Link></li>
                     </ul>

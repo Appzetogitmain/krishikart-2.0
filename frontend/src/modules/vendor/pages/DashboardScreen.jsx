@@ -55,23 +55,28 @@ export default function DashboardScreen() {
 
     const fetchDashboardData = async () => {
         try {
-            const [dispatchRes, statsRes] = await Promise.all([
+            // Load both independently so one failing call doesn't blank the whole dashboard
+            const [dispatchRes, statsRes] = await Promise.allSettled([
                 api.get('/procurement/vendor/active-dispatch'),
                 api.get('/procurement/vendor/dashboard-stats')
             ]);
 
-            if (dispatchRes.data.success) {
-                setActiveDispatches(dispatchRes.data.results || []);
+            if (dispatchRes.status === 'fulfilled' && dispatchRes.value.data.success) {
+                setActiveDispatches(dispatchRes.value.data.results || []);
             }
-            if (statsRes.data.success) {
-                console.log("Dashboard Stats Received:", statsRes.data.result);
-                setDashboardStats(statsRes.data.result || statsRes.data.results || {});
+            if (statsRes.status === 'fulfilled' && statsRes.value.data.success) {
+                setDashboardStats(statsRes.value.data.result || statsRes.value.data.results || {});
             }
-        } catch (error) {
-            console.error("Failed to fetch dashboard data", error);
-            toast.error("Dashboard Sync Failed", {
-                description: "The logistics matrix could not be synchronized."
-            });
+
+            const failed = [dispatchRes, statsRes].filter(r => r.status === 'rejected');
+            // A 401 is handled globally (session expired -> login), so don't show a second error
+            const realFailures = failed.filter(r => r.reason?.response?.status !== 401);
+            if (realFailures.length) {
+                console.error("Failed to fetch dashboard data", realFailures.map(r => r.reason));
+                toast.error("Could not load some dashboard data", {
+                    description: realFailures[0].reason?.response?.data?.message || "Please check your connection and try again."
+                });
+            }
         } finally {
             setIsLoading(false);
         }
@@ -101,27 +106,27 @@ export default function DashboardScreen() {
 
     const dispatchColumns = [
         {
-            header: 'Dispatch Ref',
+            header: 'Order Ref',
             key: '_id',
             render: (val) => <span className="text-primary font-black uppercase tracking-widest">{val.slice(-6)}</span>
         },
         {
-            header: 'Franchise Node',
+            header: 'Franchise',
             key: 'franchiseId',
-            render: (val) => <span className="text-slate-900 font-bold">{val?.franchiseName || val?.ownerName || 'Node'}</span>
+            render: (val) => <span className="text-slate-900 font-bold">{val?.franchiseName || val?.ownerName || 'Franchise'}</span>
         },
         {
-            header: 'Payload',
+            header: 'Items',
             key: 'actualWeight',
             render: (val) => <span className="text-slate-600 font-black tabular-nums">{val ? `${val} KG` : 'TBD'}</span>
         },
         {
-            header: 'Cycle Status',
+            header: 'Status',
             key: 'status',
             align: 'right',
             render: (val) => (
                 <span className={cn(
-                    "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter",
+                    "px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter",
                     val === 'ready_for_pickup' ? "bg-emerald-100 text-emerald-600" :
                         val === 'approved' ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"
                 )}>
@@ -146,10 +151,10 @@ export default function DashboardScreen() {
         <div className="space-y-8">
             <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">Procurement Pulse</h1>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">Order Activity</h1>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em]">
-                            Operational Status: <span className={cn(vendor?.status === 'active' ? "text-emerald-500" : "text-amber-500")}>{vendor?.status || 'Active'}</span>
+                        <p className="text-[10px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em]">
+                            Account Status: <span className={cn(vendor?.status === 'active' ? "text-emerald-500" : "text-amber-500")}>{vendor?.status || 'Active'}</span>
                         </p>
 
                     </div>
@@ -158,7 +163,7 @@ export default function DashboardScreen() {
                     <button
                         type="button"
                         onClick={() => navigate('/vendor/profile')}
-                        className="h-10 sm:h-11 min-h-[44px] px-3 sm:px-4 bg-white border border-slate-200 text-slate-900 rounded-xl sm:rounded-2xl inline-flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm hover:bg-slate-50 transition-all font-black text-[9px] sm:text-[10px] uppercase tracking-wide sm:tracking-widest active:scale-[0.98]"
+                        className="h-10 sm:h-11 min-h-[44px] px-3 sm:px-4 bg-white border border-slate-200 text-slate-900 rounded-xl sm:rounded-2xl inline-flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm hover:bg-slate-50 transition-all font-black text-[10px] sm:text-[10px] uppercase tracking-wide sm:tracking-widest active:scale-[0.98]"
                     >
                         <Settings className="h-4 w-4 sm:h-[17px] sm:w-[17px] text-slate-600 shrink-0" strokeWidth={2} />
                         Profile
@@ -170,9 +175,9 @@ export default function DashboardScreen() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                 {[
                     { label: 'Orders', path: '/vendor/orders', icon: ClipboardList, hint: 'Manage requests' },
-                    { label: 'Dispatch', path: '/vendor/dispatch', icon: Truck, hint: 'Active logistics' },
+                    { label: 'Dispatch', path: '/vendor/dispatch', icon: Truck, hint: 'Orders to dispatch' },
                     { label: 'Inventory', path: '/vendor/inventory', icon: Package, hint: 'Stock levels' },
-                    { label: 'History', path: '/vendor/dispatch-history', icon: Clock, hint: 'Past cycles' },
+                    { label: 'History', path: '/vendor/dispatch-history', icon: Clock, hint: 'Past orders' },
                 ].map((item) => (
                     <button
                         key={item.path}
@@ -185,7 +190,7 @@ export default function DashboardScreen() {
                         </div>
                         <div className="min-w-0">
                             <p className="text-xs font-black text-slate-900 uppercase tracking-tight truncate">{item.label}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.hint}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.hint}</p>
                         </div>
                         <ChevronRight size={14} className="ml-auto text-slate-300 group-hover:text-slate-900 shrink-0" />
                     </button>
@@ -200,7 +205,7 @@ export default function DashboardScreen() {
                     className="text-left rounded-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
                 >
                     <MetricCard
-                        label="Active Ops"
+                        label="Active Orders"
                         value={activeOps}
                         icon={Activity}
                         color="amber"
@@ -208,7 +213,7 @@ export default function DashboardScreen() {
                     />
                 </button>
                 <MetricCard
-                    label="Escrow Settlement"
+                    label="Payment Pending"
                     value={`₹${pendingSettlement.toLocaleString()}`}
                     icon={Wallet}
                     color="emerald"
@@ -217,7 +222,7 @@ export default function DashboardScreen() {
                 />
 
                 <MetricCard
-                    label="Payout Cycle"
+                    label="Payment Time"
                     value={`${safePayoutDays.toFixed(1)} Days`}
                     icon={Clock}
                     color="slate"
@@ -243,37 +248,37 @@ export default function DashboardScreen() {
                     <div className="relative z-10">
                         <div className="flex justify-between items-start gap-3 mb-6 sm:mb-10">
                             <div className="min-w-0">
-                                <h3 className="text-lg sm:text-xl font-black tracking-tight mb-1 sm:mb-2">Operational Health</h3>
-                                <p className="text-slate-400 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Real-time Inventory & Performance</p>
+                                <h3 className="text-lg sm:text-xl font-black tracking-tight mb-1 sm:mb-2">Business Overview</h3>
+                                <p className="text-slate-400 text-[10px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Live stock and performance</p>
                             </div>
                             <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl backdrop-blur-md border border-white/5 shrink-0">
                                 <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
-                                <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest">{verificationStatus}</span>
+                                <span className="text-[10px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest">{verificationStatus}</span>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-8">
                             <div className="min-w-0">
-                                <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Stock Level</p>
+                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Stock Level</p>
                                 <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{inventory.stockQuantity} Units</p>
-                                <p className="text-[8px] text-slate-400 mt-2 uppercase tracking-widest font-black">Gross Payload</p>
+                                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-black">Total Quantity</p>
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">SKU Coverage</p>
+                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Products Listed</p>
                                 <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{inventory.availableProduce} Active</p>
-                                <p className="text-[8px] text-emerald-400 mt-2 uppercase tracking-widest font-black">Market Ready</p>
+                                <p className="text-[10px] text-emerald-400 mt-2 uppercase tracking-widest font-black">Market Ready</p>
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Fulfillment</p>
+                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Fulfillment</p>
                                 <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{performance.fulfillmentRate}%</p>
                                 <div className="mt-2 w-full h-1 bg-white/5 rounded-full overflow-hidden">
                                     <div className="h-full bg-primary" style={{ width: `${performance.fulfillmentRate}%` }} />
                                 </div>
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Sync Rate</p>
+                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Last Updated</p>
                                 <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{syncMinutes}m</p>
-                                <p className="text-[8px] text-blue-400 mt-2 uppercase tracking-widest font-black">Matrix Latency</p>
+                                <p className="text-[10px] text-blue-400 mt-2 uppercase tracking-widest font-black">Minutes Ago</p>
                             </div>
                         </div>
                     </div>
@@ -291,7 +296,7 @@ export default function DashboardScreen() {
                                 <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                             </div>
                             <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Manage <br /> Orders</h4>
-                            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Procurement requests &amp; audits</p>
+                            <p className="text-[10px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Supply requests and quotations</p>
                         </div>
 
                         <button
@@ -299,7 +304,7 @@ export default function DashboardScreen() {
                             onClick={() => navigate('/vendor/orders')}
                             className="mt-5 group w-full bg-primary text-white rounded-xl sm:rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-all hover:bg-primary/90"
                         >
-                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Open Orders</span>
+                            <span className="text-[10px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Open Orders</span>
                             <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                         </button>
                     </motion.div>
@@ -314,8 +319,8 @@ export default function DashboardScreen() {
                             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-900 mb-4 border border-slate-100 shadow-sm">
                                 <Truck className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                             </div>
-                            <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Dispatch <br /> Control</h4>
-                            <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Next cycle window open</p>
+                            <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Dispatch <br /> Manage</h4>
+                            <p className="text-[10px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Ready for new orders</p>
                         </div>
 
                         <button
@@ -323,7 +328,7 @@ export default function DashboardScreen() {
                             onClick={() => navigate('/vendor/dispatch')}
                             className="mt-5 group w-full bg-slate-900 text-white rounded-xl sm:rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-all hover:bg-slate-800"
                         >
-                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Enter Logistics</span>
+                            <span className="text-[10px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Go to Dispatch</span>
                             <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                         </button>
                     </motion.div>
@@ -334,8 +339,8 @@ export default function DashboardScreen() {
                 <div className="bg-white rounded-2xl sm:rounded-[40px] p-5 sm:p-8 border border-slate-100 shadow-sm">
                     <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
                         <div className="min-w-0">
-                            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Active Logistics</h3>
-                            <p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1">Handoff Pending</p>
+                            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Dispatch</h3>
+                            <p className="text-[10px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1">Pickup Pending</p>
                         </div>
                     </div>
                     <DataGrid
@@ -349,13 +354,13 @@ export default function DashboardScreen() {
                 <div className="bg-white rounded-2xl sm:rounded-[40px] p-5 sm:p-8 border border-slate-100 shadow-sm">
                     <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
                         <div className="min-w-0">
-                            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Recent Proposals</h3>
-                            <p className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1">Audit Trail</p>
+                            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Recent Quotations</h3>
+                            <p className="text-[10px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1">View All</p>
                         </div>
                         <button
                             type="button"
                             onClick={() => navigate('/vendor/orders')}
-                            className="shrink-0 inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80"
+                            className="shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80"
                         >
                             All orders
                             <ChevronRight size={14} />
@@ -370,12 +375,12 @@ export default function DashboardScreen() {
                                     </div>
                                     <div>
                                         <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{req.status.replace('_', ' ')}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(req.createdAt).toLocaleDateString()}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(req.createdAt).toLocaleDateString()}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-sm font-black text-slate-900 tabular-nums">₹{req.amount.toLocaleString()}</p>
-                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Gross Value</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Value</p>
                                 </div>
                             </div>
                         ))}

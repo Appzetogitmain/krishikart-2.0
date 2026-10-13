@@ -16,7 +16,7 @@ export default function Sidebar() {
                     <Sprout size={24} />
                 </div>
                 <div>
-                    <h2 className="text-lg font-black tracking-tight leading-none text-slate-900">Vendor HUB</h2>
+                    <h2 className="text-lg font-black tracking-tight leading-none text-slate-900">Vendor Portal</h2>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Fresh Marketplace</p>
                 </div>
             </div>
@@ -48,7 +48,7 @@ export default function Sidebar() {
                     className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all group"
                 >
                     <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
-                    <span className="text-sm font-black tracking-tight">Logout</span>
+                    <span className="text-sm font-black tracking-tight">Log Out</span>
                 </button>
             </div>
         </div>

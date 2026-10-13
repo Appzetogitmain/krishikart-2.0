@@ -61,12 +61,12 @@ export default function LoginScreen() {
                         <ShieldCheck className="text-white w-10 h-10" />
                     </motion.div>
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">Master Admin</h2>
-                    <p className="text-slate-400 font-medium text-sm mt-2 uppercase tracking-widest">Enterprise Control Panel</p>
+                    <p className="text-slate-400 font-medium text-sm mt-2 uppercase tracking-widest">Admin Panel</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Admin Identity</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Admin Email</label>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
                                 <Mail size={18} />
@@ -84,7 +84,7 @@ export default function LoginScreen() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Access Key</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Password</label>
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
                                 <Lock size={18} />
@@ -118,7 +118,7 @@ export default function LoginScreen() {
                             onClick={() => navigate('/masteradmin/forgot-password')}
                             className="text-xs font-bold text-primary hover:underline underline-offset-4 tracking-tight"
                         >
-                            Recovery Access
+                            Forgot Password?
                         </button>
                     </div>
 
@@ -131,7 +131,7 @@ export default function LoginScreen() {
                             <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
                             <>
-                                Initiate Session
+                                Log In
                                 <ArrowRight size={18} className="ml-1 opacity-50" />
                             </>
                         )}
@@ -144,10 +144,10 @@ export default function LoginScreen() {
                         onClick={() => navigate('/masteradmin/terms')}
                         className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] hover:text-primary underline underline-offset-4 decoration-slate-200"
                     >
-                        Review Network Terms
+                        Terms & Conditions
                     </button>
                     <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em]">
-                        Part of Appzeto Kisaankart Ecosystem
+                        Kisaankart Admin
                     </p>
                 </div>
             </motion.div>

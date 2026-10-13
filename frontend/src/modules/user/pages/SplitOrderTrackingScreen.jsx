@@ -128,7 +128,7 @@ export default function SplitOrderTrackingScreen() {
                                     {groupDetails.totalOrders} separate deliveries
                                 </div>
                             </div>
-                            <Badge variant="outline" className={cn("rounded-lg font-black text-[8px] py-1.5 px-3", 
+                            <Badge variant="outline" className={cn("rounded-lg font-black text-[10px] py-1.5 px-3", 
                                 groupDetails.allDelivered ? 'bg-green-50 text-green-600 border-green-100' :
                                 groupDetails.anyInProgress ? 'bg-blue-50 text-blue-600 border-blue-100' :
                                 'bg-amber-50 text-amber-600 border-amber-100'
@@ -165,7 +165,7 @@ export default function SplitOrderTrackingScreen() {
                                         </div>
                                     </div>
                                 </div>
-                                <Badge variant="outline" className={cn("rounded-lg font-black text-[8px] py-1 px-2.5 flex items-center gap-1.5", getStatusColor(order.orderStatus))}>
+                                <Badge variant="outline" className={cn("rounded-lg font-black text-[10px] py-1 px-2.5 flex items-center gap-1.5", getStatusColor(order.orderStatus))}>
                                     {getStatusIcon(order.orderStatus)}
                                     <span className="uppercase tracking-wider">{order.orderStatus}</span>
                                 </Badge>
@@ -173,7 +173,7 @@ export default function SplitOrderTrackingScreen() {
 
                             {/* Amount */}
                             <div className="bg-slate-50/70 rounded-2xl p-3 mb-4">
-                                <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount</div>
+                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount</div>
                                 <div className="text-xl font-black text-slate-900 tracking-tighter">₹{order.totalAmount.toLocaleString()}</div>
                             </div>
 

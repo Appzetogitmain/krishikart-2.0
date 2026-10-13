@@ -56,7 +56,7 @@ export default function DashboardScreen() {
         let token = localStorage.getItem(`fcm_token_franchise`);
 
         if (!token) {
-            toast.info("Requesting FCM token...");
+            toast.info("Setting up notifications...");
             const { requestFCMToken } = await import('@/lib/firebase');
             token = await requestFCMToken();
             if (token) {
@@ -66,7 +66,7 @@ export default function DashboardScreen() {
         }
 
         if (!token) {
-            toast.error("No FCM token found. Please allow notifications in your browser.");
+            toast.error("Notifications are blocked. Please allow notifications in your browser settings.");
             setSendingPush(false);
             return;
         }
@@ -84,7 +84,7 @@ export default function DashboardScreen() {
             }
         } catch (error) {
             console.error("Test Push Error:", error);
-            toast.error(error.response?.data?.message || "Internal server error");
+            toast.error(error.response?.data?.message || "Something went wrong. Please try again.");
         } finally {
             setSendingPush(false);
         }
@@ -126,7 +126,7 @@ export default function DashboardScreen() {
             render: (val, row) => (
                 <div className="flex flex-col">
                     <span className="font-black text-slate-900 text-[11px] tracking-tight">{val}</span>
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">Order #{row.id}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">Order #{row.id}</span>
                 </div>
             )
         },
@@ -135,7 +135,7 @@ export default function DashboardScreen() {
             key: 'status',
             render: (val) => (
                 <div className={cn(
-                    "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border w-fit",
+                    "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border w-fit",
                     (val === 'delivered' || val === 'received') ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                         val === 'cancelled' ? "bg-rose-50 text-rose-600 border-rose-100" :
                             "bg-amber-50 text-amber-600 border-amber-100"
@@ -157,7 +157,7 @@ export default function DashboardScreen() {
                 <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{val}</span>
                     {row.scheduledDate && !isNaN(new Date(row.scheduledDate).getTime()) && (
-                        <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md mt-1 w-fit border border-amber-200 animate-pulse shadow-sm">
+                        <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md mt-1 w-fit border border-amber-200 animate-pulse shadow-sm">
                             Target: {new Date(row.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
                         </span>
                     )}
@@ -171,7 +171,7 @@ export default function DashboardScreen() {
             render: (_, row) => (
                 <button
                     onClick={() => (row?.id && navigate(`/franchise/orders/${row.id}`))}
-                    className="p-1 px-2 text-[9px] font-black uppercase text-slate-900 border border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all"
+                    className="p-1 px-2 text-[10px] font-black uppercase text-slate-900 border border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all"
                 >
                     View Details
                 </button>
@@ -207,7 +207,7 @@ export default function DashboardScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Dashboard</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">{franchise?.shopName || 'Franchise Terminal'}</h1>
+                        <h1 className="text-sm font-bold text-slate-900">{franchise?.shopName || 'Franchise Portal'}</h1>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -216,7 +216,7 @@ export default function DashboardScreen() {
                                 type="button"
                                 onClick={() => setIsHistoryModalOpen(false)}
                                 className={cn(
-                                    "px-3 py-1 text-[9px] font-bold rounded-sm uppercase tracking-widest transition-colors",
+                                    "px-3 py-1 text-[10px] font-bold rounded-sm uppercase tracking-widest transition-colors",
                                     !isHistoryModalOpen ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-900"
                                 )}
                             >
@@ -226,7 +226,7 @@ export default function DashboardScreen() {
                                 type="button"
                                 onClick={() => setIsHistoryModalOpen(true)}
                                 className={cn(
-                                    "px-3 py-1 text-[9px] font-bold rounded-sm uppercase tracking-widest transition-colors",
+                                    "px-3 py-1 text-[10px] font-bold rounded-sm uppercase tracking-widest transition-colors",
                                     isHistoryModalOpen ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-900"
                                 )}
                             >
@@ -248,11 +248,11 @@ export default function DashboardScreen() {
                             className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm uppercase tracking-widest disabled:opacity-50"
                         >
                             <Bell size={14} className={sendingPush ? "animate-pulse text-purple-500" : "text-purple-500"} />
-                            {sendingPush ? 'Testing...' : 'Test Push'}
+                            {sendingPush ? 'Testing...' : 'Test Notification'}
                         </button>
                         <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm uppercase tracking-widest">
                             <Monitor size={14} />
-                            Sales Terminal (POS)
+                            Counter Sale (POS)
                         </button>
                     </div>
                 </div>
@@ -260,7 +260,7 @@ export default function DashboardScreen() {
 
             <div className="bg-white border-b border-slate-200 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
                 <MetricRow
-                    label="Queued Orders"
+                    label="Waiting Orders"
                     value={stats.newOrders}
                     icon={ShoppingBag}
                 />
@@ -302,8 +302,8 @@ export default function DashboardScreen() {
                                         isSocketConnected ? "bg-emerald-50 border border-emerald-100" : "bg-amber-50 border border-amber-100"
                                     )}>
                                         <div className={cn("w-1.5 h-1.5 rounded-full", isSocketConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-                                        <span className={cn("text-[9px] font-bold uppercase tracking-widest", isSocketConnected ? "text-emerald-600" : "text-amber-600")}>
-                                            {isSocketConnected ? "System Online" : "Syncing Matrix"}
+                                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", isSocketConnected ? "text-emerald-600" : "text-amber-600")}>
+                                            {isSocketConnected ? "System Online" : "Updating"}
                                         </span>
                                     </div>
                                 </div>
@@ -398,10 +398,9 @@ export default function DashboardScreen() {
                                     <ShieldCheck size={40} className="text-amber-500" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Node Verification Required</h3>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Account Verification Required</h3>
                                     <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                        Your franchise identity is currently <span className="text-amber-600 font-black">UNVERIFIED</span>.
-                                        Please complete your document submission to activate order processing and node settlement.
+                                        Your franchise account is currently <span className="text-amber-600 font-black">UNVERIFIED</span>. Please upload your documents so you can start receiving orders and payments.
                                     </p>
                                 </div>
                                 <div className="flex flex-col gap-3">
@@ -413,7 +412,7 @@ export default function DashboardScreen() {
                                     </button>
                                     <button
                                         onClick={() => setShowKYCModal(false)}
-                                        className="w-full py-3 bg-white text-slate-400 text-[9px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
+                                        className="w-full py-3 bg-white text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
                                     >
                                         I'll do it later
                                     </button>

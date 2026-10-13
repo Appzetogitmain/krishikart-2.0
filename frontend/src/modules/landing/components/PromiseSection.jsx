@@ -15,7 +15,7 @@ const promises = [
     {
         icon: <Truck className="text-landing-primary-light" size={32} />,
         title: 'Fast Delivery',
-        description: 'Efficient delivery through our hyper-local franchise network.'
+        description: 'Quick delivery from Kisaankart stores near you.'
     },
     {
         icon: <Banknote className="text-landing-primary-light" size={32} />,

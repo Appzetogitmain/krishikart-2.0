@@ -97,7 +97,7 @@ export default function DeliveryConstraintsScreen() {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
                             <Home size={12} />
                             <ChevronRight size={10} />
-                            <span>Logistics</span>
+                            <span>Delivery</span>
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Settings</span>
                         </div>
@@ -134,11 +134,11 @@ export default function DeliveryConstraintsScreen() {
                             </div>
                             <div>
                                 <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Delivery Fee Rules</h3>
-                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Manage how much customers are charged for delivery.</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Manage how much customers are charged for delivery.</p>
                             </div>
                         </div>
                         <div className="hidden md:block">
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest border border-slate-800 px-2 py-1 rounded-sm">v2.4.0-logistics</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest border border-slate-800 px-2 py-1 rounded-sm">Delivery fee settings</span>
                         </div>
                     </div>
 
@@ -174,7 +174,7 @@ export default function DeliveryConstraintsScreen() {
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-0.5 flex items-center justify-between">
                                         Free Delivery on Orders Above (₹)
-                                        <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[8px]">Offer</span>
+                                        <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[10px]">Offer</span>
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 text-sm">₹</span>
@@ -186,7 +186,7 @@ export default function DeliveryConstraintsScreen() {
                                             className="w-full bg-slate-50/50 border border-emerald-100 rounded-sm px-8 py-2.5 text-sm font-black text-emerald-700 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                                         />
                                     </div>
-                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider italic mt-1">Orders above this amount will have free delivery.</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider italic mt-1">Orders above this amount will have free delivery.</p>
                                 </div>
                             </div>
                         </div>
@@ -232,14 +232,14 @@ export default function DeliveryConstraintsScreen() {
                         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
                                 <h4 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1">Delivery Summary</h4>
-                                <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-tight">Customers get free delivery on orders over <span className="text-emerald-900 font-black">₹{constraints.freeMov}</span></p>
+                                <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-tight">Customers get free delivery on orders over <span className="text-emerald-900 font-black">₹{constraints.freeMov}</span></p>
                             </div>
                             <div className="flex items-center gap-4 border-l border-emerald-200 pl-6">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[9px] font-black text-emerald-900 uppercase tracking-widest">Settings Active</span>
+                                    <span className="text-[10px] font-black text-emerald-900 uppercase tracking-widest">Settings Active</span>
                                 </div>
-                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Node: Master Primary</span>
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Applies to all orders</span>
                             </div>
                         </div>
                     </div>

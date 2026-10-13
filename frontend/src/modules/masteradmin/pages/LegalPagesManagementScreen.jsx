@@ -125,9 +125,7 @@ export default function LegalPagesManagementScreen() {
                     <Info size={16} className="shrink-0 text-slate-400 mt-0.5" />
                     <p className="leading-relaxed">
                         This content is stored for your apps and public surfaces. Customer-facing apps can read it from{' '}
-                        <code className="text-[10px] bg-slate-100 px-1 py-0.5 rounded">GET /api/masteradmin/public/legal-pages</code>{' '}
-                        (no auth).
-                    </p>
+                        <code className="text-[10px] bg-slate-100 px-1 py-0.5 rounded">the Kisaankart apps</code>{' '} </p>
                 </div>
 
                 <div className="flex flex-wrap gap-1 p-1 bg-white border border-slate-200 rounded-lg w-fit">

@@ -150,7 +150,7 @@ const NewOrderAlert = () => {
                             <div className="flex items-center gap-2.5">
                                 <ShoppingBag className="text-slate-500 w-4 h-4" />
                                 <div>
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Order Ref</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Ref</p>
                                     <p className="text-sm font-black text-slate-900">
                                         #{orderId ? orderId.toString().slice(-6).toUpperCase() : '------'}
                                     </p>
@@ -176,15 +176,15 @@ const NewOrderAlert = () => {
                         {/* Stats row */}
                         <div className="grid grid-cols-3 divide-x divide-slate-100">
                             <div className="px-4 py-3">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer</p>
                                 <p className="text-xs font-bold text-slate-800 truncate">{hotelName}</p>
                             </div>
                             <div className="px-4 py-3">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount</p>
                                 <p className="text-xs font-bold text-slate-800">₹{Number(totalAmount || 0).toLocaleString()}</p>
                             </div>
                             <div className="px-4 py-3">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Items</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Items</p>
                                 <p className="text-xs font-bold text-slate-800">{Array.isArray(items) ? items.length : 0}</p>
                             </div>
                         </div>
@@ -292,7 +292,7 @@ const NewOrderAlert = () => {
                     {/* Footer */}
                     <div className="bg-slate-900 py-3 px-5 flex items-center justify-center gap-2">
                         <Package size={12} className="text-emerald-400" />
-                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Kisaankart Logistic Engine</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Kisaankart</span>
                     </div>
                 </motion.div>
             </div>

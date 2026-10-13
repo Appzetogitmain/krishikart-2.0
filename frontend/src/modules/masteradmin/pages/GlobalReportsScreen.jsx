@@ -73,7 +73,7 @@ export default function GlobalReportsScreen() {
 
 
     const franchiseProcurementColumns = [
-        { header: 'Franchise Node', key: 'franchiseName', render: (val) => <span className="font-black text-slate-900">{val}</span> },
+        { header: 'Franchise', key: 'franchiseName', render: (val) => <span className="font-black text-slate-900">{val}</span> },
         { header: 'Total Procured', key: 'amount', align: 'right', render: (val) => <span className="font-bold text-slate-900">₹{val.toLocaleString()}</span> },
         { header: 'Procurement Orders', key: 'orders', align: 'right', render: (val) => <span className="text-slate-600 font-bold tabular-nums">{val}</span> },
         { header: 'Top Procured Item', key: 'topItem', render: (val) => <span className="text-slate-500 font-bold text-xs bg-slate-100 px-2 py-1 rounded-sm uppercase">{val}</span> },
@@ -91,7 +91,7 @@ export default function GlobalReportsScreen() {
     ];
 
     const franchiseSalesColumns = [
-        { header: 'Franchise Node', key: 'franchiseName', render: (val) => <span className="font-black text-slate-900">{val}</span> },
+        { header: 'Franchise', key: 'franchiseName', render: (val) => <span className="font-black text-slate-900">{val}</span> },
         { header: 'Gross Sales', key: 'amount', align: 'right', render: (val) => <span className="font-bold text-slate-900 tabular-nums text-sm">₹{val.toLocaleString()}</span> },
         { header: 'Total Orders', key: 'orders', align: 'right', render: (val) => <span className="text-slate-600 font-bold tabular-nums">{val}</span> },
         { header: 'Growth (MoM)', key: 'growth', align: 'right', render: (val) => (
@@ -137,9 +137,9 @@ export default function GlobalReportsScreen() {
                             <ChevronRight size={10} />
                             <span>Master Admin</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900">Comprehensive Reports</span>
+                            <span className="text-slate-900">Reports</span>
                         </div>
-                        <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight">Global Reporting Interface</h1>
+                        <h1 className="text-lg font-black text-slate-900 uppercase tracking-tight">Sales and purchase reports</h1>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -159,19 +159,19 @@ export default function GlobalReportsScreen() {
                 {/* KPI Ribbon */}
                 <div className="grid grid-cols-2 md:grid-cols-4 border-t border-slate-100 bg-slate-900 text-white divide-x divide-slate-800">
                     <div className="p-4 flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Franchise Sales</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Franchise Sales</span>
                         <span className="text-xl font-black tracking-tighter">₹{reportData.kpis.totalSales.toLocaleString()}</span>
                     </div>
                     <div className="p-4 flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Procured Value</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Procured Value</span>
                         <span className="text-xl font-black tracking-tighter text-blue-400">₹{reportData.kpis.totalProcured.toLocaleString()}</span>
                     </div>
                     <div className="p-4 flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Franchises</span>
-                        <span className="text-xl font-black tracking-tighter">{reportData.kpis.activeFranchises} Nodes</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Franchises</span>
+                        <span className="text-xl font-black tracking-tighter">{reportData.kpis.activeFranchises} Franchises</span>
                     </div>
                     <div className="p-4 flex flex-col gap-1">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Vendors</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Vendors</span>
                         <span className="text-xl font-black tracking-tighter text-emerald-400">{reportData.kpis.activeVendors} Suppliers</span>
                     </div>
                 </div>
@@ -238,7 +238,7 @@ export default function GlobalReportsScreen() {
                             <>
                                 <div className="xl:col-span-2 bg-white rounded-sm border border-slate-200 overflow-hidden shadow-sm">
                                     <DataGrid 
-                                        title="Franchise Procurement Ledger"
+                                        title="Franchise Stock Purchases"
                                         columns={franchiseProcurementColumns}
                                         data={reportData.franchiseProcurement}
                                     />
@@ -305,7 +305,7 @@ export default function GlobalReportsScreen() {
                         {activeTab === 'vendor_sales' && (
                             <div className="xl:col-span-3 bg-white rounded-sm border border-slate-200 overflow-hidden shadow-sm">
                                 <DataGrid 
-                                    title="Vendor Sales Attribution"
+                                    title="Vendor Sales"
                                     columns={vendorSalesColumns}
                                     data={reportData.vendorSalesImpact}
                                 />

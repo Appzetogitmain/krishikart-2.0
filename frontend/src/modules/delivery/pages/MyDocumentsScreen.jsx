@@ -199,7 +199,7 @@ export default function MyDocumentsScreen() {
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-sm font-bold text-slate-900">{doc.label}</h3>
                                             {doc.pending && (
-                                                <span className="text-[8px] font-black uppercase tracking-widest bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                                                <span className="text-[10px] font-black uppercase tracking-widest bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
                                                     Pending
                                                 </span>
                                             )}
@@ -394,7 +394,7 @@ export default function MyDocumentsScreen() {
                                         <Camera size={22} />
                                     </div>
                                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Take Photo</span>
-                                    <span className="text-[8px] font-medium text-slate-400 text-center">Use Device Camera</span>
+                                    <span className="text-[10px] font-medium text-slate-400 text-center">Use Device Camera</span>
                                 </button>
                                 
                                 <button
@@ -411,7 +411,7 @@ export default function MyDocumentsScreen() {
                                         <Upload size={22} />
                                     </div>
                                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Choose File</span>
-                                    <span className="text-[8px] font-medium text-slate-400 text-center">Gallery or Files</span>
+                                    <span className="text-[10px] font-medium text-slate-400 text-center">Gallery or Files</span>
                                 </button>
                             </div>
                         </motion.div>

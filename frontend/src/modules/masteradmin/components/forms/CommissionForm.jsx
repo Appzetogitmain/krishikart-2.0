@@ -57,7 +57,7 @@ export default function CommissionForm({ initialRate, label, onSave }) {
                         ) : (
                             <Save size={16} />
                         )}
-                        Update Strategy
+                        Save
                     </button>
                 </div>
             </div>

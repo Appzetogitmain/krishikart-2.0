@@ -213,7 +213,7 @@ export default function TopBar() {
               onFocus={() => setShowResults(true)}
               className="bg-transparent border-none outline-none text-[11px] w-full font-bold placeholder:text-slate-400 text-slate-900"
             />
-            <div className="px-1.5 py-0.5 border border-slate-200 rounded-sm text-[8px] font-black text-slate-400 group-focus-within:opacity-0 transition-opacity">
+            <div className="px-1.5 py-0.5 border border-slate-200 rounded-sm text-[10px] font-black text-slate-400 group-focus-within:opacity-0 transition-opacity">
               {isSearching ? (
                 <RefreshCw size={10} className="animate-spin" />
               ) : (
@@ -250,7 +250,7 @@ export default function TopBar() {
                           key={category}
                           className="p-2 border-b border-slate-50 last:border-none"
                         >
-                          <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-tight mb-2 px-2">
+                          <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-2 px-2">
                             {category}
                           </h4>
                           <div className="space-y-1">
@@ -286,7 +286,7 @@ export default function TopBar() {
                                       item.franchiseName ||
                                       `#${item._id.slice(-6)}`}
                                   </span>
-                                  <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate">
+                                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">
                                     {item.category?.name ||
                                       item.orderStatus ||
                                       item.email ||
@@ -333,7 +333,7 @@ export default function TopBar() {
           >
             <Bell size={20} strokeWidth={1.8} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full border-2 border-white text-[9px] font-black text-white flex items-center justify-center shadow-sm">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-500 rounded-full border-2 border-white text-[10px] font-black text-white flex items-center justify-center shadow-sm">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -352,7 +352,7 @@ export default function TopBar() {
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                       Notifications
                     </span>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
                       {unreadCount} unread
                     </p>
                   </div>
@@ -371,7 +371,7 @@ export default function TopBar() {
                     <button
                       type="button"
                       onClick={markAllNotificationsRead}
-                      className="text-[9px] font-bold text-slate-500 uppercase tracking-widest hover:text-slate-900"
+                      className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-slate-900"
                     >
                       Mark all read
                     </button>
@@ -403,7 +403,7 @@ export default function TopBar() {
                             <span className="mt-1 w-2 h-2 rounded-full bg-sky-500 shrink-0" />
                           )}
                         </div>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">
                           {formatNotificationTime(notification.createdAt)}
                         </p>
                       </button>
@@ -438,7 +438,7 @@ export default function TopBar() {
                 {admin?.fullName || "Administrator"}
               </p>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                {admin?.role?.replace("_", " ") || "Main Control"}
+                {admin?.role?.replace("_", " ") || "Admin"}
               </p>
             </div>
             <div className="w-8 h-8 rounded-sm bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 hover:border-slate-900 transition-colors overflow-hidden">
@@ -466,8 +466,8 @@ export default function TopBar() {
                   <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">
                     {admin?.fullName || "Administrator"}
                   </p>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                    {admin?.email || admin?.role?.replace("_", " ") || "Main Control"}
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                    {admin?.email || admin?.role?.replace("_", " ") || "Admin"}
                   </p>
                 </div>
 

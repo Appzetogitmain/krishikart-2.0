@@ -44,7 +44,7 @@ export default function PrivacyPolicyScreen() {
         {
             title: '3. Security Measures',
             icon: Shield,
-            content: 'We implement industry-standard security protocols to protect your business and financial information from unauthorized access or disclosure.'
+            content: 'We implement industry-standard security measures to protect your business and financial information from unauthorized access or disclosure.'
         }
     ]
 
@@ -103,7 +103,7 @@ export default function PrivacyPolicyScreen() {
                     animate={{ opacity: 1, scale: 1 }}
                     className="space-y-4"
                 >
-                    <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Data Protection <br/> Protocol</h2>
+                    <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Data Protection <br/> Policy</h2>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-sm">
                         This document outlines how KisaanKart handles and protects vendor business and personal information.
                     </p>

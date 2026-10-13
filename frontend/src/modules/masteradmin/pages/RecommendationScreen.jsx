@@ -57,7 +57,7 @@ export default function RecommendationScreen() {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Dissolve this product pairing? This will not delete the products themselves.')) {
+        if (window.confirm('Remove this recommendation? The products themselves will not be deleted.')) {
             await deleteRecommendationMapping(id);
         }
     };
@@ -73,7 +73,7 @@ export default function RecommendationScreen() {
                             <ChevronRight size={10} />
                             <span>Catalog</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Cross-Sell Engine</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Recommendations</span>
                         </div>
                         <h1 className="text-sm font-black text-slate-900 uppercase tracking-tight">Product Recommendations</h1>
                     </div>
@@ -83,7 +83,7 @@ export default function RecommendationScreen() {
                             className="px-6 py-1.5 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all hover:bg-indigo-600 shadow-sm"
                         >
                             <Plus size={12} />
-                            Create New Pairing
+                            Add Recommendation
                         </button>
                     </div>
                 </div>
@@ -104,7 +104,7 @@ export default function RecommendationScreen() {
                         </div>
                     </div>
                     <div className="bg-slate-900 rounded-sm p-3 flex flex-col justify-center shadow-lg">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Pairings</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Recommendations</p>
                         <p className="text-lg font-black text-white leading-none">{recommendations.length}</p>
                     </div>
                 </div>
@@ -113,9 +113,9 @@ export default function RecommendationScreen() {
                 <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-sm p-4 flex items-start gap-3">
                     <Info className="text-indigo-600 shrink-0 mt-0.5" size={16} />
                     <div className="space-y-1">
-                        <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Smart Reverse Mapping Enabled</p>
+                        <p className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Works both ways</p>
                         <p className="text-[10px] font-medium text-indigo-600 leading-relaxed uppercase tracking-tight">
-                            When you link <span className="font-black text-indigo-900">Product A → Product B</span>, the system automatically establishes <span className="font-black text-indigo-900">Product B → Product A</span>. You can manage them independently later.
+                            When you link <span className="font-black text-indigo-900">Product A → Product B</span>, the app also adds <span className="font-black text-indigo-900">Product B → Product A</span>. You can manage them independently later.
                         </p>
                     </div>
                 </div>
@@ -126,8 +126,8 @@ export default function RecommendationScreen() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-100">
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Source Product (Trigger)</th>
-                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Engine</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">When customer buys</th>
+                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Shown as</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Recommended Add-ons</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
@@ -137,7 +137,7 @@ export default function RecommendationScreen() {
                                 {isLoading ? (
                                     <tr>
                                         <td colSpan={5} className="py-20 text-center">
-                                            <div className="animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest">Syncing Recommendation Matrix...</div>
+                                            <div className="animate-pulse text-slate-400 uppercase font-black text-[10px] tracking-widest">Loading recommendations...</div>
                                         </td>
                                     </tr>
                                 ) : filteredRecommendations.length > 0 ? filteredRecommendations.map((rec) => (
@@ -155,7 +155,7 @@ export default function RecommendationScreen() {
                                                 </div>
                                                 <div className="space-y-0.5">
                                                     <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight line-clamp-1">{rec.sourceProduct?.name || 'Unknown Product'}</h4>
-                                                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">₹{rec.sourceProduct?.price} / {rec.sourceProduct?.unit}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">₹{rec.sourceProduct?.price} / {rec.sourceProduct?.unit}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -166,19 +166,19 @@ export default function RecommendationScreen() {
                                             <div className="flex flex-wrap gap-1.5">
                                                 {rec.recommendedProducts?.slice(0, 3).map((p) => (
                                                     <div key={p._id} className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-sm border border-slate-200 flex items-center gap-1">
-                                                        <span className="text-[8px] font-black uppercase tracking-widest">{p.name}</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">{p.name}</span>
                                                     </div>
                                                 ))}
                                                 {rec.recommendedProducts?.length > 3 && (
-                                                    <div className="bg-slate-900 text-white px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-widest">
+                                                    <div className="bg-slate-900 text-white px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest">
                                                         +{rec.recommendedProducts.length - 3} MORE
                                                     </div>
                                                 )}
                                                 {(!rec.recommendedProducts || rec.recommendedProducts.length === 0) && (
-                                                    <span className="text-[9px] font-bold text-rose-400 uppercase italic">No products linked</span>
+                                                    <span className="text-[10px] font-bold text-rose-400 uppercase italic">No products linked</span>
                                                 )}
                                             </div>
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 italic">"{rec.label}"</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 italic">"{rec.label}"</p>
                                         </td>
                                         <td className="px-6 py-4">
                                             <button
@@ -191,7 +191,7 @@ export default function RecommendationScreen() {
                                                 )}
                                             >
                                                 {rec.isActive ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
-                                                <span className="text-[8px] font-black uppercase tracking-widest">{rec.isActive ? 'Active' : 'Paused'}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">{rec.isActive ? 'Active' : 'Paused'}</span>
                                             </button>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -220,13 +220,13 @@ export default function RecommendationScreen() {
                                                 </div>
                                                 <div className="text-center">
                                                     <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">No Recommendations Configured</h3>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cross-sell matrix is empty. Start by creating a pairing.</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">No recommendations yet. Add one to suggest products to customers.</p>
                                                 </div>
                                                 <button
                                                     onClick={handleOpenCreateModal}
                                                     className="mt-4 px-8 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-sm hover:bg-indigo-600 transition-all shadow-xl shadow-slate-100"
                                                 >
-                                                    Initialize Matrix
+                                                    Add Recommendation
                                                 </button>
                                             </div>
                                         </td>
@@ -339,7 +339,7 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
             >
                 <div className="bg-slate-900 px-6 py-4 flex items-center justify-between">
                     <h2 className="text-[11px] font-black text-white uppercase tracking-[0.2em]">
-                        {editingRec ? 'Modify Product Pairing' : 'Establish New Pairing'}
+                        {editingRec ? 'Edit Recommendation' : 'New Recommendation'}
                     </h2>
                     <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
                         <X size={20} />
@@ -350,8 +350,8 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                     {/* Source Product Selection */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center text-[8px]">1</span>
-                            Primary Trigger Product
+                            <span className="w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px]">1</span>
+                            When customer buys
                         </label>
                         
                         {selectedSourceProduct ? (
@@ -362,13 +362,13 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                                     </div>
                                     <div>
                                         <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{selectedSourceProduct.name}</p>
-                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">ID: {selectedSourceProduct._id}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {selectedSourceProduct._id}</p>
                                     </div>
                                 </div>
                                 <button 
                                     type="button" 
                                     onClick={() => setFormData({ ...formData, sourceProductId: '' })}
-                                    className="text-[9px] font-black text-rose-500 uppercase tracking-widest hover:underline"
+                                    className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:underline"
                                 >
                                     Change
                                 </button>
@@ -380,7 +380,7 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                                     <input
                                         value={searchSource}
                                         onChange={(e) => setSearchSource(e.target.value)}
-                                        placeholder="SEARCH PRODUCT TO SET AS TRIGGER..."
+                                        placeholder="SEARCH FOR A PRODUCT..."
                                         className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-sm text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:border-slate-400 transition-all"
                                     />
                                 </div>
@@ -409,7 +409,7 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                     {/* Recommended Products Selection */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center text-[8px]">2</span>
+                            <span className="w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px]">2</span>
                             Suggested Add-ons
                         </label>
 
@@ -455,7 +455,7 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                                 if (!p) return null;
                                 return (
                                     <div key={id} className="bg-slate-900 text-white pl-2 pr-1 py-1 rounded-sm flex items-center gap-2 group">
-                                        <span className="text-[8px] font-black uppercase tracking-[0.15em]">{p.name}</span>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.15em]">{p.name}</span>
                                         <button 
                                             type="button" 
                                             onClick={() => toggleProductSelection(id)}
@@ -472,7 +472,7 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                     {/* Display Label */}
                     <div className="space-y-3">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center text-[8px]">3</span>
+                            <span className="w-4 h-4 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px]">3</span>
                             Suggestion Label
                         </label>
                         <select
@@ -492,9 +492,9 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                         <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-sm flex items-start gap-3">
                             <Star className="text-emerald-600 shrink-0 mt-0.5" size={16} />
                             <div>
-                                <p className="text-[9px] font-black text-emerald-900 uppercase tracking-widest">Automatic Link Synthesis</p>
-                                <p className="text-[9px] font-medium text-emerald-600 leading-relaxed uppercase tracking-tight mt-1">
-                                    Finalizing this pairing will automatically create the reverse mapping in the recommendation engine.
+                                <p className="text-[10px] font-black text-emerald-900 uppercase tracking-widest">Works both ways</p>
+                                <p className="text-[10px] font-medium text-emerald-600 leading-relaxed uppercase tracking-tight mt-1">
+                                    Saving this also suggests the first product when customers buy the suggested ones.
                                 </p>
                             </div>
                         </div>
@@ -506,7 +506,7 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                             onClick={onClose}
                             className="flex-1 py-3 border border-slate-200 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-slate-50 transition-all"
                         >
-                            Abort
+                            Cancel
                         </button>
                         <button
                             type="submit"
@@ -516,7 +516,7 @@ function RecommendationFormModal({ isOpen, onClose, editingRec, products, onSubm
                                 isSubmitting ? "opacity-50 cursor-wait" : "hover:bg-emerald-600"
                             )}
                         >
-                            {isSubmitting ? 'Processing...' : editingRec ? 'Update Pairing' : 'Establish Pairing'}
+                            {isSubmitting ? 'Processing...' : editingRec ? 'Save Changes' : 'Save Recommendation'}
                         </button>
                     </div>
                 </form>

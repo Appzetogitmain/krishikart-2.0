@@ -145,8 +145,8 @@ const DeliveryPartnerLogin = () => {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.2 }}
                     >
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Partner Portal</h1>
-                        <p className="text-primary font-bold tracking-[0.2em] uppercase text-[10px] mt-2">Logistics & Delivery Fleet</p>
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Delivery Partner Login</h1>
+                        <p className="text-primary font-bold tracking-[0.2em] uppercase text-[10px] mt-2">Kisaankart Delivery Partners</p>
                     </motion.div>
                 </div>
 
@@ -280,7 +280,7 @@ const DeliveryPartnerLogin = () => {
                 >
                     <div className="flex items-center gap-3 py-3 px-6 bg-slate-50 border border-slate-100 rounded-2xl">
                         <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                        <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase italic">Enterprise Encryption</span>
+                        <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase italic">Secure Login</span>
                     </div>
 
                     <button 
@@ -293,7 +293,7 @@ const DeliveryPartnerLogin = () => {
 
                     <p className="text-center text-[10px] text-slate-400 leading-relaxed uppercase tracking-[0.2em] font-bold">
                         Need Help? Contact <br />
-                        <span className="text-slate-900">Fleet Support Team</span>
+                        <span className="text-slate-900">Support Team</span>
                     </p>
                 </motion.div>
             </motion.div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     User,
@@ -45,7 +46,7 @@ const SettingItem = ({ icon: Icon, label, value, color, onClick }) => (
                 <Icon size={20} />
             </div>
             <div className="text-left">
-                <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em] leading-none mb-1.5">{label}</p>
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] leading-none mb-1.5">{label}</p>
                 <p className="text-[13px] font-black text-slate-900 tracking-tight">{value}</p>
             </div>
         </div>
@@ -153,17 +154,17 @@ const EditProfileModal = ({ isOpen, onClose, vendorData, onUpdate }) => {
         e.preventDefault();
         const accNo = (formData.bankAccountNumber || '').trim();
         if (accNo && (accNo.length < 9 || accNo.length > 16)) {
-            alert('Account number must be 9 to 16 digits (Indian bank standards).');
+            toast.error('Account number must be 9 to 16 digits (Indian bank standards).');
             return;
         }
         const ifsc = (formData.bankIfscCode || '').trim();
         if (ifsc && !/^[A-Z]{4}0\d{6}$/.test(ifsc)) {
-            alert('Invalid IFSC code. Format: 4 letters, then 0, then 6 digits (e.g. HDFC0001234).');
+            toast.error('Invalid IFSC code. Format: 4 letters, then 0, then 6 digits (e.g. HDFC0001234).');
             return;
         }
         const fssai = (formData.fssaiLicense || '').trim();
         if (fssai && !/^\d{14}$/.test(fssai)) {
-            alert('FSSAI License must be exactly 14 digits.');
+            toast.error('FSSAI License must be exactly 14 digits.');
             return;
         }
         setIsLoading(true);
@@ -187,7 +188,7 @@ const EditProfileModal = ({ isOpen, onClose, vendorData, onUpdate }) => {
             onClose();
         } catch (error) {
             console.error(error);
-            alert('Failed to update profile');
+            toast.error('Failed to update profile');
         } finally {
             setIsLoading(false);
         }
@@ -235,15 +236,15 @@ const EditProfileModal = ({ isOpen, onClose, vendorData, onUpdate }) => {
                         <h3 className="text-sm font-black text-slate-900 mb-3">Bank Details</h3>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Bank Name</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bank Name</label>
                                 <input name="bankName" value={formData.bankName} onChange={handleChange} placeholder="Letters only" className="w-full bg-slate-50 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20" pattern="[A-Za-z\s]*" title="Letters and spaces only" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Name</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account Name</label>
                                 <input name="bankAccountHolderName" value={formData.bankAccountHolderName} onChange={handleChange} pattern="[A-Za-z\s]+" title="Only alphabets and spaces allowed" placeholder="Name on Passbook" className="w-full bg-slate-50 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20" />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Account No.</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Account No.</label>
                                 <input
                                     name="bankAccountNumber"
                                     type="tel"
@@ -257,7 +258,7 @@ const EditProfileModal = ({ isOpen, onClose, vendorData, onUpdate }) => {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">IFSC</label>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">IFSC</label>
                                 <input name="bankIfscCode" value={formData.bankIfscCode} onChange={handleChange} maxLength={11} placeholder="HDFC0001234" pattern="[A-Z]{4}0[A-Z0-9]{6}" title="4 letters, 0, 6 alphanumeric (e.g. HDFC0001234)" className="w-full bg-slate-50 rounded-xl p-3 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 uppercase" />
                             </div>
                         </div>
@@ -298,12 +299,12 @@ const EditProfileModal = ({ isOpen, onClose, vendorData, onUpdate }) => {
                                         type="button"
                                         onClick={() => toggleCategory(catId)}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border-2 flex items-center gap-1",
+                                            "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border-2 flex items-center gap-1",
                                             btnClass
                                         )}
                                     >
                                         {cat.name}
-                                        {badgeText && <span className="opacity-80 text-[8px] font-black tracking-normal">{badgeText}</span>}
+                                        {badgeText && <span className="opacity-80 text-[10px] font-black tracking-normal">{badgeText}</span>}
                                     </button>
                                 );
                             })}
@@ -332,11 +333,11 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
         setIsLoading(true);
         try {
             await api.post('/vendor/change-password', passwords);
-            alert('Password changed successfully');
+            toast.success('Password changed successfully');
             onClose();
             setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to change password');
+            toast.error(error.response?.data?.message || 'Failed to change password');
         } finally {
             setIsLoading(false);
         }
@@ -379,11 +380,11 @@ export default function ProfileScreen() {
         if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
             try {
                 await api.delete('/vendor/delete-account');
-                alert("Account deleted successfully.");
+                toast.success("Account deleted successfully.");
                 logout();
             } catch (error) {
                 console.error("Failed to delete account", error);
-                alert(error.response?.data?.message || "Failed to delete account. Please try again.");
+                toast.error(error.response?.data?.message || "Failed to delete account. Please try again.");
             }
         }
     };
@@ -419,11 +420,11 @@ export default function ProfileScreen() {
             });
             setVendor(data.result);
             localStorage.setItem('vendorData', JSON.stringify(data.result));
-            alert('Profile updated successfully!');
+            toast.success('Profile updated successfully!');
             return data.result;
         } catch (error) {
             console.error('Update failed:', error);
-            alert(error.response?.data?.message || 'Failed to update profile');
+            toast.error(error.response?.data?.message || 'Failed to update profile');
             throw error;
         }
     };
@@ -438,7 +439,7 @@ export default function ProfileScreen() {
         try {
             await handleProfileUpdate(formData);
         } catch (error) {
-            alert('Failed to update profile picture');
+            toast.error('Failed to update profile picture');
         }
     };
 
@@ -454,13 +455,13 @@ export default function ProfileScreen() {
                 <div className="flex items-start gap-3 min-w-0">
                     <VendorBackBar className="mt-0.5" />
                     <div className="min-w-0">
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">Sovereign Identity</p>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Identity Suite</h1>
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-1">My Profile</p>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Account</h1>
                     </div>
                 </div>
-                <div className="px-3 py-1 bg-slate-900 text-white rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 self-start shrink-0">
+                <div className="px-3 py-1 bg-slate-900 text-white rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 self-start shrink-0">
                     <ShieldCheck size={10} className="text-emerald-400" />
-                    Verified Node
+                    Verified Vendor
                 </div>
             </header>
 
@@ -500,7 +501,7 @@ export default function ProfileScreen() {
 
                     <div className="w-full mt-10 flex justify-center">
                         <div className="bg-white/5 backdrop-blur-md rounded-3xl p-5 border border-white/10 text-center w-1/2">
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Location</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Location</p>
                             <p className="text-sm font-black text-white tracking-widest truncate">{vendor.farmLocation || 'N/A'}</p>
                         </div>
                     </div>
@@ -511,8 +512,8 @@ export default function ProfileScreen() {
             <div className="space-y-10">
                 <section className="space-y-4">
                     <div className="flex items-center justify-between px-2">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Identity Documents</h3>
-                        {/* <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[8px] font-black uppercase tracking-widest border border-emerald-100">
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">My Documents</h3>
+                        {/* <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest border border-emerald-100">
                             <ShieldCheck size={10} /> Fully Attested
                         </div> */}
                     </div>
@@ -536,7 +537,7 @@ export default function ProfileScreen() {
                                 {vendor.servedCategories?.map(cat => {
                                     const name = (cat && typeof cat === 'object') ? cat.name : cat;
                                     return (
-                                        <span key={(cat?._id || cat)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                                        <span key={(cat?._id || cat)} className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                             {name}
                                         </span>
@@ -545,7 +546,7 @@ export default function ProfileScreen() {
                                 {vendor.requestedCategories?.map(cat => {
                                     const name = (cat && typeof cat === 'object') ? cat.name : cat;
                                     return (
-                                        <span key={(cat?._id || cat)} className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-dashed border-amber-300 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                                        <span key={(cat?._id || cat)} className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-dashed border-amber-300 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                                             {name} (Pending Approval)
                                         </span>
@@ -565,7 +566,7 @@ export default function ProfileScreen() {
                     </div>
                     <SettingItem icon={User} label="Profile Details" value="Edit Personal Info" color="blue" onClick={() => setIsEditModalOpen(true)} />
                     <SettingItem icon={Shield} label="Security" value="Change Password" color="slate" onClick={() => setIsPasswordModalOpen(true)} />
-                    <SettingItem icon={HelpCircle} label="Help & Support" value="FAQs & Protocols" color="purple" onClick={() => navigate('/vendor/help-support')} />
+                    <SettingItem icon={HelpCircle} label="Help & Support" value="FAQs & Help" color="purple" onClick={() => navigate('/vendor/help-support')} />
                     {/* <SettingItem icon={Globe} label="Marketplace Engine" value="Global Store Visibility" color="primary" onClick={() => navigate('/vendor/preview')} /> */}
                 </section>
 
@@ -574,7 +575,7 @@ export default function ProfileScreen() {
                         onClick={logout}
                         className="w-full bg-white text-red-500 py-6 rounded-[36px] font-black text-sm flex items-center justify-center gap-3 border border-red-50 hover:bg-red-50 transition-all active:scale-[0.98] shadow-sm hover:shadow-red-100/50"
                     >
-                        Logout
+                        Log Out
                         <LogOut size={18} />
                     </button>
 
@@ -587,8 +588,8 @@ export default function ProfileScreen() {
                     </button>
 
                     <div className="text-center">
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] leading-none">Powered by Kisaankart Ledger v1.0</p>
-                        <p className="text-[9px] font-bold text-slate-200 mt-2">DEPLOYMENT_NODE: PROD-MUM-882</p>
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] leading-none">Kisaankart Vendor App</p>
+                        <p className="text-[10px] font-bold text-slate-200 mt-2">Version 1.0</p>
                     </div>
                 </div>
             </div>

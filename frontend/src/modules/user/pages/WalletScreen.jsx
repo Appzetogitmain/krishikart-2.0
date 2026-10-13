@@ -119,7 +119,7 @@ export default function WalletScreen() {
                                         <Star size={14} className="fill-primary" />
                                         <span className="text-sm font-bold tabular-nums">{loyaltyPoints}</span>
                                     </div>
-                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">KK Points</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">KK Points</span>
                                 </div>
                             </div>
 
@@ -182,7 +182,7 @@ export default function WalletScreen() {
                                                                 txn.type === 'Loyalty Bonus' ? 'Loyalty Bonus' :
                                                                     txn.type === 'Redemption' ? 'Points Redeemed' :
                                                                         txn.type === 'Refund' ? 'Refund Received' :
-                                                                        'Debit Payment'}
+                                                                        'Paid'}
                                                         </p>
                                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{txn.date} • {txn.id}</p>
                                                     </div>
@@ -201,7 +201,7 @@ export default function WalletScreen() {
                                                     </p>
                                                     <div className="flex items-center justify-end gap-1">
                                                         <div className={cn("w-1.5 h-1.5 rounded-full", txn.status === 'Success' ? "bg-emerald-500" : "bg-amber-400")} />
-                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none">{txn.status}</span>
+                                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none">{txn.status}</span>
                                                     </div>
                                                 </div>
                                             </motion.div>
@@ -240,7 +240,7 @@ export default function WalletScreen() {
                                             style={{ width: `${Math.min((loyaltyPoints / ((loyaltyConfig?.minRedeemPoints || 100) * 10)) * 100, 100)}%` }}
                                         />
                                     </div>
-                                    <p className="text-[9px] text-slate-400 leading-relaxed italic">
+                                    <p className="text-[10px] text-slate-400 leading-relaxed italic">
                                         Minimum {loyaltyConfig?.minRedeemPoints || 100} points required to redeem. Current value: ₹{Math.floor(loyaltyPoints / (loyaltyConfig?.redemptionRate || 10))}
                                     </p>
                                 </div>
@@ -290,7 +290,7 @@ export default function WalletScreen() {
                                 <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                                     <div>
                                         <h3 className="text-base font-bold text-slate-900">Add money</h3>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Instant Recharge via UPI/Nexus</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Add money instantly using UPI</p>
                                     </div>
                                     <button
                                         onClick={() => !isProcessing && setIsAddMoneyModalOpen(false)}
@@ -326,7 +326,7 @@ export default function WalletScreen() {
                                     </Button>
 
                                     <div className="grid grid-cols-1 gap-2 pt-2">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Quick Recharge</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Quick Recharge</p>
                                         <div className="grid grid-cols-3 gap-2">
                                             {quickAddAmounts.map((amt) => (
                                                 <button
@@ -335,7 +335,7 @@ export default function WalletScreen() {
                                                     className="py-2.5 border border-slate-100 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-200 transition-all active:scale-95 flex flex-col items-center justify-center gap-0.5"
                                                 >
                                                     <span className="leading-none text-[10px]">+₹{amt.toLocaleString('en-IN')}</span>
-                                                    {amt === 2000 && <span className="text-[7px] text-[#3b82f6] font-black uppercase tracking-tighter">Popular</span>}
+                                                    {amt === 2000 && <span className="text-[10px] text-[#3b82f6] font-black uppercase tracking-tighter">Popular</span>}
                                                 </button>
                                             ))}
                                         </div>

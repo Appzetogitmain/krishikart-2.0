@@ -22,12 +22,12 @@ export default function TermsScreen() {
 
     const sections = [
         {
-            title: '1. Inventory Integrity',
+            title: '1. Accurate Stock',
             icon: Box,
             content: 'Vendors are required to maintain accurate stock levels in the portal. Any product listed as "Available" must be physically present in the warehouse and ready for dispatch within 2 hours of order acceptance.'
         },
         {
-            title: '2. Logistics & Pickup',
+            title: '2. Delivery & Pickup',
             icon: Truck,
             content: 'Kisaankart logistics will conduct pickups at scheduled times. Items must be packed according to the "Vendor Packing Standards" to ensure zero damage during transit. Failure to comply may void insurance claims.'
         },
@@ -37,9 +37,9 @@ export default function TermsScreen() {
             content: 'Payments for delivered goods are processed on a T+7 cycle (7 days after delivery). Any disputes regarding payment must be raised within 48 hours of settlement through the Vendor Support Portal.'
         },
         {
-            title: '4. Quality Compliance',
+            title: '4. Quality Standards',
             icon: Scale,
-            content: 'Marketplace quality is non-negotiable. Persistent quality complaints from customers or franchise nodes may result in temporary store suspension or permanent offboarding from the platform.'
+            content: 'Marketplace quality is non-negotiable. Persistent quality complaints from customers or franchises may result in temporary store suspension or permanent offboarding from the platform.'
         }
     ];
 
@@ -81,7 +81,7 @@ export default function TermsScreen() {
                         >
                             <ChevronLeft size={20} />
                         </button>
-                        <h1 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Vendor Terms & Protocol</h1>
+                        <h1 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Vendor Terms</h1>
                     </div>
                     
                     <button 
@@ -102,13 +102,13 @@ export default function TermsScreen() {
                 >
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-wider">
                         <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                        Compliance & Support Desk
+                        Rules & Support
                     </div>
                     <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase leading-none">
                         Marketplace <br/> Agreement
                     </h2>
                     <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-xl">
-                        This document outlines the operational compliance protocol, dispute resolution terms, and support mechanisms for vendors supplying to the Kisaankart network.
+                        These are the rules, the dispute process and the support options for vendors who supply to Kisaankart.
                     </p>
                 </motion.div>
 
@@ -120,7 +120,7 @@ export default function TermsScreen() {
                         <div className="space-y-4">
                             <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
                                 <span className="w-2 h-2 bg-primary rounded-full" />
-                                Section I: Core Compliance
+                                Section I: Main Rules
                             </h3>
                             <div className="space-y-0.5 bg-slate-200 p-px rounded-3xl overflow-hidden border border-slate-200 shadow-sm">
                                 {sections.map((section, idx) => (
@@ -219,7 +219,7 @@ export default function TermsScreen() {
                                 </div>
                                 <h3 className="text-lg font-black text-slate-900 tracking-tight uppercase italic">Vendor Support</h3>
                                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                    Have queries regarding compliance terms, payment processing, or operational issues? Connect directly with our merchant support team.
+                                    Questions about these terms, payments or orders? Contact our vendor support team.
                                 </p>
                             </div>
 
@@ -232,7 +232,7 @@ export default function TermsScreen() {
                                         <Mail size={18} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Email Address</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Email Address</p>
                                         <p className="text-xs md:text-sm font-bold text-slate-800 break-all">support@kisaankart.com</p>
                                     </div>
                                 </a>
@@ -245,7 +245,7 @@ export default function TermsScreen() {
                                         <Phone size={18} />
                                     </div>
                                     <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Contact Number</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Contact Number</p>
                                         <p className="text-xs md:text-sm font-bold text-slate-800">+91 85554 54446</p>
                                     </div>
                                 </a>
@@ -255,7 +255,7 @@ export default function TermsScreen() {
                                 onClick={() => navigate('/vendor/help-support')}
                                 className="group w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-primary text-white text-xs font-black uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-slate-200 active:scale-[0.98] border-none cursor-pointer"
                             >
-                                Help & Support Route
+                                Help & Support
                                 <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
@@ -265,7 +265,7 @@ export default function TermsScreen() {
                             <div className="space-y-2">
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Legal Notice</p>
                                 <p className="text-[11px] font-bold leading-relaxed text-slate-300 uppercase tracking-wider">
-                                    By registering or logging in, you agree to these vendor compliance terms. Kisaankart reserves the right to modify these terms at any time.
+                                    By registering or logging in, you agree to these vendor terms. Kisaankart may update these terms at any time.
                                 </p>
                             </div>
                         </div>

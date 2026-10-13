@@ -6,7 +6,7 @@ import api from '@/lib/axios';
 import { toast } from 'sonner';
 
 export default function PaymentSettingsScreen() {
-    const { franchise, loginSuccess } = useFranchiseAuth();
+    const { franchise, updateFranchiseData } = useFranchiseAuth();
     const [isUploading, setIsUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState(franchise?.storeQRCode || null);
 
@@ -32,11 +32,13 @@ export default function PaymentSettingsScreen() {
                 toast.success('Payment QR Code updated successfully');
                 // Update context state
                 const updatedFranchise = { ...franchise, storeQRCode: response.data.result.qrCode };
-                loginSuccess(updatedFranchise);
+                updateFranchiseData(updatedFranchise);
+                setPreviewUrl(response.data.result.qrCode);
             }
         } catch (error) {
             console.error('QR Upload failed', error);
-            toast.error('Failed to upload QR code. Please try again.');
+            toast.error(error.response?.data?.message || 'Failed to upload QR code. Please try again.');
+            setPreviewUrl(franchise?.storeQRCode || null);
         } finally {
             setIsUploading(false);
         }
@@ -55,7 +57,7 @@ export default function PaymentSettingsScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Payment Settings</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">QR Code Configuration</h1>
+                        <h1 className="text-sm font-bold text-slate-900">Payment QR Code</h1>
                     </div>
                 </div>
             </div>
@@ -63,7 +65,7 @@ export default function PaymentSettingsScreen() {
             <div className="max-w-4xl mx-auto p-8 pt-12 space-y-10 font-sans">
                 <div className="space-y-2">
                     <h2 className="text-2xl font-black text-slate-900 tracking-tighter uppercase">Payment Methods</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Configure how you accept payments at the POS Terminal</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Set how customers pay you at the counter</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -100,8 +102,8 @@ export default function PaymentSettingsScreen() {
                                     <Upload size={20} />
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-black uppercase tracking-widest">Update QR Profile</h4>
-                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Recommended: Square JPEG/PNG</p>
+                                    <h4 className="text-xs font-black uppercase tracking-widest">Change QR Code</h4>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Recommended: Square JPEG/PNG</p>
                                 </div>
                             </div>
 
@@ -126,18 +128,18 @@ export default function PaymentSettingsScreen() {
                             <div className="pt-4 border-t border-slate-800 space-y-3">
                                 <div className="flex items-center gap-3 text-emerald-400">
                                     <CheckCircle2 size={14} />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">Synced with POS Terminal</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Shown at the billing counter</span>
                                 </div>
                                 <div className="flex items-center gap-3 text-emerald-400">
                                     <CheckCircle2 size={14} />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">Real-time update</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Updates instantly</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="bg-amber-50 border border-amber-100 p-6 rounded-sm">
                             <p className="text-[10px] font-bold text-amber-900 leading-relaxed uppercase tracking-wider">
-                                Important: Please ensure your QR code is clearly visible and belongs to your business bank account. Kisaankart is not responsible for transaction issues due to incorrect QR profiles.
+                                Important: Make sure your QR code is clear and linked to your business bank account. Kisaankart is not responsible for payment problems caused by a wrong QR code.
                             </p>
                         </div>
                     </div>

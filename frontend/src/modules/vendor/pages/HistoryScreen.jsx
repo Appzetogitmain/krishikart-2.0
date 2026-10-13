@@ -57,8 +57,8 @@ export default function HistoryScreen() {
             <header className="flex items-center gap-4">
                 <VendorBackBar />
                 <div>
-                    <h1 className="text-xl font-black text-slate-900 tracking-tight">Archive & Intel</h1>
-                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Historical Performance</p>
+                    <h1 className="text-xl font-black text-slate-900 tracking-tight">Order History</h1>
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">Past Performance</p>
                 </div>
             </header>
 
@@ -70,7 +70,7 @@ export default function HistoryScreen() {
                             <BarChart3 size={24} />
                         </div>
                         <div className="text-right">
-                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Fulfillment Avg</p>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Orders Completed</p>
                             <h3 className="text-3xl font-black">98.4%</h3>
                         </div>
                     </div>
@@ -79,14 +79,14 @@ export default function HistoryScreen() {
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <TrendingUp size={12} className="text-emerald-400" />
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Growth</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Growth</p>
                             </div>
                             <p className="text-lg font-black">+14.2%</p>
                         </div>
                         <div>
                             <div className="flex items-center gap-2 mb-1">
                                 <Clock size={12} className="text-blue-400" />
-                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Turnaround</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Avg. Time</p>
                             </div>
                             <p className="text-lg font-black">42m Avg</p>
                         </div>
@@ -116,7 +116,7 @@ export default function HistoryScreen() {
 
             {/* Past Deliveries */}
             <div className="space-y-4">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Recent Archives</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Recent Orders</h3>
 
                 {filteredOrders.map((order, index) => (
                     <motion.div
@@ -141,7 +141,7 @@ export default function HistoryScreen() {
                             </div>
                             <div>
                                 <h4 className="text-sm font-black text-slate-900 tracking-tight">{order.franchiseName}</h4>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
                                     {new Date(order.timestamp).toLocaleDateString('en-GB')}
                                     {order.status === 'rejected' && <span className="text-red-400 ml-2 italic">• {order.rejectionReason}</span>}
                                 </p>
@@ -153,10 +153,10 @@ export default function HistoryScreen() {
                                 {order.total}
                             </div>
                             <p className={cn(
-                                "text-[8px] font-bold uppercase tracking-tighter mt-1",
+                                "text-[10px] font-bold uppercase tracking-tighter mt-1",
                                 order.status === 'completed' ? "text-emerald-500" : "text-red-500"
                             )}>
-                                {order.status === 'completed' ? 'Paid-Out' : 'Voided'}
+                                {order.status === 'completed' ? 'Paid-Out' : 'Cancelled'}
                             </p>
                         </div>
                     </motion.div>
@@ -165,13 +165,13 @@ export default function HistoryScreen() {
                 {filteredOrders.length === 0 && (
                     <div className="py-20 text-center">
                         <Calendar size={48} className="text-slate-100 mx-auto mb-4" />
-                        <h4 className="text-slate-300 font-black uppercase tracking-widest text-[10px]">No archives found</h4>
+                        <h4 className="text-slate-300 font-black uppercase tracking-widest text-[10px]">No past orders</h4>
                     </div>
                 )}
             </div>
 
             <button className="w-full bg-white border border-slate-100 py-5 rounded-[24px] font-black text-[10px] text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-all">
-                Download Ledger (PDF)
+                Download Statement (PDF)
             </button>
         </div>
     );

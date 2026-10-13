@@ -90,14 +90,14 @@ export default function NotificationSettingsScreen() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-2">
                                         <h3 className="text-sm font-black text-foreground">{notif.title}</h3>
-                                        <span className="text-[9px] font-bold text-muted-foreground flex items-center gap-1 shrink-0">
+                                        <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 shrink-0">
                                             <Clock className="w-3 h-3" />
                                             {formatTime(notif.time)}
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5 truncate">{notif.subtitle}</p>
                                     {notif.meta && (
-                                        <span className="text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full inline-block mt-1.5">
+                                        <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full inline-block mt-1.5">
                                             {notif.meta}
                                         </span>
                                     )}

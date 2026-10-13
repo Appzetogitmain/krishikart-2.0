@@ -141,7 +141,7 @@ export default function OnboardingApprovalScreen() {
                             <ChevronRight size={10} />
                             <span>Approvals</span>
                             <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Verification Desk</span>
+                            <span className="text-slate-900 uppercase tracking-widest">Document Approvals</span>
                         </div>
                         <h1 className="text-sm font-bold text-slate-900">
                             {tabs.find(t => t.id === activeTab)?.label} Verification
@@ -169,7 +169,7 @@ export default function OnboardingApprovalScreen() {
                                     isActive ? "text-slate-900" : "text-slate-500"
                                 )}>{tab.label}</span>
                                 <span className={cn(
-                                    "px-1.5 py-0.5 rounded-sm text-[9px] font-black tabular-nums transition-colors",
+                                    "px-1.5 py-0.5 rounded-sm text-[10px] font-black tabular-nums transition-colors",
                                     isActive ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
                                 )}>{tab.count}</span>
                                 {isActive && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-slate-900" />}
@@ -188,7 +188,7 @@ export default function OnboardingApprovalScreen() {
                             {activeTab === 'vendor' ? (vendors?.length || 0) : activeTab === 'franchise' ? (franchises?.length || 0) : activeTab === 'delivery' ? (deliveryPartners?.length || 0) : 0}
                         </span>
                         <div className={cn(
-                            "px-1.5 py-0.5 rounded-sm text-[9px] font-bold uppercase tracking-wider border",
+                            "px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider border",
                             statusFilter === 'Pending' ? "bg-amber-50 text-amber-600 border-amber-100" :
                                 statusFilter === 'Verified' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                                     "bg-blue-50 text-blue-600 border-blue-100"
@@ -198,7 +198,7 @@ export default function OnboardingApprovalScreen() {
                     </div>
                 </div>
                 <div className="px-6 py-4 border-r border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Turnaround</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg. Time</p>
                     <div className="flex items-center gap-2">
                         <span className="text-xl font-black text-slate-900 tabular-nums">4.2h</span>
                         <span className="text-[10px] font-bold text-emerald-500">-12% vs LY</span>
@@ -234,7 +234,7 @@ export default function OnboardingApprovalScreen() {
             <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums leading-none">
-                        Status: Live // {currentItems.length} Records In Queue
+                        Status: Live {currentItems.length} Waiting for Review
                     </div>
 
                 </div>
@@ -261,8 +261,8 @@ export default function OnboardingApprovalScreen() {
                                 <div className="w-12 h-12 bg-slate-50 rounded-sm flex items-center justify-center text-slate-300 mb-4 border border-slate-100">
                                     <CheckCircle2 size={24} />
                                 </div>
-                                <h3 className="font-bold text-slate-900 text-sm">Operational Perfection</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Zer0 entities pending verification</p>
+                                <h3 className="font-bold text-slate-900 text-sm">All caught up</h3>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Nothing waiting for verification</p>
                             </div>
                         )}
                     </motion.div>

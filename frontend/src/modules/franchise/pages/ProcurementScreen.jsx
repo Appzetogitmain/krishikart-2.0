@@ -27,11 +27,12 @@ import { cn } from '@/lib/utils';
 import { useProcurement } from '../contexts/ProcurementContext';
 
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
+import { toast } from 'sonner';
 
 export default function ProcurementScreen() {
     const navigate = useNavigate();
     const { franchise } = useFranchiseAuth();
-    const { addRequest, cart, setCart, clearCart, procurementRequests } = useProcurement();
+    const { addRequest, cart, setCart, clearCart, procurementRequests, fetchRequests, isLoadingRequests, requestsError } = useProcurement();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('catalog');
     const [products, setProducts] = useState([]);
@@ -40,6 +41,7 @@ export default function ProcurementScreen() {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [lastRequestId, setLastRequestId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isQtyModalOpen, setIsQtyModalOpen] = useState(false);
     const [modalProduct, setModalProduct] = useState(null);
@@ -55,6 +57,13 @@ export default function ProcurementScreen() {
         'box',
         'dz'
     ];
+
+    // Always pull the latest requests when the History tab is opened
+    useEffect(() => {
+        if (activeTab === 'history') {
+            fetchRequests();
+        }
+    }, [activeTab, fetchRequests]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -174,12 +183,13 @@ export default function ProcurementScreen() {
         };
 
         try {
-            await addRequest(requestData);
+            const created = await addRequest(requestData);
+            setLastRequestId(created?._id || null);
             setOrderSuccess(true);
             clearCart();
         } catch (error) {
             console.error("Order placement failed", error);
-            // You might want to add a toast notification here
+            toast.error(error.response?.data?.message || 'Could not submit the procurement request. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -195,9 +205,9 @@ export default function ProcurementScreen() {
                 >
                     <CheckCircle2 size={40} />
                 </motion.div>
-                <h2 className="text-xl font-black text-slate-900 tracking-[0.2em] uppercase">RESTOCK ARCHIVE COMMITTED</h2>
+                <h2 className="text-xl font-black text-slate-900 tracking-[0.2em] uppercase">REQUEST SUBMITTED</h2>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-4 max-w-sm leading-relaxed">
-                    Procurement Manifest <b>#PO-{Math.floor(Math.random() * 90000) + 10000}</b> has been synchronized with the central logistics terminal.
+                    Your stock request{lastRequestId ? <> <b>#{String(lastRequestId).slice(-6).toUpperCase()}</b></> : null} has been sent to the admin. You can track it under Request History.
                 </p>
                 <div className="mt-12 flex flex-col gap-3 w-full max-w-xs">
                     <button
@@ -211,9 +221,9 @@ export default function ProcurementScreen() {
                     </button>
                     <button
                         onClick={() => setOrderSuccess(false)}
-                        className="w-full border border-slate-200 text-slate-400 h-10 rounded-sm font-black text-[9px] uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-all"
+                        className="w-full border border-slate-200 text-slate-400 h-10 rounded-sm font-black text-[10px] uppercase tracking-widest hover:bg-white hover:text-slate-900 transition-all"
                     >
-                        Initialize New Manifest
+                        Create Another Request
                     </button>
                 </div>
             </div>
@@ -234,7 +244,7 @@ export default function ProcurementScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest truncate max-w-[80px]">Procurement</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900 truncate">Restock Portal</h1>
+                        <h1 className="text-sm font-bold text-slate-900 truncate">Request Stock</h1>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
@@ -281,7 +291,7 @@ export default function ProcurementScreen() {
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
                                 className={cn(
-                                    "h-8 px-4 border rounded-sm text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                                    "h-8 px-4 border rounded-sm text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                                     selectedCategory === cat
                                         ? "bg-slate-900 border-slate-900 text-white shadow-md"
                                         : "bg-white border-slate-200 text-slate-400 hover:border-slate-400"
@@ -317,7 +327,7 @@ export default function ProcurementScreen() {
                                                 }}
                                             />
                                             <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-sm shadow-sm">
-                                                <p className="text-[7px] font-black text-slate-500 uppercase tracking-wider">{p.category?.name}</p>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{p.category?.name}</p>
                                             </div>
                                             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
@@ -325,8 +335,8 @@ export default function ProcurementScreen() {
                                             <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-tight line-clamp-2 leading-tight mb-2 min-h-[2.5em]">{p.name}</h4>
                                             <div className="flex items-end justify-between">
                                                 <div className="flex flex-col">
-                                                    <span className="text-[13px] font-black text-slate-900 tabular-nums leading-none mb-1">Make Request</span>
-                                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Per {p.unit}</span>
+                                                    <span className="text-[13px] font-black text-slate-900 tabular-nums leading-none mb-1">Add to Request</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Per {p.unit}</span>
                                                 </div>
 
                                                 {cart[p._id] ? (
@@ -334,7 +344,7 @@ export default function ProcurementScreen() {
                                                         <button onClick={() => updateQty(p._id, -1)} className="w-6 h-6 flex items-center justify-center hover:bg-white/10 transition-colors">
                                                             <Minus size={10} />
                                                         </button>
-                                                        <span className="w-7 text-center font-black text-[9px] tabular-nums">{cart[p._id]?.qty}</span>
+                                                        <span className="w-7 text-center font-black text-[10px] tabular-nums">{cart[p._id]?.qty}</span>
                                                         <button onClick={() => updateQty(p._id, 1)} className="w-6 h-6 flex items-center justify-center hover:bg-white/10 transition-colors">
                                                             <Plus size={10} />
                                                         </button>
@@ -355,7 +365,17 @@ export default function ProcurementScreen() {
                         </motion.div>
                     ) : (
                         <div className="space-y-4 max-w-4xl mx-auto">
-                            {procurementRequests && procurementRequests.length > 0 ? (
+                            {requestsError && (
+                                <div className="p-3 bg-rose-50 border border-rose-100 rounded-sm text-[11px] font-bold text-rose-600 flex items-center justify-between gap-3">
+                                    <span>{requestsError}</span>
+                                    <button onClick={fetchRequests} className="underline shrink-0">Retry</button>
+                                </div>
+                            )}
+                            {isLoadingRequests && (!procurementRequests || procurementRequests.length === 0) ? (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                                </div>
+                            ) : procurementRequests && procurementRequests.length > 0 ? (
                                 procurementRequests.map((request, reqIdx) => {
                                     if (!request) return null;
                                     const reqId = request._id || request.id || '';
@@ -367,17 +387,17 @@ export default function ProcurementScreen() {
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{request.createdAt && !isNaN(new Date(request.createdAt).getTime()) ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}</p>
                                             </div>
                                             <span className={cn(
-                                                "px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded-sm border",
+                                                "px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm border",
                                                 request.status === 'pending_assignment' ? "bg-amber-50 text-amber-600 border-amber-200" :
                                                     request.status === 'assigned' ? "bg-blue-50 text-blue-600 border-blue-200" :
                                                         request.status === 'completed' ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
                                                             "bg-slate-50 text-slate-400 border-slate-200"
                                             )}>
-                                                {(request.status || 'unknown').replace('_', ' ')}
+                                                {(request.status || 'unknown').replace(/_/g, ' ')}
                                             </span>
                                         </div>
                                         <div className="bg-slate-50 border border-slate-100 rounded-sm p-3">
-                                            <div className="grid grid-cols-4 gap-4 mb-2 pb-2 border-b border-slate-200 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                            <div className="grid grid-cols-4 gap-4 mb-2 pb-2 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                                 <div className="col-span-2">Item</div>
                                                 <div className="text-right">Qty</div>
                                                 <div className="text-right">Unit</div>
@@ -416,12 +436,12 @@ export default function ProcurementScreen() {
                         </div>
                         <div className="flex flex-col">
                             <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-wider leading-none">Procurement</h2>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Manifest Registry</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Request List</p>
                         </div>
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-[11px] font-black text-slate-900 tabular-nums leading-none">{cartItems.length}</span>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mt-1">SKUs</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">SKUs</span>
                     </div>
                 </div>
 
@@ -445,7 +465,7 @@ export default function ProcurementScreen() {
                                         <div className="flex justify-between items-start mb-1">
                                             <h4 className="text-[10px] xl:text-[11px] font-black text-slate-900 uppercase truncate leading-none">{item.name}</h4>
                                         </div>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Qty: {item.qty} {item.unit}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Qty: {item.qty} {item.unit}</p>
 
                                         <div className="flex items-center justify-end mt-2">
                                             <div className="flex items-center border border-slate-200 rounded-sm p-0.5 bg-white shadow-sm">
@@ -473,8 +493,8 @@ export default function ProcurementScreen() {
                                 <ShoppingBasket size={32} strokeWidth={1} />
                                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/0 to-slate-200/50" />
                             </div>
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Manifest Interface Empty</h3>
-                            <p className="text-[9px] text-slate-300 font-bold uppercase tracking-wider max-w-[160px] leading-relaxed">Matrix awaiting resource allocation for node replenishment.</p>
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Your request list is empty</h3>
+                            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider max-w-[160px] leading-relaxed">Add products from the catalog to request stock.</p>
                         </div>
                     )}
                 </div>
@@ -482,7 +502,7 @@ export default function ProcurementScreen() {
                 <div className="p-5 xl:p-6 bg-slate-900 text-white shadow-[0_-10px_40px_rgba(15,23,42,0.15)] relative z-10">
                     <div className="mb-6 xl:mb-8">
                         <div className="flex justify-between items-center px-1 mb-2">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Total SKUs</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Total Products</span>
                             <span className="text-[11px] font-black tabular-nums tracking-tight text-white">{cartItems.length}</span>
                         </div>
                         <div className="h-px bg-slate-800" />
@@ -502,7 +522,7 @@ export default function ProcurementScreen() {
                             <Loader2 className="animate-spin" size={16} />
                         ) : (
                             <>
-                                <span className="relative z-10 transition-transform group-hover/btn:-translate-x-1">Authorize Manifest</span>
+                                <span className="relative z-10 transition-transform group-hover/btn:-translate-x-1">Submit Request</span>
                                 <ArrowRight size={14} className="relative z-10 group-hover/btn:translate-x-1 transition-transform" />
                             </>
                         )}
@@ -511,7 +531,7 @@ export default function ProcurementScreen() {
 
                     <div className="mt-4 flex items-center justify-center gap-2">
                         <ShieldCheck size={10} className="text-emerald-500/50" />
-                        <span className="text-[8px] font-bold text-slate-600 uppercase tracking-wider">Encrypted Terminal Protocol</span>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Sent to admin for approval</span>
                     </div>
                 </div>
             </div>
@@ -534,7 +554,7 @@ export default function ProcurementScreen() {
                         >
                             <div className="p-6">
                                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-1">{modalProduct.name}</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-6">Select Procurement Quantity</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-6">How much do you need?</p>
 
                                 <div className="flex items-center justify-center gap-4 mb-8">
                                     <button

@@ -269,11 +269,11 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between">
-                                                    <h3 className="text-[12px] font-black text-rose-900 uppercase tracking-widest">Inventory Conflict Detected</h3>
-                                                    <span className="text-[9px] font-black text-rose-500 uppercase tracking-[0.2em] animate-pulse">Action Required</span>
+                                                    <h3 className="text-[12px] font-black text-rose-900 uppercase tracking-widest">Not Enough Stock</h3>
+                                                    <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] animate-pulse">Action Required</span>
                                                 </div>
                                                 <p className="text-[10px] text-rose-600 font-bold mt-1 leading-relaxed uppercase tracking-tight">
-                                                    The assigned franchise reports insufficient stock (Items might have been rejected/rotten). You must either initiate a <b>Procurement Cycle</b> or <b>Authorize Partial Delivery</b>.
+                                                    The franchise doesn’t have enough stock for this order (some items may have been rejected or spoiled). You can either start a <b>Stock Request</b> or <b>Allow Partial Delivery</b>.
                                                 </p>
                                             </div>
                                         </div>
@@ -305,13 +305,13 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight line-clamp-1">{item.productId?.name || item.name}</h4>
-                                                                <div className="flex items-center gap-2 mt-1 font-bold text-[9px] text-slate-400 uppercase tracking-widest">
+                                                                <div className="flex items-center gap-2 mt-1 font-bold text-[10px] text-slate-400 uppercase tracking-widest">
                                                                     <span>Qty: {item.quantity}</span>
                                                                     <div className="w-0.5 h-0.5 rounded-full bg-slate-300" />
                                                                     <span>₹{item.price?.toLocaleString()} / unit</span>
                                                                 </div>
                                                                 {item.isShortage && (
-                                                                    <div className="mt-1.5 flex items-center gap-1.5 text-rose-600 font-black text-[8px] uppercase tracking-[0.1em] bg-rose-50 px-2 py-0.5 rounded-sm border border-rose-100 w-fit animate-pulse">
+                                                                    <div className="mt-1.5 flex items-center gap-1.5 text-rose-600 font-black text-[10px] uppercase tracking-[0.1em] bg-rose-50 px-2 py-0.5 rounded-sm border border-rose-100 w-fit animate-pulse">
                                                                         <AlertCircle size={10} />
                                                                         Shortage: {item.shortageQty} {item.unit}
                                                                     </div>
@@ -339,7 +339,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 )}
                                                             >
                                                                 <Truck size={15} />
-                                                                {order.allowPartialFulfillment ? 'Available Delivery Approved' : 'Allow Available Delivery'}
+                                                                {order.allowPartialFulfillment ? 'Partial Delivery Allowed' : 'Allow Partial Delivery'}
                                                             </button>
                                                             <button
                                                                 onClick={() => {
@@ -349,7 +349,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 py-3 rounded-sm text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]"
                                                             >
                                                                 <Package size={16} />
-                                                                Procure Shortage Items
+                                                                Request Missing Items
                                                             </button>
                                                         </div>
                                                     )}
@@ -357,7 +357,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                     {(order.orderStatus || '').toLowerCase() === 'procuring' && (
                                                         <div className="mb-4 p-4 bg-slate-800 border border-slate-700 rounded-sm flex items-center justify-center gap-3">
                                                             <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                                                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Procurement in Progress...</span>
+                                                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Stock request in progress...</span>
                                                         </div>
                                                     )}
                                                     <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
@@ -401,7 +401,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                 </div>
                                                 <div className="space-y-3">
                                                     <div>
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Name</span>
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Name</span>
                                                         <span className="text-xs font-black text-slate-900 uppercase tracking-tight">
                                                             {order.userId?.fullName || 
                                                              (order.franchiseId?.mobile === order.userId?.mobile ? order.franchiseId?.ownerName : 'Unnamed User')}
@@ -409,22 +409,22 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                     </div>
                                                     <div className="flex items-center justify-between">
                                                         <div>
-                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Contact</span>
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Contact</span>
                                                             <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-900 tabular-nums">
                                                                 <Phone size={10} className="text-slate-400" />
                                                                 {order.userId?.mobile || 'N/A'}
                                                             </div>
                                                         </div>
                                                         <div>
-                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Payment</span>
+                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Payment</span>
                                                             <PaymentBadge method={order.paymentMethod || 'COD'} />
                                                         </div>
                                                     </div>
                                                     <div className="pt-3 border-t border-slate-50">
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Shipping to</span>
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Shipping to</span>
                                                         <div className="p-3 bg-slate-50 border border-slate-100 rounded-sm flex gap-2">
                                                             <MapPin size={14} className="text-slate-400 shrink-0" />
-                                                            <p className="text-[9px] font-bold text-slate-600 leading-relaxed uppercase">
+                                                            <p className="text-[10px] font-bold text-slate-600 leading-relaxed uppercase">
                                                                 {order.shippingAddress || 'No Address Provided'}
                                                             </p>
                                                         </div>
@@ -444,8 +444,8 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                             <Building2 size={16} />
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{order.franchiseId?.franchiseName || order.franchiseId?.storeName || 'Primary Facility'}</h4>
-                                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Assigned Unit</p>
+                                                            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{order.franchiseId?.franchiseName || order.franchiseId?.storeName || 'Franchise'}</h4>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Assigned Franchise</p>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -455,14 +455,14 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 <Building2 size={16} />
                                                             </div>
                                                             <div>
-                                                                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Appzeto Fulfillment</h4>
-                                                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Central Facility</p>
+                                                                <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-tight">Kisaankart</h4>
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Main Warehouse</p>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <div className="p-4 border border-dashed border-slate-200 rounded-sm flex flex-col items-center text-center gap-2">
                                                             <AlertCircle size={16} className="text-slate-300" />
-                                                            <p className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Unassigned</p>
+                                                            <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Unassigned</p>
                                                         </div>
                                                     )
                                                 )}
@@ -472,7 +472,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                             <div className="bg-white border border-slate-200 rounded-sm p-5 shadow-sm space-y-4">
                                                 <div className="flex items-center gap-2 border-l-4 border-amber-500 pl-3">
                                                     <FileText size={16} className="text-amber-500" />
-                                                    <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Audit</h3>
+                                                    <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">History</h3>
                                                 </div>
                                                 <div className="space-y-3">
                                                     {(order.scheduledDateFormatted || order.scheduledDate) && (
@@ -490,7 +490,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                         <div className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 shrink-0" />
                                                         <div>
                                                             <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">Created</p>
-                                                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{new Date(order.createdAt).toLocaleString()}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{new Date(order.createdAt).toLocaleString()}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -502,7 +502,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                 <div className="h-64 flex flex-col items-center justify-center text-center">
                                     <AlertCircle size={40} className="text-slate-200 mb-4" />
                                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Order Not Found</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">The request returned no record</p>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">We couldn't find this order</p>
                                 </div>
                             )}
                         </div>

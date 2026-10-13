@@ -41,7 +41,7 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                 </div>
                                 <div>
                                     <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">
-                                        {isInvoice ? 'Tax Invoice' : (isDC ? 'Delivery Challan' : (isBilty ? 'Bilty / Consignment Note' : 'Goods Received Note'))}
+                                        {isInvoice ? 'Tax Invoice' : (isDC ? 'Delivery Challan' : (isBilty ? 'Bilty (Delivery Slip)' : 'Goods Received Note'))}
                                     </h2>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                         ID: {data.biltyNumber || data.invoiceNumber || data.id} • {data.date || (data.invoiceDate || data.generatedAt ? new Date(data.invoiceDate || data.generatedAt).toLocaleDateString() : new Date().toLocaleDateString())}
@@ -67,7 +67,7 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                     <div className="text-[10px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest max-w-xs">
                                         Headquarters: 24, Agri-Business Center<br />
                                         Dewas Road, Ujjain, MP - 456010<br />
-                                        Certified Logistics & Distribution Node
+                                        Distribution Center
                                     </div>
                                 </div>
                                 <div className="text-right space-y-1">
@@ -75,8 +75,8 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                     <p className="text-sm font-black text-slate-900 uppercase tracking-tight">
                                         {data.date || (data.invoiceDate || data.generatedAt ? new Date(data.invoiceDate || data.generatedAt).toLocaleDateString() : new Date().toLocaleDateString())}
                                     </p>
-                                    <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black mt-4 uppercase border", accentBg, accentColor, accentBorder)}>
-                                        {isInvoice ? 'Invoice Finalized' : (isDC ? 'Dispatched' : (isBilty ? 'Bilty Generated' : 'Audited & Received'))}
+                                    <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black mt-4 uppercase border", accentBg, accentColor, accentBorder)}>
+                                        {isInvoice ? 'Invoice Finalized' : (isDC ? 'Dispatched' : (isBilty ? 'Bilty Generated' : 'Checked & Received'))}
                                     </div>
                                 </div>
                             </div>
@@ -95,7 +95,7 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                     </div>
                                     <div className="h-12 w-px bg-white/20 hidden md:block mx-8" />
                                     <div className="flex-1 space-y-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Consignment Number</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Bilty Number</p>
                                         <p className="text-lg font-black tracking-widest">{data.biltyNumber}</p>
                                     </div>
                                 </div>
@@ -107,21 +107,21 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                     <div className="flex items-center gap-2 mb-4">
                                         <Truck size={14} className="text-slate-400" />
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            {isBilty ? 'Dispatch Node' : 'Source Node (Vendor)'}
+                                            {isBilty ? 'Dispatched From' : 'From (Vendor)'}
                                         </span>
                                     </div>
                                     <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{data.fromFranchise || data.vendor || 'Kisaankart Partner'}</h4>
-                                    <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em] italic">Verified Processing Terminal</p>
+                                    <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em] italic">Verified Vendor</p>
                                 </div>
                                 <div className="p-6 bg-slate-50/50 rounded-3xl border border-slate-100">
                                     <div className="flex items-center gap-2 mb-4">
                                         <CheckCircle2 size={14} className="text-slate-400" />
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            {isBilty ? 'Consignee (Customer)' : 'Destination Node (Franchise)'}
+                                            {isBilty ? 'Consignee (Customer)' : 'To (Franchise)'}
                                         </span>
                                     </div>
                                     <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">{data.toCustomer || data.franchise || 'Main Center'}</h4>
-                                    <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em] italic">{data.toAddress || data.destNode || 'Franchise Node'}</p>
+                                    <p className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-[0.2em] italic">{data.toAddress || data.destNode || 'Franchise'}</p>
                                 </div>
                             </div>
 
@@ -130,19 +130,19 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                 <div className="p-6 border border-slate-100 rounded-3xl space-y-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <Truck size={14} className="text-slate-400" />
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assigned Logistics Partner</span>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Partner</span>
                                     </div>
                                     <div className="grid md:grid-cols-3 gap-8">
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Delivery Executive</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery Executive</p>
                                             <p className="text-xs font-black text-slate-900 uppercase">{data.deliveryPartner || 'Pending Assignment'}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vehicle Reg. No.</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vehicle Reg. No.</p>
                                             <p className="text-xs font-black text-slate-900 uppercase">{data.vehicleNumber || 'N/A'}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Vehicle Type</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vehicle Type</p>
                                             <p className="text-xs font-black text-slate-900 uppercase">{data.vehicleType || 'N/A'}</p>
                                         </div>
                                     </div>
@@ -151,7 +151,7 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
 
                             {/* Items Table */}
                             <div className="space-y-4">
-                                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Consignment Manifest</h3>
+                                <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest ml-1">Item List</h3>
                                 <div className="border border-slate-100 rounded-3xl overflow-x-auto shadow-sm">
                                     <table className="w-full min-w-[600px] text-left">
                                         <thead>
@@ -197,29 +197,29 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-4">
                                                 <div className="h-32 border-2 border-dashed border-slate-200 rounded-3xl flex items-end justify-center pb-4 bg-slate-50/30">
-                                                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Franchise Stamp / Sign</span>
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Franchise Stamp / Sign</span>
                                                 </div>
-                                                <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-widest">Authorized Dispatch</p>
+                                                <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-widest">Dispatched By</p>
                                             </div>
                                             <div className="space-y-4">
                                                 <div className="h-32 border-2 border-dashed border-slate-200 rounded-3xl flex items-end justify-center pb-4 bg-slate-50/30">
-                                                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Partner Signature</span>
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Partner Signature</span>
                                                 </div>
-                                                <p className="text-[9px] font-bold text-slate-400 text-center uppercase tracking-widest">Handover Acceptance</p>
+                                                <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-widest">Handover Acceptance</p>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="p-6 bg-slate-900 text-white rounded-[32px] space-y-4">
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                <span>Certified Packaging WT</span>
+                                                <span>Packed Weight</span>
                                                 <span className="text-white">{data.totalWeight || data.weight || '0.00'} KG</span>
                                             </div>
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                <span>Digital Security Code</span>
+                                                <span>Document Code</span>
                                                 <span className="text-emerald-400">#{(data.biltyNumber || data.id)?.slice(-8).toUpperCase() || 'AUTH-SECURE'}</span>
                                             </div>
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed pt-2 border-t border-white/10">
-                                                Terminal finalized at Distribution Center. Payload synchronized for logistics leg.
+                                                Packed at the distribution center and ready for delivery.
                                             </p>
                                         </div>
                                     )}
@@ -242,14 +242,14 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                 )}
                                 {isBilty && (
                                     <div className="flex flex-col justify-end text-right">
-                                        <div className="text-[8px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">Verification Artifact</div>
+                                        <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">Verification</div>
                                         <div className="inline-block p-4 bg-slate-50 border border-slate-100 rounded-2xl w-fit ml-auto">
                                             <div className="w-20 h-20 bg-white border border-slate-100 rounded-lg flex items-center justify-center">
                                                 <div className="w-12 h-12 bg-slate-100 rounded flex items-center justify-center">
                                                     <Loader2 size={20} className="text-slate-200" />
                                                 </div>
                                             </div>
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-2">Digital Hash: {data.biltyNumber}</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Reference: {data.biltyNumber}</p>
                                         </div>
                                     </div>
                                 )}
@@ -257,8 +257,8 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                         </div>
 
                         {/* Footer Info */}
-                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-[8px] font-black text-slate-400 uppercase tracking-widest shrink-0">
-                            <span>Certified Digital Document • {isBilty ? 'Kisaankart Logistics Manifest v2.0' : 'Kisaankart Supply Chain v2.0'}</span>
+                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">
+                            <span>Digital Document • {isBilty ? 'Kisaankart Delivery Document' : 'Kisaankart'}</span>
                             <span>{new Date().toLocaleString()}</span>
                         </div>
                     </motion.div>

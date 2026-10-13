@@ -8,7 +8,7 @@ export default function FilterBar({ actions, className }) {
                 actions
             ) : (
                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operation Controls</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filters</span>
                 </div>
             )}
         </div>

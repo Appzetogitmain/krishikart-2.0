@@ -129,7 +129,7 @@ export default function OrderDetailScreen() {
         try {
             const ok = await rejectFranchiseOrder(id);
             if (ok) {
-                toast.success('Assignment released. Another franchise may take the order.');
+                toast.success('Order rejected.');
                 navigate('/franchise/orders');
             }
         } finally {
@@ -239,14 +239,14 @@ export default function OrderDetailScreen() {
                     <Search size={32} />
                 </div>
                 <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest leading-none mb-2">Order Not Found</h2>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">The order you are looking for does not exist in the system.</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">We couldn't find this order.</p>
                 <button onClick={() => navigate(-1)} className="mt-8 text-[11px] font-black uppercase text-slate-900 border-b-2 border-slate-900 pb-1">Go Back</button>
             </div>
         );
     }
 
     const timeline = [
-        { status: 'Order Placed', time: order.time || (order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : '--'), desc: 'Order received by system', active: true },
+        { status: 'Order Placed', time: order.time || (order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : '--'), desc: 'Order received', active: true },
         { status: 'Accepted', time: '--', desc: 'Franchise accepted the order', active: !['new', 'placed', 'pending'].includes(order.status) },
         { status: 'Processing', time: '--', desc: 'Order is being prepared', active: ['packed', 'dispatched', 'delivered', 'received'].includes(order.status) },
         { status: 'Dispatch', time: '--', desc: 'Out for delivery', active: ['dispatched', 'delivered', 'received'].includes(order.status) },
@@ -270,12 +270,12 @@ export default function OrderDetailScreen() {
                             <span className="text-slate-900 uppercase tracking-widest">{order.id}</span>
                         </div>
                         <div className={cn(
-                            "px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-widest border",
+                            "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border",
                             order.status === 'completed' || order.status === 'delivered' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                                 order.status === 'procuring' ? "bg-amber-50 text-amber-600 border-amber-100" :
                                     "bg-blue-50 text-blue-600 border-blue-100"
                         )}>
-                            {order.status === 'procuring' ? 'Under Procurement' : order.status}
+                            {order.status === 'procuring' ? 'Waiting for Stock' : order.status}
                         </div>
                     </div>
 
@@ -293,11 +293,11 @@ export default function OrderDetailScreen() {
                                 <h2 className="text-3xl font-black tracking-tighter uppercase leading-none mb-4">{order.customer || order.hotelName}</h2>
                                 <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     <div className="flex items-center gap-1.5">
-                                        <Briefcase size={12} strokeWidth={2.5} /> Regular Partner
+                                        <Briefcase size={12} strokeWidth={2.5} /> Regular Customer
                                     </div>
                                     <div className="w-1 h-1 rounded-full bg-slate-700" />
                                     <div className="flex items-center gap-1.5">
-                                        <Clock size={12} strokeWidth={2.5} /> System Connected
+                                        <Clock size={12} strokeWidth={2.5} /> Verified
                                     </div>
                                 </div>
                             </div>
@@ -330,14 +330,14 @@ export default function OrderDetailScreen() {
                                         <Clock size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 leading-none mb-1.5">Target Delivery Date</p>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 leading-none mb-1.5">Delivery Date</p>
                                         <h3 className="text-sm font-black uppercase tracking-tight">
                                             {order.scheduledDateFormatted || new Date(order.scheduledDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
                                         </h3>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1 leading-none">Assigned Shift</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1 leading-none">Delivery Slot</p>
                                     <p className="text-[11px] font-black uppercase tracking-tighter">{order.deliverySlot}</p>
                                 </div>
                             </div>
@@ -375,8 +375,8 @@ export default function OrderDetailScreen() {
                                             <div className="flex items-center gap-3">
                                                 <Package size={16} className="text-amber-500" />
                                                 <div className="flex flex-col">
-                                                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Bilty / Consignment Note</span>
-                                                    <span className="text-[8px] font-bold text-amber-600 uppercase tracking-tight">{order.bilty.numberOfPackages} Packages • {order.bilty.biltyNumber}</span>
+                                                    <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Bilty (Delivery Slip)</span>
+                                                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">{order.bilty.numberOfPackages} Packages • {order.bilty.biltyNumber}</span>
                                                 </div>
                                             </div>
                                             <ChevronRight size={12} className="text-slate-300" />
@@ -401,14 +401,14 @@ export default function OrderDetailScreen() {
                                         >
                                             <div className="flex items-center gap-3">
                                                 <ShieldCheck className="text-emerald-500" size={16} />
-                                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Purchase Record (GRN)</span>
+                                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Goods Received Note (GRN)</span>
                                             </div>
                                             <ChevronRight size={12} className="text-slate-300" />
                                         </button>
                                     )}
                                     {!order.deliveryChallan && !order.grn && (
                                         <div className="p-4 border border-dashed border-slate-200 rounded-sm text-center">
-                                            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">No documents available</p>
+                                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">No documents available</p>
                                         </div>
                                     )}
                                 </div>
@@ -430,18 +430,18 @@ export default function OrderDetailScreen() {
                                         <div className="flex items-center gap-4">
                                             <div className="min-w-[40px] px-2 h-8 rounded-sm bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-400 flex items-center justify-center tabular-nums gap-1">
                                                 <span>{Number(item.quantity) || 0}</span>
-                                                {item.unit && <span className="text-[8px] opacity-70 uppercase tracking-tighter">{item.unit}</span>}
+                                                {item.unit && <span className="text-[10px] opacity-70 uppercase tracking-tighter">{item.unit}</span>}
                                             </div>
                                             <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{item.name}</span>
                                             {item.isShortage && (
-                                                <span className="text-[8px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+                                                <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
                                                     Shortage
                                                 </span>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-8">
                                             <div className="hidden md:flex flex-col items-end opacity-0 group-hover:opacity-100 transition-all">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase italic">Price</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase italic">Price</span>
                                                 <span className="text-[10px] font-black text-slate-900 tabular-nums">₹{(Number(item.price) || 0).toLocaleString()}</span>
                                             </div>
                                             <span className="text-[11px] font-black text-slate-900 tabular-nums">₹{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}</span>
@@ -468,7 +468,7 @@ export default function OrderDetailScreen() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex flex-col">
                                         <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Total</span>
-                                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
                                             {order.paymentMethod} • {order.paymentStatus}
                                         </span>
                                     </div>
@@ -499,7 +499,7 @@ export default function OrderDetailScreen() {
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between mb-2">
                                                 <h4 className={cn("text-[10px] font-black uppercase tracking-widest", step.active ? "text-slate-900" : "text-slate-400")}>{step.status}</h4>
-                                                <span className="text-[9px] font-bold text-slate-400 tabular-nums">{step.time}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 tabular-nums">{step.time}</span>
                                             </div>
                                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight leading-normal">{step.desc}</p>
                                         </div>
@@ -544,7 +544,7 @@ export default function OrderDetailScreen() {
                                     className="w-full h-12 bg-rose-600 text-white rounded-sm font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:bg-rose-700 transition-all flex items-center justify-center gap-2"
                                 >
                                     {isRejectingAssignment ? <RefreshCw size={14} className="animate-spin" /> : null}
-                                    Reject assignment
+                                    Reject Order
                                 </button>
                             )}
 
@@ -553,22 +553,22 @@ export default function OrderDetailScreen() {
                                     {order.items.some(i => i.isShortage) && !order.allowPartialFulfillment ? (
                                         <div className="space-y-3 p-4 border border-amber-100 bg-amber-50 rounded-sm">
                                             <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2 mb-2">
-                                                <AlertCircle size={14} /> Stock Shortage Detected
+                                                <AlertCircle size={14} /> Not Enough Stock
                                             </p>
-                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight text-center leading-relaxed">
-                                                Some items are still short in your inventory. You must request procurement or wait for Admin permission to dispatch available stock.
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight text-center leading-relaxed">
+                                                You don’t have enough stock for some items. Request stock from the admin, or wait for the admin to allow you to send what you have.
                                             </p>
                                             <button
                                                 onClick={() => navigate('/franchise/procurement')}
                                                 className="w-full h-10 bg-amber-600 text-white rounded-sm font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:bg-amber-700 transition-all flex items-center justify-center gap-2"
                                             >
-                                                Request Procurement
+                                                Request Stock
                                             </button>
                                         </div>
                                     ) : (
                                         <div className="space-y-3 p-4 border border-emerald-100 bg-emerald-50 rounded-sm">
                                             {order.allowPartialFulfillment && order.items.some(i => i.isShortage) && (
-                                                <div className="rounded-sm border border-blue-200 bg-blue-50 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-blue-700">
+                                                <div className="rounded-sm border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">
                                                     Master Admin approved packing with current available stock.
                                                 </div>
                                             )}
@@ -602,10 +602,10 @@ export default function OrderDetailScreen() {
                             {order.status === 'procuring' && (
                                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-sm">
                                     <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
-                                        <RefreshCw size={14} className="animate-spin" /> Under Procurement
+                                        <RefreshCw size={14} className="animate-spin" /> Waiting for Stock
                                     </p>
-                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight text-center leading-relaxed">
-                                        Stock for some items is low. Procurement request has been initiated. Once received, the order will be ready for packing.
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight text-center leading-relaxed">
+                                        Stock for some items is low and a stock request has been sent. Once the stock arrives, you can pack this order.
                                     </p>
                                 </div>
                             )}
@@ -621,8 +621,8 @@ export default function OrderDetailScreen() {
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-black text-slate-900 uppercase">{order.deliveryPartner?.fullName}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{order.deliveryPartner?.mobile}</p>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{order.deliveryPartner?.vehicleNumber}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{order.deliveryPartner?.mobile}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{order.deliveryPartner?.vehicleNumber}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -641,7 +641,7 @@ export default function OrderDetailScreen() {
                                                     Request #{request.index + 1}
                                                 </span>
                                                 <span className={cn(
-                                                    "text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-sm border",
+                                                    "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-sm border",
                                                     request.status === 'pending' ? "bg-amber-50 text-amber-700 border-amber-200" :
                                                         request.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
                                                             request.status === 'rejected' ? "bg-rose-50 text-rose-700 border-rose-200" :
@@ -681,14 +681,14 @@ export default function OrderDetailScreen() {
                                                         <button
                                                             disabled={isReviewing}
                                                             onClick={() => handleReviewReturn(request.index, 'approve')}
-                                                            className="h-9 bg-emerald-600 text-white rounded-sm font-black uppercase text-[9px] tracking-widest disabled:opacity-50"
+                                                            className="h-9 bg-emerald-600 text-white rounded-sm font-black uppercase text-[10px] tracking-widest disabled:opacity-50"
                                                         >
                                                             Approve
                                                         </button>
                                                         <button
                                                             disabled={isReviewing}
                                                             onClick={() => handleReviewReturn(request.index, 'reject')}
-                                                            className="h-9 bg-rose-600 text-white rounded-sm font-black uppercase text-[9px] tracking-widest disabled:opacity-50"
+                                                            className="h-9 bg-rose-600 text-white rounded-sm font-black uppercase text-[10px] tracking-widest disabled:opacity-50"
                                                         >
                                                             Reject
                                                         </button>
@@ -698,7 +698,7 @@ export default function OrderDetailScreen() {
 
                                             {['approved', 'pickup_assigned'].includes(request.status) && (
                                                 <div className="space-y-2 pt-1">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Assign Delivery Partner For Pickup</p>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assign Delivery Partner For Pickup</p>
                                                     <select
                                                         className="w-full h-9 border border-slate-200 rounded-sm px-2 text-[11px] font-bold text-slate-700"
                                                         defaultValue=""

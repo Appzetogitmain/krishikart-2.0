@@ -145,7 +145,7 @@ export default function OrderDetailScreen() {
                         </button>
                         <div className="flex flex-col">
                             <h1 className="text-base font-black text-slate-900 tracking-tight leading-none">Order Details</h1>
-                            <p className="text-[9px] font-bold text-slate-400 capitalize mt-1 leading-none">Reference: #{order._id.slice(-8).toUpperCase()}</p>
+                            <p className="text-[10px] font-bold text-slate-400 capitalize mt-1 leading-none">Reference: #{order._id.slice(-8).toUpperCase()}</p>
                         </div>
                     </div>
                 </div>
@@ -155,7 +155,7 @@ export default function OrderDetailScreen() {
                     {/* Integrated Status Header */}
                     <div className="flex items-center justify-between gap-4">
                         <div className="min-w-0">
-                            <h2 className="text-[8px] font-black text-slate-300 uppercase tracking-[0.25em] mb-1">Lifecycle</h2>
+                            <h2 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.25em] mb-1">Status</h2>
                             <div className="flex items-center gap-2">
                                 <div className={cn("w-1.5 h-1.5 rounded-full", status.dot, "animate-pulse shadow-sm")} />
                                 <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tighter">
@@ -164,7 +164,7 @@ export default function OrderDetailScreen() {
                             </div>
                         </div>
                         <div className="text-right shrink-0">
-                            <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Date</p>
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Date</p>
                             <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight">{new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
                         </div>
                     </div>
@@ -183,8 +183,8 @@ export default function OrderDetailScreen() {
                                         <Activity size={16} strokeWidth={2.5} className="text-emerald-400" />
                                     </div>
                                     <div>
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Live Tracking</p>
-                                        <h4 className="text-[11px] font-black uppercase tracking-tight">Track Live Harvest</h4>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Live Tracking</p>
+                                        <h4 className="text-[11px] font-black uppercase tracking-tight">Track Order</h4>
                                     </div>
                                 </div>
                                 <ArrowRight size={14} strokeWidth={3} className="text-slate-500 mr-1" />
@@ -196,14 +196,14 @@ export default function OrderDetailScreen() {
                                 <div className="flex flex-col gap-1.5">
                                     <div className="flex items-center gap-1.5 text-orange-500">
                                         <MapPin size={10} strokeWidth={3} />
-                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Deliver To</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest leading-none">Deliver To</span>
                                     </div>
                                     <p className="text-[10px] font-bold text-slate-700 truncate leading-none">{order.shippingAddress?.split(',')[0] || 'Saved Location'}</p>
                                 </div>
                                 <div className="flex flex-col gap-1.5 pl-4">
                                     <div className="flex items-center gap-1.5 text-blue-500">
                                         <CreditCard size={10} strokeWidth={3} />
-                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Payment</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest leading-none">Payment</span>
                                     </div>
                                     <span className="text-[10px] font-black text-slate-700 uppercase leading-none truncate">{order.paymentMethod}</span>
                                 </div>
@@ -212,14 +212,14 @@ export default function OrderDetailScreen() {
                                 <div className="flex flex-col gap-1.5">
                                     <div className="flex items-center gap-1.5 text-emerald-500">
                                         <Clock size={10} strokeWidth={3} />
-                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Delivery Slot</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest leading-none">Delivery Slot</span>
                                     </div>
                                     <p className="text-[10px] font-black text-slate-700 leading-none">{order.deliveryShift}</p>
                                 </div>
                                 <div className="flex flex-col gap-1.5 pl-4">
                                     <div className="flex items-center gap-1.5 text-purple-500">
                                         <Activity size={10} strokeWidth={3} />
-                                        <span className="text-[8px] font-black uppercase tracking-widest leading-none">Target Date</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest leading-none">Delivery Date</span>
                                     </div>
                                     <p className="text-[10px] font-black text-slate-700 leading-none">
                                         {order.scheduledDate 
@@ -235,7 +235,7 @@ export default function OrderDetailScreen() {
                     {/* Order Manifest (Items) */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between px-1">
-                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Basket Manifest ({order.items?.length})</h3>
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Items ({order.items?.length})</h3>
                         </div>
                         <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden divide-y divide-slate-50">
                             {order.items?.map((item, idx) => (
@@ -249,7 +249,7 @@ export default function OrderDetailScreen() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight truncate">{item.name}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
                                             {item.quantity} {item.unit} <span className="mx-1 opacity-20">×</span> ₹{item.price}
                                         </p>
                                     </div>
@@ -264,16 +264,16 @@ export default function OrderDetailScreen() {
                     {/* Monetary Breakdown */}
                     <div className="bg-slate-900 rounded-[28px] p-5 text-white relative overflow-hidden">
                         <div className="space-y-3 relative z-10">
-                            <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2.5">
+                            <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2.5">
                                 <span>Subtotal</span>
                                 <span className="text-white">₹{(order.subtotal || 0).toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                                <span>Platform & Tax</span>
+                            <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                <span>Taxes & Charges</span>
                                 <span className="text-white">₹{(order.tax || 0).toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between text-[8px] font-black text-slate-500 uppercase tracking-widest">
-                                <span>Fixed Logistics Fee</span>
+                            <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                <span>Delivery Fee</span>
                                 <span className={cn(order.deliveryFee === 0 ? "text-emerald-400" : "text-white")}>
                                     {order.deliveryFee === 0 ? "FREE" : `₹${order.deliveryFee}`}
                                 </span>
@@ -281,7 +281,7 @@ export default function OrderDetailScreen() {
 
                             <div className="pt-5 mt-2 border-t border-dashed border-white/10 flex items-end justify-between">
                                 <div className="flex flex-col">
-                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Grant Total</p>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Grand Total</p>
                                     <p className="text-2xl font-black text-white tracking-tighter italic">₹{(order.totalAmount || 0).toLocaleString()}</p>
                                 </div>
                                 <ShieldCheck size={24} className="text-white/10" />
@@ -294,9 +294,9 @@ export default function OrderDetailScreen() {
                 <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 z-[100] flex gap-2">
                     <Button
                         onClick={handleReorder}
-                        className="flex-1 h-12 rounded-xl bg-slate-900 text-white font-black text-[9px] uppercase tracking-[0.25em] active:scale-95 transition-all group"
+                        className="flex-1 h-12 rounded-xl bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.25em] active:scale-95 transition-all group"
                     >
-                        <RotateCcw size={14} className="mr-2" /> Reorder Basket
+                        <RotateCcw size={14} className="mr-2" /> Order Again
                     </Button>
                     <button
                         onClick={() => navigate('/help-support')}

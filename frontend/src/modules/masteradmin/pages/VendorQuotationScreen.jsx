@@ -123,8 +123,8 @@ export default function VendorQuotationScreen() {
                         <HandHelping size={20} />
                     </div>
                     <div className="flex flex-col">
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Vendor Receiving Audit</h1>
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Audit & Adjust Procurement Quotations</p>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">Vendor Quotations</h1>
+                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Review, edit and approve vendor quotations</p>
                     </div>
                 </div>
             </header>
@@ -132,7 +132,7 @@ export default function VendorQuotationScreen() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Quotation List */}
                 <div className="lg:col-span-1 space-y-4">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Quoted Proposals</h3>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Quotations</h3>
                     <div className="space-y-3">
                         {quotations.length > 0 ? quotations.map((req) => (
                             <motion.button
@@ -148,12 +148,12 @@ export default function VendorQuotationScreen() {
                             >
                                 <div className="flex items-center justify-between mb-3">
                                     <span className={cn(
-                                        "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm",
+                                        "text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm",
                                         req.status === 'approved' ? "bg-emerald-500 text-white" : "bg-blue-500 text-white"
                                     )}>
                                         {req.status}
                                     </span>
-                                    <span className="text-[9px] font-bold opacity-60 tabular-nums">
+                                    <span className="text-[10px] font-bold opacity-60 tabular-nums">
                                         {new Date(req.createdAt || req.date).toLocaleDateString()}
                                     </span>
                                 </div>
@@ -187,16 +187,16 @@ export default function VendorQuotationScreen() {
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
-                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Proposal Audit</h3>
-                                            <span className="px-1.5 py-0.5 bg-slate-900 text-white text-[8px] font-black rounded-sm uppercase tracking-tighter">Admin Mode</span>
+                                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Review Quotation</h3>
+                                            <span className="px-1.5 py-0.5 bg-slate-900 text-white text-[10px] font-black rounded-sm uppercase tracking-tighter">Editable</span>
                                         </div>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">REQ #{(selectedRequest._id || selectedRequest.id).slice(-6)}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">REQ #{(selectedRequest._id || selectedRequest.id).slice(-6)}</p>
                                     </div>
                                 </div>
                                 {selectedRequest.status === 'approved' && (
                                     <div className="flex items-center gap-2 text-emerald-600 px-3 py-1 bg-emerald-50 rounded-sm border border-emerald-100">
                                         <CheckCircle2 size={14} />
-                                        <span className="text-[9px] font-black uppercase tracking-widest">Authorized</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Approved</span>
                                     </div>
                                 )}
                             </div>
@@ -205,7 +205,7 @@ export default function VendorQuotationScreen() {
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead>
-                                            <tr className="border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                            <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
                                                 <th className="text-left pb-4">Product</th>
                                                 <th className="text-center pb-4">Quantity</th>
                                                 <th className="text-right pb-4">Rate (INR)</th>
@@ -236,7 +236,7 @@ export default function VendorQuotationScreen() {
                                                                     onChange={(e) => handleItemEdit(idx, 'quantity', e.target.value)}
                                                                     className="w-16 h-8 bg-slate-50 border border-slate-200 rounded text-center text-[10px] font-black focus:outline-none focus:border-slate-900 transition-all"
                                                                 />
-                                                                <span className="text-[8px] font-black text-slate-400 uppercase">{item.unit}</span>
+                                                                <span className="text-[10px] font-black text-slate-400 uppercase">{item.unit}</span>
                                                             </div>
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{item.quantity} {item.unit}</span>
@@ -245,7 +245,7 @@ export default function VendorQuotationScreen() {
                                                     <td className="py-4 text-right">
                                                         {selectedRequest.status === 'quoted' ? (
                                                             <div className="flex items-center justify-end gap-1">
-                                                                <span className="text-[9px] font-black text-slate-400 tracking-tighter">₹</span>
+                                                                <span className="text-[10px] font-black text-slate-400 tracking-tighter">₹</span>
                                                                 <input
                                                                     type="number"
                                                                     value={item.quotedPrice}
@@ -270,16 +270,16 @@ export default function VendorQuotationScreen() {
                                     <div className="p-4 bg-orange-50 border border-orange-100 rounded-xl space-y-2">
                                         <div className="flex items-center gap-2 text-orange-900 mb-1">
                                             <Info size={14} />
-                                            <h5 className="text-[9px] font-black uppercase tracking-widest">Audit Notice</h5>
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest">Note</h5>
                                         </div>
-                                        <p className="text-[9px] text-orange-800/70 font-bold uppercase leading-relaxed tracking-wider">
-                                            You are in Audit Mode. Any changes to quantities or rates will override the vendor's proposal and serve as the final authorized procurement value.
+                                        <p className="text-[10px] text-orange-800/70 font-bold uppercase leading-relaxed tracking-wider">
+                                            You can change quantities or prices here. Your changes replace the vendor’s quote and become the final approved amount.
                                         </p>
                                     </div>
 
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-baseline mb-4">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Authorized Aggregate</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Approved Total</span>
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-3xl font-black text-slate-900 tabular-nums tracking-tighter">₹{currentTotal.toLocaleString()}</span>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">INR</span>
@@ -298,7 +298,7 @@ export default function VendorQuotationScreen() {
                                                     onClick={() => handleApprove(selectedRequest._id || selectedRequest.id)}
                                                     className="flex-[2] h-12 bg-slate-900 text-white rounded-sm font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                                                 >
-                                                    <CheckCircle2 size={16} /> Approve & Authorize
+                                                    <CheckCircle2 size={16} /> Approve
                                                 </button>
                                             </div>
                                         )}
@@ -311,9 +311,9 @@ export default function VendorQuotationScreen() {
                             <div className="w-20 h-20 bg-white shadow-xl rounded-full flex items-center justify-center text-slate-200 mb-6">
                                 <ArrowUpRight size={32} strokeWidth={1} />
                             </div>
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Choose a proposal to audit</h3>
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em]">Choose a quotation to review</h3>
                             <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-2 max-w-[200px] leading-relaxed">
-                                Quotations can be audited and adjusted by the Master Admin before final supply authorization.
+                                You can check and edit a quotation before approving it.
                             </p>
                         </div>
                     )}

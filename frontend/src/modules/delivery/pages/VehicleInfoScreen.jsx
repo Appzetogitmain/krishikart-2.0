@@ -48,7 +48,7 @@ export default function VehicleInfoScreen() {
                     <div className="w-20 h-20 bg-primary/20 rounded-2xl flex items-center justify-center mb-4">
                         <Truck className="w-10 h-10 text-primary" />
                     </div>
-                    <p className="text-sm font-bold text-primary uppercase tracking-wider">Verified Asset</p>
+                    <p className="text-sm font-bold text-primary uppercase tracking-wider">Verified Vehicle</p>
                 </div>
 
                 <div className="space-y-4">
@@ -73,7 +73,7 @@ export default function VehicleInfoScreen() {
                             value={formData.vehicleNumber}
                             onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
                             pattern="^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$"
-                            title="Invalid Vehicle Number (must be 4 alphabets and 6 numbers e.g., MP09AB1234)"
+                            title="Please enter a valid vehicle number, e.g. MP09AB1234"
                             maxLength={10}
                             className="w-full p-4 rounded-2xl border border-border bg-muted/20 focus:outline-none focus:ring-2 focus:ring-primary/20 font-bold uppercase"
                             placeholder="e.g. MP09AB1234"

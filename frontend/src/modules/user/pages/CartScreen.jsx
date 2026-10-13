@@ -205,7 +205,7 @@ export default function CartScreen() {
                               {product.name}
                             </h4>
                             <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
-                              ₹{product.price} <span className="text-[8px]">/ {product.unit}</span>
+                              ₹{product.price} <span className="text-[10px]">/ {product.unit}</span>
                             </p>
                           </div>
                           <Button
@@ -277,7 +277,7 @@ export default function CartScreen() {
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-100/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] max-w-md mx-auto md:hidden">
           <div className="flex items-center gap-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] px-5">
             <div className="shrink-0 flex flex-col">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Payable</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Payable</span>
               <span className="text-[22px] font-black text-slate-900 leading-none tracking-tighter">₹{total}</span>
             </div>
 

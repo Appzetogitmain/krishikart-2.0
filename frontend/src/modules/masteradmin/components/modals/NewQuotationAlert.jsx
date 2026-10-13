@@ -52,7 +52,7 @@ export default function NewQuotationAlert() {
                                 <HandHelping size={32} strokeWidth={2.5} />
                             </div>
                             <div className="flex-1 space-y-1">
-                                <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none uppercase">Proposal Audit Required</h3>
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none uppercase">Please review the quotation</h3>
                                 <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Received from Vendor</p>
                                 
                                 <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 border-dashed space-y-3">
@@ -85,7 +85,7 @@ export default function NewQuotationAlert() {
                                 onClick={handleViewDetails}
                                 className="flex-[2] h-12 bg-slate-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-slate-200 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                             >
-                                Audit Proposal <ChevronRight size={16} />
+                                Review Quotation <ChevronRight size={16} />
                             </button>
                         </div>
                     </div>

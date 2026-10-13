@@ -8,12 +8,12 @@ import { useOrders } from '@/modules/user/contexts/OrderContext'
 import { joinOrderRoom } from '@/lib/socket'
 
 const stepMappings = [
-    { label: 'Placed', matchStatuses: ['placed', 'pending'], icon: ShoppingBag, desc: 'Order registered successfully.' },
-    { label: 'Accepted', matchStatuses: ['assigned', 'accepted', 'procuring'], icon: ClipboardList, desc: 'Aggregating stock from vendor network.' },
-    { label: 'Packed', matchStatuses: ['packed', 'ready'], icon: Zap, desc: 'Verification & sealing in progress.' },
-    { label: 'Dispatched', matchStatuses: ['dispatched', 'out for delivery'], icon: Truck, desc: 'Enroute to your location.' },
+    { label: 'Placed', matchStatuses: ['placed', 'pending'], icon: ShoppingBag, desc: 'We have received your order.' },
+    { label: 'Accepted', matchStatuses: ['assigned', 'accepted', 'procuring'], icon: ClipboardList, desc: 'The store has accepted your order.' },
+    { label: 'Packed', matchStatuses: ['packed', 'ready'], icon: Zap, desc: 'Your order has been packed.' },
+    { label: 'Dispatched', matchStatuses: ['dispatched', 'out for delivery'], icon: Truck, desc: 'Your order is on the way.' },
     { label: 'Delivered', matchStatuses: ['delivered'], icon: Package, desc: 'Delivered at your address.' },
-    { label: 'Received', matchStatuses: ['received'], icon: CheckCircle2, desc: 'End-to-end cycle complete.' }
+    { label: 'Received', matchStatuses: ['received'], icon: CheckCircle2, desc: 'Order complete. Thank you!' }
 ]
 
 export default function OrderTrackingScreen() {
@@ -103,7 +103,7 @@ export default function OrderTrackingScreen() {
                 <div className="bg-[#f8fafc] min-h-screen flex items-center justify-center p-6">
                     <div className="text-center">
                         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                        <h2 className="text-lg font-black text-slate-900">Syncing Order</h2>
+                        <h2 className="text-lg font-black text-slate-900">Loading Order</h2>
                         <p className="text-sm text-slate-400 mt-2">Fetching the latest order status...</p>
                     </div>
                 </div>
@@ -124,7 +124,7 @@ export default function OrderTrackingScreen() {
                         </button>
                         <div className="flex flex-col">
                             <h1 className="text-base font-black text-slate-900 tracking-tight leading-none mb-1">Track Order</h1>
-                            <p className="text-[8px] font-black text-emerald-600 uppercase tracking-[0.2em] leading-none">Manifest: #{order._id.slice(-8).toUpperCase()}</p>
+                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] leading-none">Order #{order._id.slice(-8).toUpperCase()}</p>
                         </div>
                     </div>
 
@@ -135,7 +135,7 @@ export default function OrderTrackingScreen() {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                             </span>
-                            <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Live</span>
+                            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Live</span>
                         </div>
                     )}
                 </div>
@@ -152,10 +152,10 @@ export default function OrderTrackingScreen() {
                                 <Truck size={28} strokeWidth={2.5} />
                             </motion.div>
                             <h2 className="text-xl font-black text-white leading-tight uppercase tracking-tight italic">
-                                {order.orderStatus?.replace(/_/g, ' ') || 'Syncing...'}
+                                {order.orderStatus?.replace(/_/g, ' ') || 'Updating...'}
                             </h2>
-                            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-[0.25em] mt-2">
-                                {isTerminal ? 'Order Completed' : 'Tracking Active · Updates Every 30s'}
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.25em] mt-2">
+                                {isTerminal ? 'Order Completed' : 'Live tracking · updates every 30 seconds'}
                             </p>
                         </div>
                         {/* Background blur elements */}
@@ -200,9 +200,9 @@ export default function OrderTrackingScreen() {
                                             <div className="flex justify-between items-center gap-2 mb-1">
                                                 <h3 className={`text-[11px] font-black uppercase tracking-tight ${!isCompleted && !isCurrent ? 'text-slate-300' : 'text-slate-900'}`}>
                                                     {step.label}
-                                                    {isCurrent && <span className="ml-1.5 text-[8px] font-black text-orange-500 uppercase tracking-wider">Current</span>}
+                                                    {isCurrent && <span className="ml-1.5 text-[10px] font-black text-orange-500 uppercase tracking-wider">Current</span>}
                                                 </h3>
-                                                <span className="text-[8px] font-black text-slate-400 tabular-nums">{time}</span>
+                                                <span className="text-[10px] font-black text-slate-400 tabular-nums">{time}</span>
                                             </div>
                                             <p className={`text-[10px] leading-relaxed ${!isCompleted && !isCurrent ? 'text-slate-200' : 'text-slate-500'} font-medium`}>
                                                 {step.desc}
@@ -223,8 +223,8 @@ export default function OrderTrackingScreen() {
                                         <ShieldCheck size={20} strokeWidth={3} />
                                     </div>
                                     <div className="min-w-0">
-                                        <h4 className="text-[14px] font-black text-emerald-900 tracking-tight leading-none mb-1.5 uppercase">Final Verification</h4>
-                                        <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest leading-none">Confirm receipt of your order</p>
+                                        <h4 className="text-[14px] font-black text-emerald-900 tracking-tight leading-none mb-1.5 uppercase">Confirm Delivery</h4>
+                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">Confirm receipt of your order</p>
                                     </div>
                                 </div>
 

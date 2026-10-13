@@ -47,7 +47,7 @@ export default function CreditOverdueModal({ isOpen, usedCredit, dueDate }) {
                             <p className="text-slate-600 text-sm leading-relaxed font-medium">
                                 Your **KK Credit** balance of <span className="text-red-600 font-black">₹{usedCredit.toLocaleString()}</span> is overdue.
                                 <br /><br />
-                                As per policy, further shopping is strictly restricted until the balance is cleared.
+                                Please clear this amount to continue shopping.
                             </p>
 
                             <div className="flex flex-col gap-2 pt-2">
@@ -80,15 +80,15 @@ export default function CreditOverdueModal({ isOpen, usedCredit, dueDate }) {
                                 )}
                             </Button>
 
-                            <p className="text-[9px] text-slate-400 text-center uppercase font-black tracking-widest italic leading-relaxed">
-                                This alert cannot be dismissed until payment is confirmed by the system.
+                            <p className="text-[10px] text-slate-400 text-center uppercase font-black tracking-widest italic leading-relaxed">
+                                This message will close once your payment is received.
                             </p>
                         </div>
 
                         <div className="pt-4 border-t border-slate-50 flex items-center justify-center gap-6">
                             <div className="flex flex-col items-center gap-1 opacity-50">
                                 <PhoneCall size={14} className="text-slate-400" />
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Support</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Support</span>
                             </div>
                         </div>
                     </div>

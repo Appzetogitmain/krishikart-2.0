@@ -86,7 +86,7 @@ const ReceivingScreen = () => {
             setOrders(inbound);
         } catch (error) {
             console.error("Fetch failed", error);
-            toast.error("Failed to load inbound logistics");
+            toast.error("Could not load incoming stock");
         } finally {
             setIsLoading(false);
         }
@@ -149,7 +149,7 @@ const ReceivingScreen = () => {
             });
 
             if (response.data.success) {
-                toast.success("Consignment received and stock updated");
+                toast.success("Stock received and added to your inventory");
 
                 // Refresh live inventory and orders from server
                 refreshInventory();
@@ -162,7 +162,7 @@ const ReceivingScreen = () => {
             }
         } catch (error) {
             console.error("Reception failed", error);
-            toast.error(error.response?.data?.message || "Reception synchronization failed");
+            toast.error(error.response?.data?.message || "Could not save. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -181,7 +181,7 @@ const ReceivingScreen = () => {
             render: (_, row) => (
                 <div className="flex flex-col">
                     <span className="font-black text-slate-900 uppercase text-[10px] tracking-tight">{row.invoice?.invoiceNumber || row._id.slice(-8)}</span>
-                    <span className="text-[8px] font-bold text-slate-400">ID: {row._id}</span>
+                    <span className="text-[10px] font-bold text-slate-400">ID: {row._id}</span>
                 </div>
             )
         },
@@ -199,7 +199,7 @@ const ReceivingScreen = () => {
         },
         {
             key: 'items',
-            label: 'MANIFEST',
+            label: 'ITEMS',
             render: (_, row) => (
                 <span className="text-[10px] font-black text-slate-900 tabular-nums">
                     {row.items?.filter(item => (item.dispatchedQuantity ?? item.quantity) > 0).length || 0} SKUs
@@ -208,7 +208,7 @@ const ReceivingScreen = () => {
         },
         {
             key: 'status',
-            label: 'LOGISTICS STATUS',
+            label: 'STATUS',
             render: (status) => (
                 <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -226,7 +226,7 @@ const ReceivingScreen = () => {
                         onClick={() => handleSelectPO(row)}
                         className="p-1 px-4 bg-slate-900 text-white rounded-sm text-[10px] font-black hover:bg-slate-800 transition-all uppercase tracking-widest"
                     >
-                        Audit & Receive
+                        Check & Receive
                     </button>
                 </div>
             )
@@ -237,7 +237,7 @@ const ReceivingScreen = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                 <Loader2 className="animate-spin text-primary" size={40} />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Scanning Logistical Inbound...</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading...</p>
             </div>
         );
     }
@@ -251,12 +251,12 @@ const ReceivingScreen = () => {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
                             <Home size={12} />
                             <ChevronRight size={10} />
-                            <span>Inbound Logistics</span>
+                            <span>Incoming Stock</span>
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">Vendor Receiving</span>
                         </div>
                         <h1 className="text-sm font-bold text-slate-900">
-                            {selectedPO ? `Audit PO: ${selectedPO.invoice?.invoiceNumber || selectedPO._id}` : 'Inbound GRN Registry'}
+                            {selectedPO ? `Checking delivery: ${selectedPO.invoice?.invoiceNumber || selectedPO._id}` : 'Stock arriving from vendors'}
                         </h1>
                     </div>
                 </div>
@@ -270,7 +270,7 @@ const ReceivingScreen = () => {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={14} />
                                 <input
                                     type="text"
-                                    placeholder="Search PO Profile..."
+                                    placeholder="Search by request ID or vendor..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value.trim())}
                                     className="bg-white border border-slate-200 rounded-sm py-1.5 pl-9 pr-4 outline-none text-[11px] font-black text-slate-900 placeholder:text-slate-400 focus:border-slate-400 transition-all font-sans min-w-[240px]"
@@ -311,14 +311,14 @@ const ReceivingScreen = () => {
                                         <ChevronLeft size={20} />
                                     </button>
                                     <div>
-                                        <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Audit Session: {selectedPO.invoice?.invoiceNumber || selectedPO._id}</h2>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{selectedPO.vendor || selectedPO.vendorName || selectedPO.assignedVendorName || selectedPO.assignedVendorId || 'Kisaankart Franchise'}</p>
+                                        <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Checking: {selectedPO.invoice?.invoiceNumber || selectedPO._id}</h2>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{selectedPO.vendor || selectedPO.vendorName || selectedPO.assignedVendorName || selectedPO.assignedVendorId || 'Kisaankart Franchise'}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <div className="hidden sm:flex flex-col items-end mr-4">
                                         <span className="text-[11px] font-black text-slate-900 tabular-nums leading-none">{selectedPO.items.length}</span>
-                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total SKUs</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Products</span>
                                     </div>
                                     <button
                                         onClick={() => setSelectedPO(null)}
@@ -334,9 +334,9 @@ const ReceivingScreen = () => {
                                 <div className="flex-1 overflow-y-auto no-scrollbar border-r border-slate-200 bg-slate-50/30 p-4 md:p-8">
                                     <div className="max-w-4xl mx-auto space-y-6">
                                         <div className="flex items-center justify-between px-2">
-                                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Itemized Audit Matrix</h3>
+                                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Check each item</h3>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[9px] font-black text-rose-500 uppercase px-2 py-0.5 bg-rose-50 rounded-full border border-rose-100">Reporting Losses Allowed</span>
+                                                <span className="text-[10px] font-black text-rose-500 uppercase px-2 py-0.5 bg-rose-50 rounded-full border border-rose-100">Report damaged or missing items</span>
                                             </div>
                                         </div>
 
@@ -362,11 +362,11 @@ const ReceivingScreen = () => {
                                                                 <h4 className="text-xs font-black text-slate-900 uppercase truncate leading-none mb-1.5">{item.name}</h4>
                                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                                                     <div className="flex items-center gap-1.5">
-                                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order:</span>
+                                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order:</span>
                                                                         <span className="text-[10px] font-black text-slate-500 tabular-nums">{item.quantity} {item.unit}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-900 text-white rounded-[4px]">
-                                                                        <span className="text-[8px] font-black uppercase tracking-widest whitespace-nowrap">Vendor Sent:</span>
+                                                                        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Vendor Sent:</span>
                                                                         <span className="text-[10px] font-black tabular-nums">{item.dispatchedQuantity || item.quantity} {item.unit}</span>
                                                                     </div>
                                                                     <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-sm">₹{item.quotedPrice || 0}/{item.unit}</span>
@@ -377,7 +377,7 @@ const ReceivingScreen = () => {
                                                         <div className="flex items-center gap-4 sm:gap-8 grow justify-between sm:justify-end">
                                                             {/* Reject Button */}
                                                             <div className="flex flex-col gap-1.5">
-                                                                <label className={`text-[8px] font-black uppercase tracking-[0.2em] px-1 text-center ${rejectedItems.has(itemId) ? 'text-rose-500' : 'text-slate-400'}`}>
+                                                                <label className={`text-[10px] font-black uppercase tracking-[0.2em] px-1 text-center ${rejectedItems.has(itemId) ? 'text-rose-500' : 'text-slate-400'}`}>
                                                                     {rejectedItems.has(itemId) ? 'Rejected' : 'Reject Item'}
                                                                 </label>
                                                                 <button
@@ -395,7 +395,7 @@ const ReceivingScreen = () => {
 
                                                             {/* Received Control - Disabled if rejected */}
                                                             <div className="flex flex-col gap-1.5">
-                                                                <label className={`text-[8px] font-black uppercase tracking-[0.2em] px-1 ${rejectedItems.has(itemId) ? 'text-slate-300' : 'text-slate-400'}`}>Received</label>
+                                                                <label className={`text-[10px] font-black uppercase tracking-[0.2em] px-1 ${rejectedItems.has(itemId) ? 'text-slate-300' : 'text-slate-400'}`}>Received</label>
                                                                 <div className={`flex items-center border rounded-lg p-1 w-32 ${rejectedItems.has(itemId) ? 'bg-slate-50 border-slate-100' : 'bg-slate-50 border-slate-200'}`}>
                                                                     <input
                                                                         type="number"
@@ -409,7 +409,7 @@ const ReceivingScreen = () => {
 
                                                             {/* Damage Control - Disabled if rejected */}
                                                             <div className="flex flex-col gap-1.5">
-                                                                <label className={`text-[8px] font-black uppercase tracking-[0.2em] px-1 text-right ${rejectedItems.has(itemId) ? 'text-slate-300' : 'text-rose-400'}`}>Damaged/Spoilt</label>
+                                                                <label className={`text-[10px] font-black uppercase tracking-[0.2em] px-1 text-right ${rejectedItems.has(itemId) ? 'text-slate-300' : 'text-rose-400'}`}>Damaged/Spoilt</label>
                                                                 <div className={`flex items-center border rounded-lg p-1 w-24 ${rejectedItems.has(itemId) ? 'bg-slate-50 border-slate-100' : 'bg-rose-50 border-rose-100'}`}>
                                                                     <input
                                                                         type="number"
@@ -438,23 +438,23 @@ const ReceivingScreen = () => {
                                                 <ClipboardCheck size={20} />
                                             </div>
                                             <div>
-                                                <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Verification Terminal</h3>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Audit result commitment required</p>
+                                                <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Summary</h3>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Review and confirm</p>
                                             </div>
                                         </div>
 
                                         <div className="space-y-4">
                                             <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">Quality Summary</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Quality Summary</p>
                                                 <div className="space-y-3">
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Received SKUs</span>
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Items Received</span>
                                                         <span className="text-xs font-black text-slate-900 tabular-nums">
                                                             {Object.values(receivingData).reduce((acc, d) => acc + (d.received || 0), 0)} Units
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between items-center text-rose-600">
-                                                        <span className="text-[10px] font-bold uppercase">Reported Losses</span>
+                                                        <span className="text-[10px] font-bold uppercase">Damaged/Missing</span>
                                                         <span className="text-xs font-black tabular-nums">
                                                             {Object.values(receivingData).reduce((acc, d) => acc + (d.damage || 0), 0)} Units
                                                         </span>
@@ -463,7 +463,7 @@ const ReceivingScreen = () => {
                                                         <div className="flex justify-between items-center bg-rose-50 p-2 rounded-lg border border-rose-100">
                                                             <span className="text-[10px] font-bold text-rose-600 uppercase">Rejected Items</span>
                                                             <span className="text-xs font-black text-rose-600 tabular-nums">
-                                                                {rejectedItems.size} SKU(s)
+                                                                {rejectedItems.size} item(s)
                                                             </span>
                                                         </div>
                                                     )}
@@ -471,11 +471,11 @@ const ReceivingScreen = () => {
                                             </div>
 
                                             <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-2xl">
-                                                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                    <ShieldCheck size={12} /> Digital Audit Log Ready
+                                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                    <ShieldCheck size={12} /> Ready to confirm
                                                 </p>
                                                 <p className="text-[10px] font-bold text-emerald-800/70 leading-relaxed uppercase tracking-widest italic">
-                                                    By committing, you verify that the inbound logistics match the reported quantities. Admin will finalize vendor payments based on this data.
+                                                    By confirming, you agree that the quantities above are what you received. The admin pays the vendor based on these numbers.
                                                 </p>
                                             </div>
                                         </div>
@@ -491,7 +491,7 @@ const ReceivingScreen = () => {
                                                 <Loader2 className="animate-spin" />
                                             ) : (
                                                 <>
-                                                    <span>Commit Audit Registry</span>
+                                                    <span>Confirm & Add to Stock</span>
                                                     <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                                 </>
                                             )}
@@ -500,7 +500,7 @@ const ReceivingScreen = () => {
                                             onClick={() => setSelectedPO(null)}
                                             className="w-full py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-colors"
                                         >
-                                            Abandon Session
+                                            Cancel
                                         </button>
                                     </div>
 
@@ -530,7 +530,7 @@ const ReceivingScreen = () => {
                             quotedPrice: i.quotedPrice
                         })),
                     vendor: selectedPO.vendor || selectedPO.vendorName || selectedPO.assignedVendorName || selectedPO.assignedVendorId || 'Kisaankart Franchise',
-                    franchise: 'My Franchise Node', // Ideally from context
+                    franchise: 'My Franchise', // Ideally from context
                     handlingFee: 40
                 } : null}
             />
