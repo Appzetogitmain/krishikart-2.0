@@ -1,5 +1,5 @@
 import POSSale from "../models/posSale.js";
-import Inventory from "../models/inventory.js";
+import { takeStock, addStock } from "../utils/stock.js";
 import handleResponse from "../utils/helper.js";
 
 /**
@@ -9,32 +9,41 @@ import handleResponse from "../utils/helper.js";
  */
 export const createPOSSale = async (req, res) => {
     try {
-        const { items, totalAmount, paymentMethod } = req.body;
+        const { items, paymentMethod } = req.body;
         const franchiseId = req.franchise._id;
 
-        if (!items || items.length === 0) {
+        if (!Array.isArray(items) || items.length === 0) {
             return handleResponse(res, 400, "Cart is empty");
         }
-
-        // 1. Get or Create Inventory
-        let inventory = await Inventory.findOne({ franchiseId });
-        if (!inventory) {
-            inventory = new Inventory({ franchiseId, items: [] });
-            await inventory.save();
+        if (!["Cash", "QR Scan"].includes(paymentMethod)) {
+            return handleResponse(res, 400, "Please choose Cash or QR Scan as the payment method");
         }
-
-        // 2. Validate inventory and stock
         for (const item of items) {
-            let inventoryItem = inventory.items.find(i => i.productId.toString() === item.productId.toString());
-
-            if (!inventoryItem) {
-                return handleResponse(res, 400, `Item ${item.name} not found in inventory`);
-            }
-
-            if (inventoryItem.currentStock < item.quantity) {
-                return handleResponse(res, 400, `Insufficient stock for ${item.name}`);
+            const q = Number(item.quantity);
+            const p = Number(item.price);
+            if (!item.productId || !Number.isFinite(q) || q <= 0 || !Number.isFinite(p) || p < 0) {
+                return handleResponse(res, 400, `Invalid quantity or price for ${item.name || "an item"}`);
             }
         }
+
+        // 1. Take the stock atomically, item by item; undo everything if one item is short
+        const taken = [];
+        for (const item of items) {
+            const ok = await takeStock(franchiseId, item.productId, Number(item.quantity));
+            if (!ok) {
+                for (const t of taken) await addStock(franchiseId, t.productId, t.quantity);
+                return handleResponse(res, 400, `Not enough stock for ${item.name || "an item"}`);
+            }
+            taken.push({ productId: item.productId, quantity: Number(item.quantity) });
+        }
+
+        // Totals are worked out on the server from price x quantity (not trusted from the browser)
+        const saleItems = items.map(item => {
+            const quantity = Number(item.quantity);
+            const price = Number(item.price);
+            return { productId: item.productId, name: item.name, unit: item.unit, quantity, price, subtotal: Math.round(quantity * price * 100) / 100 };
+        });
+        const totalAmount = Math.round(saleItems.reduce((s, i) => s + i.subtotal, 0) * 100) / 100;
 
         // 3. Generate Unique Sale ID
         let saleId;
@@ -48,33 +57,24 @@ export const createPOSSale = async (req, res) => {
         // 4. Create POS Sale record
         const newSale = new POSSale({
             franchiseId,
-            items: items.map(item => ({
-                ...item,
-                productId: item.productId // Ensure it's correctly mapped
-            })),
+            items: saleItems,
             totalAmount,
             paymentMethod,
             saleId
         });
 
-        console.log("Saving new sale:", saleId);
-        await newSale.save();
-
-        // 5. Deduct Stock (Inventory already saved/updated above for existence)
-        // Need to re-fetch or use the one from step 2
-        for (const item of items) {
-            const inventoryItem = inventory.items.find(i => i.productId.toString() === item.productId.toString());
-            if (inventoryItem) {
-                inventoryItem.currentStock = Math.max(0, inventoryItem.currentStock - item.quantity);
-                inventoryItem.lastUpdated = new Date();
-            }
+        try {
+            await newSale.save();
+        } catch (saveErr) {
+            // Sale not recorded: give the stock back
+            for (const t of taken) await addStock(franchiseId, t.productId, t.quantity);
+            throw saveErr;
         }
-        await inventory.save();
 
         return handleResponse(res, 201, "Sale recorded successfully", newSale);
     } catch (err) {
         console.error("POS Sale Error Details:", err);
-        return handleResponse(res, 500, err.message || "Internal server error");
+        return handleResponse(res, 500, "Internal server error");
     }
 };
 

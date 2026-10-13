@@ -2,15 +2,18 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState, useMemo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/layout/BottomNav'
+import FloatingCartBar from '../components/layout/FloatingCartBar'
 import DesktopNavbar from '../components/layout/DesktopNavbar'
 import Breadcrumbs from '../components/layout/Breadcrumbs'
 import DesktopFooter from '../components/layout/DesktopFooter'
 import { useUserAuth } from '../contexts/UserAuthContext'
+import { useCart } from '../contexts/CartContext'
 import CreditOverdueModal from '../components/modals/CreditOverdueModal'
 
 export default function AppLayout() {
     const location = useLocation()
     const { user } = useUserAuth()
+    const { cartItems } = useCart()
 
     const isCreditOverdue = useMemo(() => {
         if (!user || !user.usedCredit || user.usedCredit <= 0 || !user.creditOverdueDate) return false;
@@ -68,12 +71,16 @@ export default function AppLayout() {
                 </AnimatePresence>
             </main>
 
+            {/* Extra scroll room on mobile so the floating cart bar never covers the last row */}
+            {!hideBottomNav && cartItems.length > 0 && <div className="md:hidden h-16" aria-hidden="true" />}
+
             {/* Desktop Footer */}
             {!hideBottomNav && <DesktopFooter />}
 
             {/* Mobile Navigation - Restored to Global Fixed */}
             {!hideBottomNav && (
                 <div className="md:hidden">
+                    <FloatingCartBar />
                     <BottomNav />
                 </div>
             )}

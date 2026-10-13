@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { getReadableLocationError } from '@/lib/geo'
 import LocationActionPopup from '../common/LocationActionPopup'
 import api from '@/lib/axios'
+import HighlightText from '../common/HighlightText'
 
 const PLACEHOLDERS = [
     "Fresh Apples",
@@ -164,7 +165,7 @@ export default function StickySearchBar() {
                 >
                     <ShoppingCart size={16} className="w-[16px] h-[16px]" />
                     {cartCount > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] leading-none font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
+                        <span key={cartCount} className="kk-pop absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] leading-none font-black rounded-full flex items-center justify-center border-2 border-white shadow-sm">
                             {cartCount > 99 ? '99+' : cartCount}
                         </span>
                     )}
@@ -257,28 +258,33 @@ export default function StickySearchBar() {
 
                                 <div className="overflow-y-auto no-scrollbar py-2">
                                     {searchResults.length > 0 ? (
-                                        searchResults.map((product) => (
-                                            <div
+                                        searchResults.map((product, index) => (
+                                            <motion.div
                                                 key={product._id}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.22, delay: Math.min(index, 8) * 0.04 }}
                                                 onClick={() => {
                                                     navigate(`/product/${product._id}`)
                                                     setShowOverlay(false)
                                                     setSearchValue('')
                                                 }}
-                                                className="px-4 py-3 flex items-center gap-3 hover:bg-slate-50 active:bg-slate-100 transition-colors cursor-pointer border-b border-slate-50 last:border-0"
+                                                className="mx-2 px-2 py-2.5 flex items-center gap-3 rounded-xl hover:bg-emerald-50/60 active:bg-emerald-50 active:scale-[0.98] transition-all cursor-pointer"
                                             >
-                                                <div className="w-12 h-12 rounded-lg bg-slate-50 overflow-hidden shrink-0 border border-slate-100">
-                                                    <img src={product.primaryImage || product.image} className="w-full h-full object-cover" />
+                                                <div className="w-12 h-12 rounded-xl bg-slate-50 overflow-hidden shrink-0 border border-slate-100">
+                                                    <img src={product.primaryImage || product.image} alt="" loading="lazy" className="w-full h-full object-cover" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-slate-900 truncate">{product.name}</p>
-                                                    <p className="text-[10px] font-medium text-slate-400">₹{product.effectiveStorefrontPrice || product.price} • {product.unitValue} {product.unit}</p>
+                                                    <p className="text-sm font-bold text-slate-900 truncate"><HighlightText text={product.name} query={searchValue} /></p>
+                                                    <p className="text-[11px] font-medium text-slate-400">{product.unitValue} {product.unit}</p>
                                                 </div>
-                                            </div>
+                                                <span className="shrink-0 text-sm font-black text-emerald-700 tabular-nums">₹{product.effectiveStorefrontPrice || product.price}</span>
+                                            </motion.div>
                                         ))
                                     ) : !isSearching && (
-                                        <div className="py-8 text-center">
-                                            <p className="text-sm font-medium text-slate-400">No products found</p>
+                                        <div className="py-8 px-6 text-center">
+                                            <p className="text-sm font-bold text-slate-500">No products found</p>
+                                            <p className="text-xs text-slate-400 mt-1">Try a shorter word or check the spelling.</p>
                                         </div>
                                     )}
                                 </div>

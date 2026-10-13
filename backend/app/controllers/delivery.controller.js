@@ -317,9 +317,10 @@ export const saveFCMToken = async (req, res) => {
  * @access Private (Delivery)
  */
 export const testPushByToken = async (req, res) => {
+    // Declared outside try so the catch block can clean up an invalid token
+    const { fcm_token, fcmToken, plateform, platform } = req.body || {};
+    const targetToken = fcm_token || fcmToken;
     try {
-        const { fcm_token, fcmToken, plateform, platform } = req.body;
-        const targetToken = fcm_token || fcmToken;
         const targetPlatform = plateform || platform || 'device';
 
         if (!targetToken) return handleResponse(res, 400, "fcm_token is required");

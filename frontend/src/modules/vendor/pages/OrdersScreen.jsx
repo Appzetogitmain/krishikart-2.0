@@ -15,7 +15,6 @@ import {
     List as ListIcon,
     Calendar
 } from 'lucide-react';
-import mockOrders from '../data/mockVendorOrders.json';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/modules/user/contexts/OrderContext';

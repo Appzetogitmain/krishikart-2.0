@@ -17,7 +17,6 @@ import {
     Activity
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import mockOrders from '../data/mockVendorOrders.json';
 import { cn } from '@/lib/utils';
 import { useOrders } from '@/modules/user/contexts/OrderContext';
 import DocumentViewer from '../components/documents/DocumentViewer';

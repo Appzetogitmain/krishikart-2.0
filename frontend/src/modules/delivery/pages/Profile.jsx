@@ -38,6 +38,7 @@ const Profile = () => {
         { label: 'My Documents', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50', path: '/delivery/documents' },
         { label: 'Vehicle Information', icon: Truck, color: 'text-amber-500', bg: 'bg-amber-50', path: '/delivery/vehicle' },
         { label: 'COD Remittance', icon: Settings, color: 'text-emerald-500', bg: 'bg-emerald-50', path: '/delivery/cod-remittance' },
+        { label: 'My Reports', icon: FileText, color: 'text-indigo-500', bg: 'bg-indigo-50', path: '/delivery/reports' },
         { label: 'Help & Support', icon: HelpCircle, color: 'text-purple-500', bg: 'bg-purple-50', path: '/delivery/help' },
     ];
 
@@ -59,9 +60,6 @@ const Profile = () => {
 
                     <h1 className="text-xl font-bold text-white mb-1">{delivery?.fullName || 'Partner'}</h1>
                     <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
-                        <Star className="w-3 h-3 text-amber-300 fill-amber-300" />
-                        <span className="text-xs font-bold text-white">4.8 Rating</span>
-                        <span className="text-white/40 mx-1">•</span>
                         <span className="text-xs font-bold text-white">{delivery?.mobile}</span>
                     </div>
                 </div>
@@ -98,12 +96,14 @@ const Profile = () => {
                             <h3 className="text-xl font-bold mb-4">{delivery?.vehicleNumber || 'No Number'}</h3>
                             <div className="flex gap-4">
                                 <div className="flex-1 bg-white/10 px-4 py-2 rounded-xl border border-white/10 text-center">
-                                    <p className="text-[10px] text-white/60 font-medium">Efficiency</p>
-                                    <p className="font-bold">92%</p>
+                                    <p className="text-[10px] text-white/60 font-medium">Account</p>
+                                    <p className="font-bold">
+                                        {delivery?.isApproved ? 'Approved' : delivery?.approvalStatus === 'rejected' ? 'Not approved' : 'Pending approval'}
+                                    </p>
                                 </div>
                                 <div className="flex-1 bg-white/10 px-4 py-2 rounded-xl border border-white/10 text-center">
-                                    <p className="text-[10px] text-white/60 font-medium">Next Service</p>
-                                    <p className="font-bold">850 km</p>
+                                    <p className="text-[10px] text-white/60 font-medium">Status</p>
+                                    <p className="font-bold">{delivery?.isOnline ? 'Online' : 'Offline'}</p>
                                 </div>
                             </div>
                         </div>

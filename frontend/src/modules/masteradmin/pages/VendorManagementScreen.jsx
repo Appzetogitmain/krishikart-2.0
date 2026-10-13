@@ -202,36 +202,24 @@ export default function VendorManagementScreen() {
             {/* Performance KPIs */}
             <div className="bg-white border-b border-slate-200 grid grid-cols-1 md:grid-cols-4">
                 <MetricRow
-                    label="Total Partners"
+                    label="Total Vendors"
                     value={vendors?.length || 0}
-                    change={0}
-                    trend="up"
                     icon={ShieldCheck}
-                    sparklineData={[...Array(7)].map(() => ({ value: vendors?.length || 0 }))}
                 />
                 <MetricRow
-                    label="Performance"
-                    value="98.4%"
-                    change={0.2}
-                    trend="up"
+                    label="Active"
+                    value={(vendors || []).filter(v => v.status === 'active').length}
                     icon={BarChart3}
-                    sparklineData={[97.5, 98, 98.2, 98.1, 98.4, 98.3, 98.4].map(v => ({ value: v }))}
                 />
                 <MetricRow
-                    label="Average Rating"
-                    value="4.82"
-                    change={0.15}
-                    trend="up"
-                    icon={Shield}
-                    sparklineData={[4.7, 4.75, 4.8, 4.78, 4.82, 4.81, 4.82].map(v => ({ value: v }))}
-                />
-                <MetricRow
-                    label="Average Time"
-                    value="2.4h"
-                    change={-5.8}
-                    trend="up"
+                    label="Awaiting Approval"
+                    value={(vendors || []).filter(v => v.status === 'pending').length}
                     icon={Clock}
-                    sparklineData={[2.8, 2.7, 2.5, 2.6, 2.4, 2.5, 2.4].map(v => ({ value: v }))}
+                />
+                <MetricRow
+                    label="Blocked"
+                    value={(vendors || []).filter(v => v.status === 'blocked').length}
+                    icon={Shield}
                 />
             </div>
 

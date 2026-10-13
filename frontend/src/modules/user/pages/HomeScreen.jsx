@@ -259,7 +259,7 @@ export default function HomeScreen() {
                                         <button onClick={() => navigate('/products/all')} className="text-primary text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-tight bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-all active:scale-95">See All</button>
                                     </div>
                                     <div ref={flashDealsScrollRef} className="relative overflow-x-auto no-scrollbar md:overflow-visible px-5 md:px-0">
-                                        <div className="flex gap-4 w-max md:w-full md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pb-2 md:pb-0 pr-4 md:pr-0">
+                                        <div className="flex gap-4 w-max md:w-full md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pt-2 pb-3 md:pb-0 pr-4 md:pr-0">
                                             {filteredProducts.filter(p => p.homeSections?.includes('flash_deals')).slice(0, 5).map((product) => (
                                                 <div key={product._id} className="w-[164px] md:w-full cursor-pointer"><ProductCard product={product} /></div>
                                             ))}
@@ -283,7 +283,7 @@ export default function HomeScreen() {
                                             <button onClick={() => navigate('/products/all')} className="text-primary text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-tight bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-all active:scale-95 whitespace-nowrap">See All</button>
                                         </div>
                                         <div className="relative overflow-x-auto no-scrollbar md:overflow-visible px-5 md:px-0">
-                                            <div className="flex gap-4 w-max md:w-full md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pb-4 pr-4 md:pr-0">
+                                            <div className="flex gap-4 w-max md:w-full md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pt-2 pb-4 pr-4 md:pr-0">
                                                 {filteredProducts.filter(p => p.homeSections?.includes('bulk_saving') || p.bulkPricing?.length > 0).slice(0, 5).map((product) => (
                                                     <div key={product._id} className="w-[155px] md:w-full cursor-pointer"><ProductCard product={product} /></div>
                                                 ))}
@@ -317,7 +317,7 @@ export default function HomeScreen() {
                                             <button onClick={() => navigate('/products/all')} className="text-primary text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-tight bg-primary/5 px-4 py-2 rounded-full hover:bg-primary/10 transition-all active:scale-95 whitespace-nowrap">See All</button>
                                         </div>
                                         <div className="relative overflow-x-auto no-scrollbar md:overflow-visible px-5 md:px-0">
-                                            <div className="flex gap-4 w-max md:w-full md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pb-6 pr-4 md:pr-0">
+                                            <div className="flex gap-4 w-max md:w-full md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 pt-2 pb-6 pr-4 md:pr-0">
                                                 {filteredProducts.filter(p => p.homeSections?.includes('exotic_finds') || p.category?.name?.toLowerCase() === 'exotic').slice(0, 5).map((product) => (
                                                     <div key={product._id} className="w-[164px] md:w-full cursor-pointer"><ProductCard product={product} /></div>
                                                 ))}

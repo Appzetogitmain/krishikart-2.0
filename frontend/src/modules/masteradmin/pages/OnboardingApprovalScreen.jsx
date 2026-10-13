@@ -20,7 +20,6 @@ import {
 import ApprovalCard from '../components/cards/ApprovalCard';
 import ApprovalDetailDrawer from '../components/drawers/ApprovalDetailDrawer';
 import FilterBar from '../components/tables/FilterBar';
-import mockApprovals from '../data/mockApprovals.json';
 import { useAdmin } from '../contexts/AdminContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -198,19 +197,12 @@ export default function OnboardingApprovalScreen() {
                     </div>
                 </div>
                 <div className="px-6 py-4 border-r border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg. Time</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Matching Your Search</p>
                     <div className="flex items-center gap-2">
-                        <span className="text-xl font-black text-slate-900 tabular-nums">4.2h</span>
-                        <span className="text-[10px] font-bold text-emerald-500">-12% vs LY</span>
+                        <span className="text-xl font-black text-slate-900 tabular-nums">{currentItems?.length || 0}</span>
                     </div>
                 </div>
-                <div className="px-6 py-4 border-r border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Success Rate</p>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xl font-black text-slate-900 tabular-nums">92.4%</span>
-                        <span className="text-[10px] font-bold text-slate-400 tabular-nums">942 Approved</span>
-                    </div>
-                </div>
+                <div className="px-6 py-4 border-r border-slate-100" />
                 <div className="px-6 py-4 flex items-center justify-center bg-slate-50/50">
                 </div>
             </div>

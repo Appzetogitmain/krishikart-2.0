@@ -110,8 +110,11 @@ export const sendSMS = async (mobile, otp) => {
       response.data,
     );
 
-    const logEntry = `[${new Date().toISOString()}] Mobile: ${mobile}, Success: ${isSuccess}, Response: ${JSON.stringify(raw)}, Msg: ${message}\n`;
-    fs.appendFileSync(logFile, logEntry);
+    // Never write OTP codes to disk; async append so SMS logging never blocks the server
+    const safeMsg = String(message).replace(/\d{4,8}/g, "****");
+    const maskedMobile = String(mobile).replace(/^(\d{2})\d+(\d{2})$/, "$1******$2");
+    const logEntry = `[${new Date().toISOString()}] Mobile: ${maskedMobile}, Success: ${isSuccess}, Response: ${JSON.stringify(raw)}, Msg: ${safeMsg}\n`;
+    fs.promises.appendFile(logFile, logEntry).catch(() => {});
 
     if (isSuccess) {
       console.log("✅ SMS Sent successfully");
@@ -122,10 +125,7 @@ export const sendSMS = async (mobile, otp) => {
     // Do NOT treat local/dev as success — otherwise UI shows "OTP sent" while SMS failed.
     return false;
   } catch (error) {
-    fs.appendFileSync(
-      logFile,
-      `[${new Date().toISOString()}] CRITICAL: ${error.message}\n`,
-    );
+    fs.promises.appendFile(logFile, `[${new Date().toISOString()}] CRITICAL: ${error.message}\n`).catch(() => {});
     console.error("❌ SMS send critical error:", error.message);
     return false;
   }

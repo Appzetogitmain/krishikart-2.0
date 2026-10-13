@@ -251,15 +251,20 @@ export default function ProductDetailScreen() {
 
               <h1 className="text-xl md:text-4xl font-black text-slate-900 leading-tight mb-1.5 uppercase md:normal-case md:font-bold">{product.name}</h1>
 
+              {/* Rating is shown only when the product really has one (no ratings system yet) */}
+              {Number(product.rating) > 0 ? (
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center gap-1">
                   <div className="flex items-center gap-0.5 bg-yellow-400/10 px-2 py-1 rounded-lg">
                     <Star size={14} className="fill-yellow-400 text-yellow-400" />
                     <span className="text-xs font-black text-yellow-700 md:font-bold">{product.rating}</span>
                   </div>
-                  <span className="text-xs text-slate-400 font-bold md:font-medium">({product.reviews} Reviews)</span>
+                  {Number(product.reviews) > 0 && (
+                    <span className="text-xs text-slate-400 font-bold md:font-medium">({product.reviews} Reviews)</span>
+                  )}
                 </div>
               </div>
+              ) : <div className="mb-3" />}
 
               {/* Pricing Section */}
               <div className="mb-8">

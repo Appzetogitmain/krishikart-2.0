@@ -13,6 +13,7 @@ import Product from "../models/product.js";
 import Cart from "../models/cart.js";
 import User from "../models/user.js";
 import Franchise from "../models/franchise.js";
+import Delivery from "../models/delivery.js";
 import GlobalSetting from "../models/globalSetting.js";
 import Inventory from "../models/inventory.js";
 import { geocodeAddress, getDistance } from "../utils/geo.js";
@@ -27,6 +28,9 @@ import {
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
 import { resolveDeliverySchedule } from "../utils/deliverySchedule.js";
+import { refundCancelledOrder } from "../utils/orderRefund.js";
+import { acquireUserLock, releaseUserLock } from "../utils/userLock.js";
+import { takeStock, takeStockUpTo, addStock } from "../utils/stock.js";
 
 /**
  * Helper to calculate price based on quantity and bulk pricing rules
@@ -130,6 +134,18 @@ const applyFranchiseStockShortageFlags = async (orders) => {
 };
 
 export const createOrder = async (req, res) => {
+  const lockKey = `checkout:${req.user.id}`;
+  if (!acquireUserLock(lockKey)) {
+    return handleResponse(res, 409, "Your order is already being placed. Please wait a moment.");
+  }
+  try {
+    return await placeOrder(req, res);
+  } finally {
+    releaseUserLock(lockKey);
+  }
+};
+
+const placeOrder = async (req, res) => {
   try {
     const userId = req.user.id;
     const { shippingAddress, shippingLocation, paymentMethod, deliveryShift, scheduledDate } =
@@ -204,45 +220,54 @@ export const createOrder = async (req, res) => {
       );
     }
 
+    // Charge wallet / credit atomically BEFORE creating orders: the balance check and the
+    // deduction happen in one database operation, so two checkouts can't spend the same money.
+    const couponNote = appliedCouponCode ? ` (Coupon: ${appliedCouponCode})` : "";
+    let charged = 0;
     if (paymentMethod === "Wallet") {
-      if (user.walletBalance < grandTotal) {
-        return handleResponse(res, 400, "Insufficient wallet balance");
-      }
-      user.walletBalance -= grandTotal;
-      user.walletTransactions = user.walletTransactions || [];
-      user.walletTransactions.unshift({
-        txnId: `WAL-${Date.now()}`,
-        type: "Paid",
-        amount: grandTotal,
-        status: "Success",
-        note: `Order paid via wallet ${appliedCouponCode ? "(Coupon: " + appliedCouponCode + ")" : ""}`,
-        createdAt: new Date(),
-      });
+      const updated = await User.findOneAndUpdate(
+        { _id: userId, walletBalance: { $gte: grandTotal } },
+        {
+          $inc: { walletBalance: -grandTotal },
+          $push: {
+            walletTransactions: {
+              $each: [{ txnId: `WAL-${Date.now()}`, type: "Paid", amount: grandTotal, status: "Success", note: `Order paid via wallet${couponNote}`, createdAt: new Date() }],
+              $position: 0,
+            },
+          },
+        },
+        { new: true },
+      );
+      if (!updated) return handleResponse(res, 400, "Insufficient wallet balance");
+      charged = grandTotal;
     } else if (paymentMethod === "Credit") {
-      const availableCredit = user.creditLimit - user.usedCredit;
-      if (availableCredit < grandTotal) {
-        return handleResponse(res, 400, "Insufficient credit limit");
-      }
-
-      if (user.usedCredit === 0) {
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 7);
-        user.creditOverdueDate = dueDate;
-      }
-
-      user.usedCredit += grandTotal;
-      user.walletTransactions = user.walletTransactions || [];
-      user.walletTransactions.unshift({
-        txnId: `CRD-${Date.now()}`,
-        type: "Credit Used",
-        amount: grandTotal,
-        status: "Success",
-        note: `Order paid via business credit ${appliedCouponCode ? "(Coupon: " + appliedCouponCode + ")" : ""}`,
-        createdAt: new Date(),
-      });
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 7);
+      const updated = await User.findOneAndUpdate(
+        { _id: userId, $expr: { $gte: [{ $subtract: [{ $ifNull: ["$creditLimit", 0] }, { $ifNull: ["$usedCredit", 0] }] }, grandTotal] } },
+        [
+          {
+            $set: {
+              // Start the 7-day repayment clock only when this is the first unpaid credit
+              creditOverdueDate: { $cond: [{ $lte: [{ $ifNull: ["$usedCredit", 0] }, 0] }, dueDate, "$creditOverdueDate"] },
+              usedCredit: { $round: [{ $add: [{ $ifNull: ["$usedCredit", 0] }, grandTotal] }, 2] },
+              walletTransactions: {
+                $concatArrays: [
+                  { $literal: [{ txnId: `CRD-${Date.now()}`, type: "Credit Used", amount: grandTotal, status: "Success", note: `Order paid via business credit${couponNote}`, createdAt: new Date() }] },
+                  { $ifNull: ["$walletTransactions", []] },
+                ],
+              },
+            },
+          },
+        ],
+        { new: true, updatePipeline: true },
+      );
+      if (!updated) return handleResponse(res, 400, "Insufficient credit limit");
+      charged = grandTotal;
     }
 
     const createdOrders = [];
+    try {
     for (const g of computedGroups) {
       let fulfillmentCategoryId = null;
       try {
@@ -312,13 +337,31 @@ export const createOrder = async (req, res) => {
         console.error("[CreateOrder] Auto-assignment failed:", assignErr);
       }
     }
-
-    if (couponToIncrement) {
-      couponToIncrement.timesUsed += 1;
-      await couponToIncrement.save();
+    } catch (createErr) {
+      // Order creation failed part-way: cancel what was created and give the money back
+      console.error("[CreateOrder] Failed while creating orders, rolling back:", createErr);
+      let refundedViaOrders = 0;
+      for (const o of createdOrders) {
+        try {
+          await Order.updateOne({ _id: o._id }, { $set: { orderStatus: "Cancelled" } });
+          const r = await refundCancelledOrder(o._id, "order could not be completed");
+          refundedViaOrders += r.walletRefund + r.creditRestore;
+        } catch (e) {
+          console.error("[CreateOrder] Rollback of order failed:", o._id, e);
+        }
+      }
+      const remainder = Math.round((charged - refundedViaOrders) * 100) / 100;
+      if (remainder > 0) {
+        const field = paymentMethod === "Credit" ? { usedCredit: -remainder } : { walletBalance: remainder };
+        await User.updateOne({ _id: userId }, { $inc: field });
+      }
+      return handleResponse(res, 500, "Order failed");
     }
 
-    await user.save();
+    if (couponToIncrement) {
+      // Atomic increment so concurrent orders don't lose a count
+      await couponToIncrement.constructor.updateOne({ _id: couponToIncrement._id }, { $inc: { timesUsed: 1 } });
+    }
 
     cart.items = [];
     await cart.save();
@@ -1462,152 +1505,50 @@ export const updateOrderStatus = async (req, res) => {
 
     await order.save();
 
-    // Deduct stock if status changed to Packed. Compare against the status *before* this update:
-    // order.orderStatus was already set to "Packed" above, so checking it here was always false
-    // and franchise stock was never deducted.
+    // Deduct stock when the franchise packs the order. Compare with the status *before* this
+    // update (order.orderStatus is already "Packed" here). Each item is taken atomically, so two
+    // orders packed at the same time can't overwrite each other's stock change.
     if (status === "Packed" && isFranchise && currentStatus !== "Packed") {
       try {
         const franchiseId = req.franchise._id;
-        const inventory = await Inventory.findOne({ franchiseId });
-        if (inventory) {
-          for (const item of order.items) {
-            const inventoryItem = inventory.items.find(
-              (i) => i.productId.toString() === item.productId.toString(),
-            );
-            const quantityToPack = order.allowPartialFulfillment
-              ? Math.min(
-                  Number(inventoryItem?.currentStock || 0),
-                  Number(item.quantity || 0),
-                )
-              : Number(item.quantity || 0);
-
-            item.packedQuantity = quantityToPack;
-
-            if (inventoryItem && quantityToPack > 0) {
-              inventoryItem.currentStock = Math.max(
-                0,
-                inventoryItem.currentStock - quantityToPack,
-              );
-              inventoryItem.lastUpdated = new Date();
-            } else if (!inventoryItem) {
-              item.packedQuantity = 0;
-            }
+        for (const item of order.items) {
+          const wanted = Number(item.quantity || 0);
+          let packed = 0;
+          if (!order.allowPartialFulfillment && (await takeStock(franchiseId, item.productId, wanted))) {
+            packed = wanted;
+          } else {
+            packed = await takeStockUpTo(franchiseId, item.productId, wanted);
           }
-          await order.save();
-          await inventory.save();
-          console.log(
-            `[Inventory] Stock deducted for order ${order._id} (Franchise: ${franchiseId})`,
-          );
+          item.packedQuantity = packed;
         }
+        await order.save();
       } catch (stockErr) {
         console.error("Stock deduction error during status update:", stockErr);
       }
     }
 
-    // Return stock if status changed to Cancelled from Packed/Out for Delivery/Delivered
+    // Put stock back when an order is cancelled after it was packed (by any role)
     if (
       status === "Cancelled" &&
-      ["Packed", "Out for Delivery", "Delivered"].includes(currentStatus) &&
-      isFranchise
+      ["Packed", "Ready", "Dispatched", "Out for Delivery"].includes(currentStatus) &&
+      order.franchiseId
     ) {
       try {
-        const franchiseId = req.franchise._id;
-        const inventory = await Inventory.findOne({ franchiseId });
-        if (inventory) {
-          for (const item of order.items) {
-            const inventoryItem = inventory.items.find(
-              (i) => i.productId.toString() === item.productId.toString(),
-            );
-            if (inventoryItem) {
-              // Return what was actually taken out at packing time (partial packs take less)
-              const returnedQty = Number(item.packedQuantity ?? item.quantity ?? 0);
-              inventoryItem.currentStock += returnedQty;
-              inventoryItem.lastUpdated = new Date();
-            }
-          }
-          await inventory.save();
-          console.log(
-            `[Inventory] Stock returned for cancelled order ${order._id} (Franchise: ${franchiseId})`,
-          );
+        for (const item of order.items) {
+          const returnedQty = Number(item.packedQuantity || 0);
+          if (returnedQty > 0) await addStock(order.franchiseId, item.productId, returnedQty);
         }
       } catch (stockErr) {
         console.error("Stock return error during status update:", stockErr);
       }
     }
 
-    // Refund credit if order was paid via Credit
-    if (
-      status === "Cancelled" &&
-      (order.paymentMethod === "Credit" ||
-        order.paymentMethod === "Credit + Online")
-    ) {
+    // Refund wallet/credit exactly once (shared with franchise rejection)
+    if (status === "Cancelled") {
       try {
-        const user = await User.findById(order.userId);
-        if (user) {
-          const refundedCredit =
-            order.paymentMethod === "Credit + Online"
-              ? Number(order.creditAmountUsed || 0)
-              : order.totalAmount;
-          user.usedCredit = Math.max(0, user.usedCredit - refundedCredit);
-          user.walletTransactions = user.walletTransactions || [];
-          user.walletTransactions.unshift({
-            txnId: `CRR-${Date.now()}`,
-            type: "Credit Refunded",
-            amount: refundedCredit,
-            status: "Success",
-            note: `Credit refunded for cancelled order ${order._id}`,
-            referenceOrderId: order._id,
-            createdAt: new Date(),
-          });
-          await user.save();
-          console.log(
-            `[Credit] Refunded ₹${order.totalAmount} to user ${order.userId} for cancelled order ${order._id}`,
-          );
-        }
-      } catch (creditErr) {
-        console.error("Credit refund error during status update:", creditErr);
-      }
-    }
-
-    // Refund wallet if order was paid via Wallet OR any other online method (UPI/Card) if payment was completed
-    if (
-      status === "Cancelled" &&
-      (order.paymentMethod === "Wallet" ||
-        order.paymentMethod === "Wallet + Online" ||
-        order.paymentMethod === "Credit + Online" ||
-        (["UPI", "Card"].includes(order.paymentMethod) &&
-          order.paymentStatus === "Completed"))
-    ) {
-      try {
-        const user = await User.findById(order.userId);
-        if (user) {
-          const refundAmount =
-            order.paymentMethod === "Wallet + Online"
-              ? Number(order.walletAmountUsed || 0) +
-                Number(order.onlineAmountPaid || 0)
-              : order.paymentMethod === "Credit + Online"
-                ? Number(order.onlineAmountPaid || 0)
-              : order.totalAmount;
-          user.walletBalance = Number(
-            (user.walletBalance + refundAmount).toFixed(2),
-          );
-          user.walletTransactions = user.walletTransactions || [];
-          user.walletTransactions.unshift({
-            txnId: `REF-${Date.now()}`,
-            type: "Refund",
-            amount: refundAmount,
-            status: "Success",
-            note: `Refund for cancelled order ${order._id} (${order.paymentMethod})`,
-            referenceOrderId: order._id,
-            createdAt: new Date(),
-          });
-          await user.save();
-          console.log(
-            `[Refund] Refunded ₹${order.totalAmount} to user ${order.userId} wallet for cancelled order ${order._id}`,
-          );
-        }
+        await refundCancelledOrder(order._id, `cancelled by ${updatedBy}`);
       } catch (refundErr) {
-        console.error("Wallet refund error during status update:", refundErr);
+        console.error("Refund error during status update:", refundErr);
       }
     }
 
@@ -2095,76 +2036,31 @@ export const rejectFranchiseOrder = async (req, res) => {
 
     await order.save();
 
-    // Perform refund logic immediately
-    const freshOrder = await Order.findById(order._id);
-    if (freshOrder) {
-      try {
-        const user = await User.findById(freshOrder.userId);
-        if (user) {
-          // UPI / Card — refund to wallet
-          if (["UPI", "Card", "Razorpay"].includes(freshOrder.paymentMethod) && freshOrder.paymentStatus === "Completed") {
-            user.walletBalance = Number((user.walletBalance + freshOrder.totalAmount).toFixed(2));
-            user.walletTransactions = user.walletTransactions || [];
-            user.walletTransactions.unshift({
-              txnId: `REF-${Date.now()}`,
-              type: "Refund",
-              amount: freshOrder.totalAmount,
-              status: "Success",
-              note: `Refund for order ${freshOrder._id} — rejected by franchise (${freshOrder.paymentMethod})`,
-              referenceOrderId: freshOrder._id,
-              createdAt: new Date(),
-            });
-            freshOrder.paymentStatus = "Refunded";
-            await freshOrder.save();
-            console.log(`[Refund] ₹${freshOrder.totalAmount} refunded to wallet for user ${freshOrder.userId}`);
-          }
-          // Wallet payment — refund to wallet
-          if (freshOrder.paymentMethod === "Wallet") {
-            user.walletBalance = Number((user.walletBalance + freshOrder.totalAmount).toFixed(2));
-            user.walletTransactions = user.walletTransactions || [];
-            user.walletTransactions.unshift({
-              txnId: `REF-${Date.now()}`,
-              type: "Refund",
-              amount: freshOrder.totalAmount,
-              status: "Success",
-              note: `Refund for order ${freshOrder._id} — rejected by franchise`,
-              referenceOrderId: freshOrder._id,
-              createdAt: new Date(),
-            });
-            freshOrder.paymentStatus = "Refunded";
-            await freshOrder.save();
-          }
-          // Credit — restore credit limit
-          if (freshOrder.paymentMethod === "Credit" || freshOrder.paymentMethod === "Credit + Online") {
-            const refundedCredit = freshOrder.paymentMethod === "Credit + Online"
-              ? Number(freshOrder.creditAmountUsed || 0)
-              : freshOrder.totalAmount;
-            user.usedCredit = Math.max(0, user.usedCredit - refundedCredit);
-            user.walletTransactions = user.walletTransactions || [];
-            user.walletTransactions.unshift({
-              txnId: `CRR-${Date.now()}`,
-              type: "Credit Refunded",
-              amount: refundedCredit,
-              status: "Success",
-              note: `Credit refunded for order ${freshOrder._id} — rejected by franchise`,
-              referenceOrderId: freshOrder._id,
-              createdAt: new Date(),
-            });
-          }
-          await user.save();
-        }
-
-        await createUserNotification({
-          userId: freshOrder.userId,
-          type: "order_update",
-          title: "Order Cancelled",
-          message: `Sorry, the assigned store cannot fulfil your order #${freshOrder._id.toString().slice(-6)}. Your order has been cancelled and refunded to your wallet.`,
-          link: `/order-detail/${freshOrder._id}`,
-          meta: { orderId: freshOrder._id.toString(), status: "Cancelled" },
-        });
-      } catch (refundErr) {
-        console.error("[rejectFranchiseOrder] Refund error:", refundErr);
-      }
+    // Refund exactly once (also covers Wallet + Online and the online part of Credit + Online)
+    let refundResult = { refunded: false, walletRefund: 0, creditRestore: 0 };
+    try {
+      refundResult = await refundCancelledOrder(order._id, "rejected by franchise");
+    } catch (refundErr) {
+      console.error("[rejectFranchiseOrder] Refund error:", refundErr);
+    }
+    const refundText = refundResult.walletRefund > 0 && refundResult.creditRestore > 0
+      ? ` ₹${refundResult.walletRefund} has been added back to your wallet and ₹${refundResult.creditRestore} to your KK Credit.`
+      : refundResult.walletRefund > 0
+        ? ` ₹${refundResult.walletRefund} has been added back to your wallet.`
+        : refundResult.creditRestore > 0
+          ? ` ₹${refundResult.creditRestore} has been added back to your KK Credit.`
+          : "";
+    try {
+      await createUserNotification({
+        userId: order.userId,
+        type: "order_update",
+        title: "Order Cancelled",
+        message: `Sorry, the assigned store cannot fulfil your order #${order._id.toString().slice(-6)}, so it has been cancelled.${refundText}`,
+        link: `/order-detail/${order._id}`,
+        meta: { orderId: order._id.toString(), status: "Cancelled" },
+      });
+    } catch (notifyErr) {
+      console.error("[rejectFranchiseOrder] Notification error:", notifyErr);
     }
 
     const updated = await Order.findById(order._id)
@@ -2201,7 +2097,7 @@ export const rejectFranchiseOrder = async (req, res) => {
     emitToOrderRoom(order._id, "order_rejected_by_store", {
       orderId: order._id,
       status: "Cancelled",
-      message: "The assigned store rejected your order. Your order has been cancelled and refunded to your wallet."
+      message: `The assigned store could not fulfil your order, so it has been cancelled.${refundText}`
     });
     
     emitToOrderRoom(order._id, "order_status_changed", {
@@ -2263,6 +2159,23 @@ export const assignDeliveryPartner = async (req, res) => {
 
     if (!deliveryPartnerId) {
       return handleResponse(res, 400, "Delivery partner ID is required");
+    }
+
+    // Dispatch only packed orders (packing is where stock is deducted); allow re-assigning
+    // the partner of an order that is already dispatched but not yet picked up.
+    if (!["Packed", "Ready", "Dispatched"].includes(order.orderStatus)) {
+      return handleResponse(
+        res,
+        400,
+        order.orderStatus === "Accepted" || order.orderStatus === "Placed" || order.orderStatus === "Procuring"
+          ? "Please pack this order before assigning a delivery partner."
+          : `This order is already "${order.orderStatus}" and can't be assigned for delivery.`,
+      );
+    }
+
+    const partner = await Delivery.findById(deliveryPartnerId).select("isApproved status fullName");
+    if (!partner || !partner.isApproved || partner.status === "blocked") {
+      return handleResponse(res, 400, "This delivery partner is not available. Please choose another partner.");
     }
 
     // Check for stock shortages before allowing dispatch
@@ -2422,6 +2335,14 @@ export const rejectDeliveryTask = async (req, res) => {
 
     const order = await Order.findById(id);
     if (!order) return handleResponse(res, 404, "Order not found");
+
+    // Only the partner the order is assigned to can hand it back, and only before pickup
+    if (!order.deliveryPartnerId || order.deliveryPartnerId.toString() !== partnerId.toString()) {
+      return handleResponse(res, 403, "This order is not assigned to you");
+    }
+    if (!["Dispatched", "Ready", "Packed"].includes(order.orderStatus)) {
+      return handleResponse(res, 400, `This order is already "${order.orderStatus}" and can no longer be rejected.`);
+    }
 
     // Clear partner and reset status
     order.deliveryPartnerId = null;

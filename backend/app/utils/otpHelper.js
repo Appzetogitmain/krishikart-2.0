@@ -44,3 +44,28 @@ export function matchesGlobalDefaultOtp(otp) {
     if (!expected) return false;
     return String(otp ?? "").trim() === expected;
 }
+
+/**
+ * Checks an OTP against its stored record with a limit of 5 wrong attempts per code.
+ * The attempt counter is increased atomically before comparing, so parallel guesses
+ * can't get around the limit. After 5 wrong tries the code is deleted and the person
+ * must request a new OTP.
+ */
+export const MAX_OTP_ATTEMPTS = 5;
+export const verifyOtpRecord = async (otpRecord, otp) => {
+    const { default: OTP } = await import("../models/otp.js");
+    const claimed = await OTP.findOneAndUpdate(
+        { _id: otpRecord._id, attempts: { $lt: MAX_OTP_ATTEMPTS } },
+        { $inc: { attempts: 1 } },
+        { returnDocument: "after" },
+    );
+    if (!claimed) {
+        await OTP.deleteOne({ _id: otpRecord._id });
+        return false;
+    }
+    const ok = await verifyHashedOTP(String(otp), claimed.otp);
+    if (!ok && claimed.attempts >= MAX_OTP_ATTEMPTS) {
+        await OTP.deleteOne({ _id: otpRecord._id });
+    }
+    return ok;
+};

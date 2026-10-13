@@ -7,6 +7,7 @@ import {
   generateOTP,
   hashOTP,
   verifyHashedOTP,
+  verifyOtpRecord,
   matchesGlobalDefaultOtp,
   isGlobalDefaultOtpEnabled,
 } from "../utils/otpHelper.js";
@@ -203,7 +204,7 @@ export const verifyOTP = async (req, res) => {
       return handleResponse(res, 400, "OTP expired");
     }
 
-    const isMatch = await verifyHashedOTP(otp, otpRecord.otp);
+    const isMatch = await verifyOtpRecord(otpRecord, otp);
 
     if (!isMatch) {
       return handleResponse(res, 400, "Invalid OTP");
@@ -382,7 +383,7 @@ export const resetPassword = async (req, res) => {
     if (!otpRecord)
       return handleResponse(res, 400, "OTP not found or expired");
 
-    const isMatch = await verifyHashedOTP(otp, otpRecord.otp);
+    const isMatch = await verifyOtpRecord(otpRecord, otp);
     if (!isMatch)
       return handleResponse(res, 400, "Invalid OTP");
 
@@ -563,41 +564,43 @@ export const verifyWalletRecharge = async (req, res) => {
       return handleResponse(res, 400, "Invalid payment signature");
     }
 
-    const recharge = await WalletRecharge.findOne({
-      userId,
-      razorpayOrderId: razorpay_order_id,
-    });
+    // Atomically claim the recharge so the same payment can never be credited twice
+    // (and a credit-repayment payment can't be claimed as a wallet top-up)
+    const recharge = await WalletRecharge.findOneAndUpdate(
+      { userId, razorpayOrderId: razorpay_order_id, type: { $ne: "credit_repayment" }, status: { $ne: "paid" } },
+      { $set: { status: "paid", razorpayPaymentId: razorpay_payment_id, paidAt: new Date() } },
+      { new: true },
+    );
 
     if (!recharge) {
-      return handleResponse(res, 404, "Recharge order not found");
-    }
-
-    // Idempotency: do not credit wallet twice for same Razorpay order.
-    if (recharge.status === "paid") {
+      const existing = await WalletRecharge.findOne({ userId, razorpayOrderId: razorpay_order_id, type: { $ne: "credit_repayment" } });
+      if (!existing) return handleResponse(res, 404, "Recharge order not found");
       const existingUser = await User.findById(userId);
       return handleResponse(res, 200, "Wallet already recharged", existingUser);
     }
 
-    const user = await User.findById(userId);
+    const rechargeAmount = Number(recharge.amount || 0);
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $inc: { walletBalance: rechargeAmount },
+        $push: {
+          walletTransactions: {
+            $each: [{
+              txnId: `WAL-RZP-${Date.now()}`,
+              type: "Added",
+              amount: rechargeAmount,
+              status: "Success",
+              note: "Wallet recharge via Razorpay",
+              createdAt: new Date(),
+            }],
+            $position: 0,
+          },
+        },
+      },
+      { new: true },
+    );
     if (!user) return handleResponse(res, 404, "User not found");
-
-    user.walletBalance = Number((Number(user.walletBalance || 0) + Number(recharge.amount || 0)).toFixed(2));
-    user.walletTransactions = user.walletTransactions || [];
-    user.walletTransactions.unshift({
-      txnId: `WAL-RZP-${Date.now()}`,
-      type: "Added",
-      amount: Number(recharge.amount || 0),
-      status: "Success",
-      note: "Wallet recharge via Razorpay",
-      createdAt: new Date(),
-    });
-
-    recharge.status = "paid";
-    recharge.razorpayPaymentId = razorpay_payment_id;
-    recharge.paidAt = new Date();
-
-    await recharge.save();
-    await user.save();
 
     await createUserNotification({
       userId,
@@ -683,17 +686,16 @@ export const verifyCreditRepayment = async (req, res) => {
       return handleResponse(res, 400, "Invalid payment signature");
     }
 
-    const recharge = await WalletRecharge.findOne({
-      userId,
-      razorpayOrderId: razorpay_order_id,
-      type: "credit_repayment"
-    });
+    // Atomically claim the payment so the same repayment can never be applied twice
+    const recharge = await WalletRecharge.findOneAndUpdate(
+      { userId, razorpayOrderId: razorpay_order_id, type: "credit_repayment", status: { $ne: "paid" } },
+      { $set: { status: "paid", razorpayPaymentId: razorpay_payment_id, paidAt: new Date() } },
+      { new: true },
+    );
 
     if (!recharge) {
-      return handleResponse(res, 404, "Payment record not found");
-    }
-
-    if (recharge.status === "paid") {
+      const existing = await WalletRecharge.findOne({ userId, razorpayOrderId: razorpay_order_id, type: "credit_repayment" });
+      if (!existing) return handleResponse(res, 404, "Payment record not found");
       const existingUser = await User.findById(userId);
       return handleResponse(res, 200, "Payment already processed", existingUser);
     }
@@ -719,11 +721,6 @@ export const verifyCreditRepayment = async (req, res) => {
       createdAt: new Date(),
     });
 
-    recharge.status = "paid";
-    recharge.razorpayPaymentId = razorpay_payment_id;
-    recharge.paidAt = new Date();
-
-    await recharge.save();
     await user.save();
 
     await createUserNotification({
@@ -778,19 +775,30 @@ export const redeemLoyaltyPoints = async (req, res) => {
     }
 
     const pointsConsumed = redeemRupees * redemptionRate;
-    user.loyaltyPoints = Math.max(0, currentPoints - pointsConsumed);
-    user.walletBalance = Number((Number(user.walletBalance || 0) + redeemRupees).toFixed(2));
-    user.walletTransactions = user.walletTransactions || [];
-    user.walletTransactions.unshift({
-      txnId: `RED-${Date.now()}`,
-      type: "Redemption",
-      amount: redeemRupees,
-      status: "Success",
-      note: `Redeemed ${pointsConsumed} points to wallet`,
-      createdAt: new Date(),
-    });
-
-    await user.save();
+    // Atomic: only succeeds while the points are still there (blocks double redemption)
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: user._id, loyaltyPoints: { $gte: pointsConsumed } },
+      {
+        $inc: { loyaltyPoints: -pointsConsumed, walletBalance: redeemRupees },
+        $push: {
+          walletTransactions: {
+            $each: [{
+              txnId: `RED-${Date.now()}`,
+              type: "Redemption",
+              amount: redeemRupees,
+              status: "Success",
+              note: `Redeemed ${pointsConsumed} points to wallet`,
+              createdAt: new Date(),
+            }],
+            $position: 0,
+          },
+        },
+      },
+      { new: true },
+    );
+    if (!updatedUser) {
+      return handleResponse(res, 400, "Insufficient loyalty points");
+    }
 
     await createUserNotification({
       userId,
@@ -805,7 +813,7 @@ export const redeemLoyaltyPoints = async (req, res) => {
       },
     });
 
-    return handleResponse(res, 200, "Loyalty points redeemed successfully", user);
+    return handleResponse(res, 200, "Loyalty points redeemed successfully", updatedUser);
   } catch (error) {
     console.error("Redeem loyalty points error:", error);
     return handleResponse(res, 500, "Server error");
@@ -865,8 +873,10 @@ export const saveFCMToken = async (req, res) => {
  * @access Private (User)
  */
 export const testPushByToken = async (req, res) => {
+  // Declared outside try so the catch block can clean up an invalid token
+  const { fcm_token, plateform } = req.body || {};
+  const bodyToken = fcm_token;
   try {
-    const { fcm_token, plateform } = req.body;
     if (!fcm_token) return handleResponse(res, 400, "fcm_token is required");
 
     console.log(`[FCM-Test-User] Sending test ping to ${plateform || 'mobile'}:`, fcm_token);
@@ -879,7 +889,6 @@ export const testPushByToken = async (req, res) => {
       token: fcm_token
     };
 
-    const bodyToken = fcm_token || token;
     const response = await admin.messaging().send(message);
     return handleResponse(res, 200, "Test notification sent successfully!", response);
   } catch (error) {
@@ -909,29 +918,6 @@ export const testPushByToken = async (req, res) => {
       code: error.code,
       error_message: error.message
     });
-  }
-};
-
-/**
- * FOR TESTING ONLY: Manually make account overdue
- */
-export const makeOverdueTest = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-    if (!user) return handleResponse(res, 404, "User not found");
-
-    user.usedCredit = 500;
-    // Set due date to 8 days ago
-    const overdueDate = new Date();
-    overdueDate.setDate(overdueDate.getDate() - 8);
-    user.creditOverdueDate = overdueDate;
-
-    await user.save();
-    return handleResponse(res, 200, "Success! Your account is now OVERDUE by 8 days. Refresh your app to see the lock screen.");
-  } catch (error) {
-    console.error(error);
-    return handleResponse(res, 500, "Test failed");
   }
 };
 

@@ -13,7 +13,7 @@ import StockAlertsScreen from '../pages/StockAlertsScreen';
 import HistoryScreen from '../pages/HistoryScreen';
 import DispatchHistoryScreen from '../pages/DispatchHistoryScreen';
 import ProfileScreen from '../pages/ProfileScreen';
-import ReceivablesReportScreen from '../pages/ReceivablesReportScreen';
+import VendorReportsHub from '../pages/VendorReportsHub';
 import RejectionReportsScreen from '../pages/RejectionReportsScreen';
 import QuotationHistoryScreen from '../pages/QuotationHistoryScreen';
 import SignupScreen from '../pages/SignupScreen';
@@ -57,7 +57,7 @@ export const vendorRoutes = (
             <Route path="dispatch-history" element={<DispatchHistoryScreen />} />
             <Route path="alerts" element={<StockAlertsScreen />} />
             <Route path="history" element={<HistoryScreen />} />
-            <Route path="reports" element={<ReceivablesReportScreen />} />
+            <Route path="reports" element={<VendorReportsHub />} />
             <Route path="rejected-stock" element={<RejectionReportsScreen />} />
             <Route path="payments" element={<Navigate to="/vendor/reports" replace />} />
             <Route path="profile" element={<ProfileScreen />} />

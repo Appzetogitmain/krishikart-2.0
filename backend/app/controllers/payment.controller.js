@@ -11,28 +11,128 @@ import {
 } from "../utils/checkoutOrderSplit.js";
 import { assignOrderToFranchise } from "../utils/assignment.js";
 import { resolveDeliverySchedule } from "../utils/deliverySchedule.js";
+import { acquireUserLock, releaseUserLock } from "../utils/userLock.js";
+import { emitToAdmin } from "../lib/socket.js";
+import { createUserNotification } from "../utils/userNotification.js";
+import { createAdminNotification } from "../utils/adminNotification.js";
+
+const ONLINE_METHODS = ["UPI", "Card", "Wallet + Online", "Credit + Online"];
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+const fail = (status, message) => ({ ok: false, status, message });
+
+/**
+ * Works out, on the server, how much of the order is paid online. Used both when the
+ * Razorpay order is created and again when the payment is verified, so the amount the
+ * customer pays can't be changed from the browser.
+ */
+async function computeOnlineCheckout(userId, orderData) {
+    if (!orderData || !orderData.shippingAddress || !orderData.paymentMethod || !orderData.deliveryShift) {
+        return fail(400, "Missing shipping address, payment method, or delivery shift");
+    }
+    const { shippingAddress, shippingLocation, paymentMethod } = orderData;
+    if (!ONLINE_METHODS.includes(paymentMethod)) {
+        return fail(400, "This payment method does not use online payment");
+    }
+
+    const cart = await Cart.findOne({ userId }).populate("items.productId");
+    if (!cart || cart.items.length === 0) {
+        return fail(400, "Your cart is empty. Please add items and try again.");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return fail(404, "User not found");
+    if (user.usedCredit > 0 && user.creditOverdueDate && new Date() > new Date(user.creditOverdueDate)) {
+        return fail(403, "Payment Overdue: Please clear your KK Credit balance to continue shopping.");
+    }
+
+    const resolvedLocation = await resolveCheckoutCoordinates(shippingAddress, shippingLocation);
+    if (!resolvedLocation) {
+        return fail(400, "Valid delivery location is required. Please pick your location on the map and try again.");
+    }
+
+    const split = await computeSplitCheckoutPayload({
+        cart,
+        userId,
+        couponCode: orderData.couponCode || "",
+        resolvedLocation,
+    });
+    if (!split.ok) return fail(split.status, split.message);
+
+    const grandTotal = Number(split.payload.grandTotal || 0);
+    const requestedWallet = Number(orderData.walletAmountUsed || 0);
+    const requestedCredit = Number(orderData.creditAmountUsed || 0);
+    const walletAmountUsed = paymentMethod === "Wallet + Online"
+        ? round2(Math.min(Number.isFinite(requestedWallet) ? requestedWallet : 0, Number(user.walletBalance || 0), grandTotal))
+        : 0;
+    const availableCredit = Math.max(0, Number(user.creditLimit || 0) - Number(user.usedCredit || 0));
+    const creditAmountUsed = paymentMethod === "Credit + Online"
+        ? round2(Math.min(Number.isFinite(requestedCredit) ? requestedCredit : 0, availableCredit, grandTotal))
+        : 0;
+    const onlineAmountPaid = round2(grandTotal - walletAmountUsed - creditAmountUsed);
+
+    if (paymentMethod === "Wallet + Online" && walletAmountUsed <= 0) {
+        return fail(400, "Wallet amount is required for split payment");
+    }
+    if (paymentMethod === "Credit + Online" && creditAmountUsed <= 0) {
+        return fail(400, "Credit amount is required for split payment");
+    }
+    if (onlineAmountPaid < 1) {
+        return fail(400, "Online payment amount must be at least ₹1");
+    }
+
+    return { ok: true, cart, user, split: split.payload, grandTotal, walletAmountUsed, creditAmountUsed, onlineAmountPaid };
+}
+
+/** Best-effort automatic refund when a captured payment can't be turned into an order. */
+async function refundRazorpayPayment(paymentId, reason) {
+    try {
+        await razorpay.payments.refund(paymentId, { notes: { reason: String(reason).slice(0, 250) } });
+        console.warn(`[Payment] Refunded payment ${paymentId}: ${reason}`);
+        return true;
+    } catch (err) {
+        console.error(`[Payment] AUTO-REFUND FAILED for ${paymentId} (${reason}) — refund manually in Razorpay:`, err?.error || err?.message);
+        try {
+            await createAdminNotification({
+                type: "payment_refund_needed",
+                title: "Manual refund needed",
+                message: `Payment ${paymentId} could not be turned into an order and the automatic refund failed. Please refund it from the Razorpay dashboard. Reason: ${reason}`,
+                link: "/masteradmin/orders",
+                meta: { paymentId, reason },
+            });
+        } catch {}
+        return false;
+    }
+}
 
 export const createRazorpayOrder = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { amount } = req.body; // Amount in INR
+        let amount;
+        let notes = { type: "order_checkout", userId: String(userId) };
 
-        const numericAmount = Number(amount);
-        if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-            return handleResponse(res, 400, "A valid payment amount is required");
-        }
-        // Razorpay rejects orders below ₹1
-        if (numericAmount < 1) {
-            return handleResponse(res, 400, "Online payment amount must be at least ₹1");
+        if (req.body.orderData) {
+            // Amount decided by the server from the cart, never by the browser
+            const checkout = await computeOnlineCheckout(userId, req.body.orderData);
+            if (!checkout.ok) return handleResponse(res, checkout.status, checkout.message);
+            amount = checkout.onlineAmountPaid;
+            notes = { ...notes, expectedAmount: String(amount) };
+        } else {
+            // Older app versions send only an amount; it is still checked during verification
+            amount = Number(req.body.amount);
+            if (!Number.isFinite(amount) || amount <= 0) {
+                return handleResponse(res, 400, "A valid payment amount is required");
+            }
+            if (amount < 1) {
+                return handleResponse(res, 400, "Online payment amount must be at least ₹1");
+            }
         }
 
-        const options = {
-            amount: Math.round(numericAmount * 100), // Convert to paise
+        const order = await razorpay.orders.create({
+            amount: Math.round(amount * 100), // paise
             currency: "INR",
             receipt: `receipt_order_${Date.now()}`,
-        };
-
-        const order = await razorpay.orders.create(options);
+            notes,
+        });
 
         return handleResponse(res, 200, "Razorpay order created", order);
     } catch (error) {
@@ -49,206 +149,136 @@ export const createRazorpayOrder = async (req, res) => {
     }
 };
 
+const orderPayload = (orders, orderGroupId, grandTotal) =>
+    orders.length === 1
+        ? { order: orders[0], orders, orderGroupId, grandTotal }
+        : { orders, orderGroupId, grandTotal };
+
 export const verifyPayment = async (req, res) => {
+    const userId = req.user.id;
+    // Shares the checkout lock with wallet/credit/COD orders: one checkout at a time per customer
+    const lockKey = `checkout:${userId}`;
+    if (!acquireUserLock(lockKey)) {
+        return handleResponse(res, 409, "Your payment is already being processed. Please wait a moment.");
+    }
     try {
-        const {
-            razorpay_order_id,
-            razorpay_payment_id,
-            razorpay_signature,
-            orderData
-        } = req.body;
+        return await processVerifiedPayment(req, res, userId);
+    } finally {
+        releaseUserLock(lockKey);
+    }
+};
 
-        const userId = req.user.id;
-
-        // 0. Diagnostic Logging
-        console.log("--- Payment Verification Start ---");
-        console.log("User ID:", userId);
-        console.log("Rzp Order ID:", razorpay_order_id);
-        console.log("Rzp Payment ID:", razorpay_payment_id);
-        console.log("Rzp Signature:", !!razorpay_signature);
-        console.log("Order Data:", JSON.stringify(orderData, null, 2));
-
-        // Input Validation
-        console.log("Validating request fields...");
+async function processVerifiedPayment(req, res, userId) {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderData } = req.body;
+    try {
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-            console.error("Missing payment credentials:", {
-                hasOrderId: !!razorpay_order_id,
-                hasPaymentId: !!razorpay_payment_id,
-                hasSignature: !!razorpay_signature
-            });
             return handleResponse(res, 400, "Missing payment credentials");
         }
-
-        if (!orderData) {
-            console.error("Missing orderData object");
-            return handleResponse(res, 400, "Missing order information");
+        if (!process.env.RAZORPAY_KEY_SECRET) {
+            console.error("[VerifyPayment] RAZORPAY_KEY_SECRET is not set");
+            return handleResponse(res, 500, "Payment verification is not configured");
         }
 
-        if (!orderData.shippingAddress || !orderData.paymentMethod || !orderData.deliveryShift) {
-            console.error("Incomplete orderData:", {
-                hasShippingAddress: !!orderData.shippingAddress,
-                hasPaymentMethod: !!orderData.paymentMethod,
-                hasDeliveryShift: !!orderData.deliveryShift,
-                orderData
-            });
-            return handleResponse(res, 400, "Missing shipping address, payment method, or delivery shift");
-        }
-
-        console.log("All fields validated successfully");
-
-        // 1. Verify Signature
-        console.log("Verifying payment signature...");
-        const sign = razorpay_order_id + "|" + razorpay_payment_id;
+        // 1. Signature (constant-time compare; never log the expected value)
         const expectedSign = crypto
             .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-            .update(sign.toString())
+            .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest("hex");
-
-        if (razorpay_signature !== expectedSign) {
-            console.error("Signature mismatch:", {
-                received: razorpay_signature,
-                expected: expectedSign
-            });
+        const given = Buffer.from(String(razorpay_signature));
+        const expected = Buffer.from(expectedSign);
+        if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
+            console.warn(`[VerifyPayment] Invalid signature for user ${userId}, order ${razorpay_order_id}`);
             return handleResponse(res, 400, "Invalid payment signature");
         }
 
-        console.log("Signature verified successfully");
+        // 2. Idempotency: the same payment never creates orders twice (retries, double taps)
+        const existing = await Order.find({ razorpayOrderId: razorpay_order_id });
+        if (existing.length) {
+            if (String(existing[0].userId) !== String(userId)) {
+                return handleResponse(res, 403, "This payment belongs to another account");
+            }
+            const total = existing.reduce((s, o) => s + Number(o.totalAmount || 0), 0);
+            return handleResponse(res, 200, "Order already placed for this payment", orderPayload(existing, existing[0].orderGroupId || null, round2(total)));
+        }
 
-        // 2. Original Order Logic (Create the order in DB after payment)
-        const { shippingAddress, shippingLocation, paymentMethod, deliveryShift, scheduledDate } = orderData;
+        // 3. Ask Razorpay what was actually paid, and for which order
+        let payment;
+        let rzOrder;
+        try {
+            [payment, rzOrder] = await Promise.all([
+                razorpay.payments.fetch(razorpay_payment_id),
+                razorpay.orders.fetch(razorpay_order_id),
+            ]);
+        } catch (err) {
+            console.error("[VerifyPayment] Could not fetch payment from Razorpay:", err?.error || err?.message);
+            return handleResponse(res, 502, "We couldn't confirm your payment with the bank yet. If money was deducted, please contact support with your payment ID: " + razorpay_payment_id);
+        }
+        if (payment.order_id !== razorpay_order_id || !["captured", "authorized"].includes(payment.status)) {
+            return handleResponse(res, 400, "This payment is not complete. Please try again.");
+        }
+        if (rzOrder?.notes?.userId && String(rzOrder.notes.userId) !== String(userId)) {
+            return handleResponse(res, 403, "This payment belongs to another account");
+        }
 
-        // Delivery date (evaluated in IST). The customer has already paid at this point, so an
-        // out-of-range date (e.g. payment finished just after midnight) falls back to today
-        // instead of rejecting a captured payment.
+        // 4. Recalculate the order on the server and compare with the amount paid
+        const checkout = await computeOnlineCheckout(userId, orderData);
+        if (!checkout.ok) {
+            await refundRazorpayPayment(razorpay_payment_id, `Order could not be placed: ${checkout.message}`);
+            return handleResponse(res, checkout.status, `${checkout.message} Your payment will be refunded automatically.`);
+        }
+        const expectedPaise = Math.round(checkout.onlineAmountPaid * 100);
+        if (Math.abs(Number(payment.amount) - expectedPaise) > 100) {
+            console.error(`[VerifyPayment] Amount mismatch for user ${userId}: paid ${payment.amount} paise, expected ${expectedPaise} paise`);
+            await refundRazorpayPayment(razorpay_payment_id, `Amount mismatch: paid ${payment.amount / 100}, order needs ${checkout.onlineAmountPaid}`);
+            return handleResponse(res, 400, `The amount paid (₹${payment.amount / 100}) doesn't match your order total (₹${checkout.onlineAmountPaid}). Your payment will be refunded automatically. Please place the order again.`);
+        }
+
+        const { cart, user, split, grandTotal, walletAmountUsed, creditAmountUsed, onlineAmountPaid } = checkout;
+        const { userCoords, computedGroups, appliedCouponCode, couponToIncrement, orderGroupId } = split;
+        const { shippingAddress, paymentMethod, deliveryShift, scheduledDate } = orderData;
+        const couponNote = appliedCouponCode ? ` (Coupon: ${appliedCouponCode})` : "";
+
+        // Delivery date (IST). The customer has already paid, so an out-of-range date (e.g. payment
+        // finished just after midnight) falls back to today instead of rejecting the payment.
         let schedule = resolveDeliverySchedule(scheduledDate, null);
-        if (!schedule.ok) {
-            console.warn("[VerifyPayment] Invalid scheduled date, defaulting to today:", schedule.message);
-            schedule = resolveDeliverySchedule(null, null);
-        }
-        const preOrderDate = schedule.scheduledDate;
-        const isPreOrder = schedule.isPreOrder;
+        if (!schedule.ok) schedule = resolveDeliverySchedule(null, null);
 
-        // Get User Cart
-        console.log("Fetching user cart for userId:", userId);
-        const cart = await Cart.findOne({ userId }).populate('items.productId');
-
-        if (!cart) {
-            console.error("Cart not found for userId:", userId);
-            return handleResponse(res, 400, "Cart not found. Please add items to cart and try again.");
-        }
-
-        if (cart.items.length === 0) {
-            console.error("Cart is empty for userId:", userId);
-            return handleResponse(res, 400, "Your cart is empty. Items may have been removed during payment.");
-        }
-
-        console.log(`Cart found with ${cart.items.length} items`);
-
-        const resolvedLocation = await resolveCheckoutCoordinates(
-            shippingAddress,
-            shippingLocation,
-        );
-
-        if (!resolvedLocation) {
-            return handleResponse(
-                res,
-                400,
-                "Valid delivery location is required. Please pick your location on the map and try again.",
+        // 5. Take the wallet / credit part atomically (balance can't be spent twice)
+        if (walletAmountUsed > 0) {
+            const updated = await User.findOneAndUpdate(
+                { _id: userId, walletBalance: { $gte: walletAmountUsed } },
+                {
+                    $inc: { walletBalance: -walletAmountUsed },
+                    $push: { walletTransactions: { $each: [{ txnId: `WAL-${Date.now()}`, type: "Paid", amount: walletAmountUsed, status: "Success", note: `Wallet part of order payment${couponNote}`, createdAt: new Date() }], $position: 0 } },
+                },
+                { new: true },
             );
+            if (!updated) {
+                await refundRazorpayPayment(razorpay_payment_id, "Wallet balance changed during payment");
+                return handleResponse(res, 400, "Your wallet balance changed during payment. Your online payment will be refunded automatically; please try again.");
+            }
+        }
+        if (creditAmountUsed > 0) {
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 7);
+            const updated = await User.findOneAndUpdate(
+                { _id: userId, $expr: { $gte: [{ $subtract: [{ $ifNull: ["$creditLimit", 0] }, { $ifNull: ["$usedCredit", 0] }] }, creditAmountUsed] } },
+                [{
+                    $set: {
+                        creditOverdueDate: { $cond: [{ $lte: [{ $ifNull: ["$usedCredit", 0] }, 0] }, dueDate, "$creditOverdueDate"] },
+                        usedCredit: { $round: [{ $add: [{ $ifNull: ["$usedCredit", 0] }, creditAmountUsed] }, 2] },
+                        walletTransactions: { $concatArrays: [{ $literal: [{ txnId: `CRD-${Date.now()}`, type: "Credit Used", amount: creditAmountUsed, status: "Success", note: `Credit part of order payment${couponNote}`, createdAt: new Date() }] }, { $ifNull: ["$walletTransactions", []] }] },
+                    },
+                }],
+                { new: true, updatePipeline: true },
+            );
+            if (!updated) {
+                await refundRazorpayPayment(razorpay_payment_id, "Credit limit changed during payment");
+                return handleResponse(res, 400, "Your available credit changed during payment. Your online payment will be refunded automatically; please try again.");
+            }
         }
 
-        const split = await computeSplitCheckoutPayload({
-            cart,
-            userId,
-            couponCode: orderData.couponCode || "",
-            resolvedLocation,
-        });
-
-        if (!split.ok) {
-            return handleResponse(res, split.status, split.message);
-        }
-
-        const {
-            userCoords,
-            computedGroups,
-            grandTotal,
-            appliedCouponCode,
-            couponToIncrement,
-            orderGroupId,
-        } = split.payload;
-
-        console.log("Split checkout totals:", { slices: computedGroups.length, grandTotal });
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return handleResponse(res, 404, "User not found");
-        }
-
-        const requestedWalletAmount = Number(orderData.walletAmountUsed || 0);
-        const requestedCreditAmount = Number(orderData.creditAmountUsed || 0);
-        const walletAmountUsed = Math.min(
-            Number.isFinite(requestedWalletAmount) ? requestedWalletAmount : 0,
-            Number(user.walletBalance || 0),
-            Number(grandTotal || 0),
-        );
-        const availableCredit = Math.max(0, Number(user.creditLimit || 0) - Number(user.usedCredit || 0));
-        const creditAmountUsed = Math.min(
-            Number.isFinite(requestedCreditAmount) ? requestedCreditAmount : 0,
-            availableCredit,
-            Number(grandTotal || 0),
-        );
-        const onlineAmountPaid = paymentMethod === "Wallet + Online"
-            ? Number((Number(grandTotal || 0) - walletAmountUsed).toFixed(2))
-            : paymentMethod === "Credit + Online"
-                ? Number((Number(grandTotal || 0) - creditAmountUsed).toFixed(2))
-                : Number(grandTotal || 0);
-
-        if (paymentMethod === "Wallet + Online") {
-            if (walletAmountUsed <= 0) {
-                return handleResponse(res, 400, "Wallet amount is required for split payment");
-            }
-
-            if (onlineAmountPaid <= 0) {
-                return handleResponse(res, 400, "Online payment amount must be greater than zero");
-            }
-
-            user.walletBalance = Number((Number(user.walletBalance || 0) - walletAmountUsed).toFixed(2));
-            user.walletTransactions = user.walletTransactions || [];
-            user.walletTransactions.unshift({
-                txnId: `WAL-${Date.now()}`,
-                type: "Paid",
-                amount: walletAmountUsed,
-                status: "Success",
-                note: `Wallet contribution for hybrid order payment${appliedCouponCode ? " (Coupon: " + appliedCouponCode + ")" : ""}`,
-                createdAt: new Date(),
-            });
-        } else if (paymentMethod === "Credit + Online") {
-            if (creditAmountUsed <= 0) {
-                return handleResponse(res, 400, "Credit amount is required for split payment");
-            }
-
-            if (onlineAmountPaid <= 0) {
-                return handleResponse(res, 400, "Online payment amount must be greater than zero");
-            }
-
-            if (user.usedCredit === 0) {
-                const dueDate = new Date();
-                dueDate.setDate(dueDate.getDate() + 7);
-                user.creditOverdueDate = dueDate;
-            }
-
-            user.usedCredit = Number((Number(user.usedCredit || 0) + creditAmountUsed).toFixed(2));
-            user.walletTransactions = user.walletTransactions || [];
-            user.walletTransactions.unshift({
-                txnId: `CRD-${Date.now()}`,
-                type: "Credit Used",
-                amount: creditAmountUsed,
-                status: "Success",
-                note: `Credit contribution for hybrid order payment${appliedCouponCode ? " (Coupon: " + appliedCouponCode + ")" : ""}`,
-                createdAt: new Date(),
-            });
-        }
-
+        // 6. Create the orders (one per category)
         const createdOrders = [];
         for (const g of computedGroups) {
             let fulfillmentCategoryId = null;
@@ -257,7 +287,7 @@ export const verifyPayment = async (req, res) => {
             } catch {
                 fulfillmentCategoryId = null;
             }
-
+            const share = grandTotal > 0 ? g.totalAmount / grandTotal : 0;
             const newOrder = new Order({
                 userId,
                 franchiseId: null,
@@ -270,15 +300,9 @@ export const verifyPayment = async (req, res) => {
                 couponCode: appliedCouponCode,
                 discountAmount: g.discountAmount,
                 paymentStatus: "Completed",
-                walletAmountUsed: paymentMethod === "Wallet + Online"
-                    ? Number(((g.totalAmount / grandTotal) * walletAmountUsed).toFixed(2))
-                    : 0,
-                creditAmountUsed: paymentMethod === "Credit + Online"
-                    ? Number(((g.totalAmount / grandTotal) * creditAmountUsed).toFixed(2))
-                    : 0,
-                onlineAmountPaid: ["Wallet + Online", "Credit + Online"].includes(paymentMethod)
-                    ? Number(((g.totalAmount / grandTotal) * onlineAmountPaid).toFixed(2))
-                    : g.totalAmount,
+                walletAmountUsed: round2(share * walletAmountUsed),
+                creditAmountUsed: round2(share * creditAmountUsed),
+                onlineAmountPaid: ["Wallet + Online", "Credit + Online"].includes(paymentMethod) ? round2(share * onlineAmountPaid) : g.totalAmount,
                 orderStatus: "Placed",
                 shippingAddress,
                 shippingLocation: userCoords,
@@ -287,14 +311,24 @@ export const verifyPayment = async (req, res) => {
                 fulfillmentCategoryId,
                 razorpayOrderId: razorpay_order_id,
                 razorpayPaymentId: razorpay_payment_id,
-                scheduledDate: preOrderDate,
-                isPreOrder,
+                scheduledDate: schedule.scheduledDate,
+                isPreOrder: schedule.isPreOrder,
             });
-
             await newOrder.save();
             createdOrders.push(newOrder);
-            console.log("Order saved successfully, ID:", newOrder._id);
 
+            try {
+                await createUserNotification({
+                    userId,
+                    type: "order",
+                    title: "Order Placed",
+                    message: `Your order #${newOrder._id.toString().slice(-6)} has been placed and paid successfully.`,
+                    link: `/order-detail/${newOrder._id}`,
+                    meta: { orderId: newOrder._id.toString(), amount: newOrder.totalAmount, paymentMethod },
+                });
+            } catch (e) {
+                console.error("[VerifyPayment] User notification failed:", e);
+            }
             try {
                 await assignOrderToFranchise(newOrder._id);
             } catch (assignErr) {
@@ -303,41 +337,30 @@ export const verifyPayment = async (req, res) => {
         }
 
         if (couponToIncrement) {
-            couponToIncrement.timesUsed += 1;
-            await couponToIncrement.save();
+            await couponToIncrement.constructor.updateOne({ _id: couponToIncrement._id }, { $inc: { timesUsed: 1 } });
         }
-
-        await user.save();
 
         cart.items = [];
         await cart.save();
-        console.log("Cart cleared");
 
-        console.log("=== Payment Verification Completed Successfully ===");
-
-        const payload =
-            createdOrders.length === 1
-                ? {
-                      order: createdOrders[0],
-                      orders: createdOrders,
-                      orderGroupId,
-                      grandTotal,
-                  }
-                : { orders: createdOrders, orderGroupId, grandTotal };
-
-        return handleResponse(res, 201, "Order placed and payment verified", payload);
-
-    } catch (error) {
-        console.error("=== Payment Verification Failed ===");
-        console.error("Error type:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Stack trace:", error.stack);
-
-        // Send detailed error message to frontend
-        const errorMessage = error.message || "Payment verification failed";
-        if (error.name === "ValidationError") {
-            return handleResponse(res, 400, `Verification error: ${errorMessage}`);
+        for (const order of createdOrders) {
+            emitToAdmin("new_order_placed", {
+                orderId: order._id,
+                orderGroupId,
+                customerName: user.fullName,
+                amount: order.totalAmount,
+                isPreOrder: order.isPreOrder,
+                scheduledDate: order.scheduledDate,
+                message: `New order placed by ${user.fullName}: ₹${order.totalAmount} (paid online)`,
+            });
         }
-        return handleResponse(res, 500, `Verification error: ${errorMessage}`);
+
+        return handleResponse(res, 201, "Order placed and payment verified", orderPayload(createdOrders, orderGroupId, grandTotal));
+    } catch (error) {
+        console.error("[VerifyPayment] Failed:", error);
+        if (error.name === "ValidationError") {
+            return handleResponse(res, 400, "Some order details are invalid. Please check your address and try again.");
+        }
+        return handleResponse(res, 500, "Payment verification failed");
     }
-};
+}

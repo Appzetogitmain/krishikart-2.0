@@ -10,11 +10,14 @@ import { useNavigate } from 'react-router-dom'
 import PageTransition from '../components/layout/PageTransition'
 import { cn } from '@/lib/utils'
 import { useWallet } from '../contexts/WalletContext'
+import { useFilter } from '../contexts/FilterContext'
+import { Switch } from '@/components/ui/switch'
 import api from '@/lib/axios'
 
 export default function ProfileScreen() {
   const navigate = useNavigate()
   const { balance, creditLimit, availableCredit } = useWallet()
+  const { vegMode, setVegMode } = useFilter()
 
 
   const userData = JSON.parse(localStorage.getItem('userData') || '{}')
@@ -147,8 +150,8 @@ export default function ProfileScreen() {
                             {item.badge}
                             {isToggle ? (
                               <Switch
-                                checked={isVegMode}
-                                onCheckedChange={setIsVegMode}
+                                checked={vegMode}
+                                onCheckedChange={setVegMode}
                                 className="scale-[0.85] origin-right data-[state=checked]:bg-emerald-600"
                               />
                             ) : (

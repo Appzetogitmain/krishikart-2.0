@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Coupon from '../models/coupon.js';
 import Order from '../models/order.js';
 import handleResponse from '../utils/helper.js';
@@ -143,7 +144,7 @@ export const validateCoupon = async (req, res) => {
             const monthlyVolume = await Order.aggregate([
                 {
                     $match: {
-                        $or: [{ userId: mongoose.Types.ObjectId(userId) }, { user: mongoose.Types.ObjectId(userId) }],
+                        $or: [{ userId: new mongoose.Types.ObjectId(String(userId)) }, { user: new mongoose.Types.ObjectId(String(userId)) }],
                         createdAt: { $gte: startOfMonth },
                         orderStatus: 'Delivered'
                     }

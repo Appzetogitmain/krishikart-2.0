@@ -98,7 +98,8 @@ export function CartProvider({ children }) {
                 fetchCart(); // Sync with backend to be safe
             } catch (error) {
                 console.error("API add to cart error:", error);
-                toast.error("Could not update your cart. Please check your internet connection.");
+                toast.error(error.response?.data?.message || "Could not update your cart. Please check your internet connection.");
+                fetchCart(); // undo the optimistic change
             }
         }
     };
@@ -137,6 +138,8 @@ export function CartProvider({ children }) {
                 await api.put('/user/cart/update', { productId, quantity: newQty });
             } catch (error) {
                 console.error("API update quantity error:", error);
+                toast.error(error.response?.data?.message || "Could not update your cart. Please try again.");
+                fetchCart(); // undo the optimistic change
             }
         }
     };
@@ -159,6 +162,8 @@ export function CartProvider({ children }) {
                 await api.put('/user/cart/update', { productId, quantity: targetQty });
             } catch (error) {
                 console.error("API set quantity error:", error);
+                toast.error(error.response?.data?.message || "Could not update your cart. Please try again.");
+                fetchCart(); // undo the optimistic change
             }
         }
     };

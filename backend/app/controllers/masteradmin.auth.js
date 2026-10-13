@@ -16,7 +16,8 @@ export const createMasterAdmin = async (req, res) => {
     const { email, password, secretKey, fullName, mobile, operationalZone } = req.body;
 
     /* 🔐 SECURITY CHECK */
-    if (secretKey !== process.env.MASTERADMIN_SECRET) {
+    // An unset secret must never match an empty/missing key
+    if (!process.env.MASTERADMIN_SECRET || !secretKey || secretKey !== process.env.MASTERADMIN_SECRET) {
       return handleResponse(res, 403, "Unauthorized");
     }
 
@@ -202,16 +203,14 @@ export const forgotMasterAdminPassword = async (req, res) => {
     if (!admin)
       return handleResponse(res, 404, "Admin not found with this email");
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    admin.otp = otp;
-    admin.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
-    await admin.save();
-
-    console.log(`[MasterAdmin/SubAdmin] Reset OTP for ${trimmedEmail}:`, otp);
-    // 📧 Email service integrate here
-
-    return handleResponse(res, 200, "OTP sent to email");
+    // No email service is connected yet, so a reset code can't be delivered. Previously the code
+    // was only printed to the server log (a security leak) while the screen claimed "OTP sent".
+    // TODO: send the code by email once an email provider is configured.
+    return handleResponse(
+      res,
+      503,
+      "Password reset by email is not available yet. Please ask the Super Admin to reset your password from Team Management.",
+    );
   } catch (err) {
     console.error("[Forgot Password Error]:", err);
     return handleResponse(res, 500, "Server error", { error: err.message });

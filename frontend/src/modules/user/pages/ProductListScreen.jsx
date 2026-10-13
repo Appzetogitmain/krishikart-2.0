@@ -577,7 +577,7 @@ export default function ProductListScreen() {
                                                 exit={{ opacity: 0, scale: 0.95 }}
                                                 className="w-full"
                                             >
-                                                <ProductCard product={product} />
+                                                <ProductCard product={product} highlight={searchQuery} />
                                             </motion.div>
                                         ))}
                                     </AnimatePresence>
@@ -753,7 +753,7 @@ export default function ProductListScreen() {
                                                 </div>
                                             ) : (
                                                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-                                                    {filteredProducts.map((product, index) => <ProductCard key={product._id || product.id || index} product={product} />)}
+                                                    {filteredProducts.map((product, index) => <ProductCard key={product._id || product.id || index} product={product} highlight={searchQuery} />)}
                                                 </div>
                                             )}
                                         </div>

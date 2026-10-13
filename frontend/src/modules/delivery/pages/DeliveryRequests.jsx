@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Package } from 'lucide-react';
-import { deliveryRequests as initialRequests } from '../utils/mockData';
 import DeliveryCard from '../components/cards/DeliveryCard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../utils/constants';

@@ -375,3 +375,86 @@ body {
   padding-bottom: env(safe-area-inset-bottom); /* iPhone notch/home bar fix */
 }
 
+
+/* ---------------------------------------------------------------------------
+   Customer app: product touch feedback ("lights up" when pressed / hovered)
+   Plain CSS so it stays smooth inside the Flutter webview. Only transform,
+   opacity and box-shadow are animated.
+   --------------------------------------------------------------------------- */
+.kk-press {
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+    -webkit-tap-highlight-color: transparent;
+    will-change: transform;
+}
+
+/* Pressed: card dips slightly and glows green. Skipped while an inner button
+   (add to cart, heart, +/-) is the thing being pressed. */
+.kk-press:active:not(:has(button:active, input:active)) {
+    transform: scale(0.97);
+    border-color: rgba(16, 185, 129, 0.55);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18), 0 14px 28px -12px rgba(16, 185, 129, 0.45);
+}
+
+.kk-press:active:not(:has(button:active, input:active)) .kk-press-img {
+    transform: scale(1.08);
+}
+
+.kk-press-img {
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease;
+}
+
+/* Devices with a real pointer (web): lift and glow on hover */
+@media (hover: hover) and (pointer: fine) {
+    .kk-press:hover {
+        transform: translateY(-4px);
+        border-color: rgba(16, 185, 129, 0.4);
+        box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.12), 0 18px 32px -14px rgba(15, 23, 42, 0.22);
+    }
+
+    .kk-press:hover .kk-press-img {
+        transform: scale(1.07);
+    }
+}
+
+/* Product already in the cart keeps a soft green outline */
+.kk-in-cart {
+    border-color: rgba(16, 185, 129, 0.6) !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.14), 0 6px 18px -10px rgba(16, 185, 129, 0.4);
+}
+
+/* Image placeholder shimmer while a product photo loads */
+.kk-shimmer {
+    background: linear-gradient(100deg, #f1f5f9 20%, #e8eef5 40%, #f8fafc 60%, #f1f5f9 80%);
+    background-size: 200% 100%;
+    animation: kk-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes kk-shimmer {
+    from { background-position: 180% 0; }
+    to { background-position: -20% 0; }
+}
+
+/* Small "pop" for the add button, cart count and heart */
+.kk-pop {
+    animation: kk-pop 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes kk-pop {
+    0% { transform: scale(0.8); }
+    60% { transform: scale(1.14); }
+    100% { transform: scale(1); }
+}
+
+/* Matched letters in search results */
+.kk-highlight {
+    background: rgba(16, 185, 129, 0.16);
+    color: #047857;
+    border-radius: 3px;
+    padding: 0 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .kk-press, .kk-press-img { transition: none; }
+    .kk-press:active, .kk-press:hover { transform: none; }
+    .kk-shimmer, .kk-pop { animation: none; }
+}

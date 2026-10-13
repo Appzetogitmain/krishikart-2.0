@@ -21,6 +21,7 @@ const PrivacySecurity = lazy(() => import('../pages/PrivacySecurityScreen'));
 const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicyScreen'));
 const ReturnPickupsScreen = lazy(() => import('../pages/ReturnPickupsScreen'));
 const CodRemittanceScreen = lazy(() => import('../pages/CodRemittanceScreen'));
+const DeliveryReportsScreen = lazy(() => import('../pages/DeliveryReportsScreen'));
 
 const MyDocumentsScreen = lazy(() => import('../pages/MyDocumentsScreen'));
 
@@ -71,6 +72,7 @@ export const deliveryRoutes = (
                 <Route path="history" element={withSuspense(DeliveryHistory)} />
                 <Route path="return-pickups" element={withSuspense(ReturnPickupsScreen)} />
                 <Route path="cod-remittance" element={withSuspense(CodRemittanceScreen)} />
+                <Route path="reports" element={withSuspense(DeliveryReportsScreen)} />
                 <Route path="profile" element={withSuspense(Profile)} />
                 <Route path="map" element={withSuspense(MapTracking)} />
                 <Route path="pickup" element={withSuspense(PickupConfirmation)} />

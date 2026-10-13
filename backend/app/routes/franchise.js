@@ -18,7 +18,6 @@ import {
   getFranchiseAdminPayoutsReceived,
   getInventory,
   updateStoreQRCode,
-  resetInventoryStock,
   getActiveFranchises,
   updateAvailability,
   saveFCMToken,
@@ -117,12 +116,6 @@ router.post(
   protectFranchise,
   requireFranchiseAccountVerified,
   testPushByToken,
-);
-router.post(
-  "/inventory/reset",
-  protectFranchise,
-  requireFranchiseAccountVerified,
-  resetInventoryStock,
 );
 
 // Franchise Notifications

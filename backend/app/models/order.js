@@ -283,10 +283,6 @@ const orderSchema = new mongoose.Schema({
         type: [returnRequestSchema],
         default: []
     },
-    numberOfPackages: {
-        type: Number,
-        default: 0
-    },
     bilty: {
         biltyNumber: String,
         generatedAt: Date,
@@ -323,6 +319,11 @@ const orderSchema = new mongoose.Schema({
         default: false
     },
     scheduleReminderSentAt: {
+        type: Date,
+        default: null
+    },
+    // Set once when a cancelled order's refund has been processed (guards double refunds)
+    refundProcessedAt: {
         type: Date,
         default: null
     }

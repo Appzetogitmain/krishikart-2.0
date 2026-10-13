@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Star, ShoppingCart, Plus, Minus, Heart } from 'lucide-react'
+import { Star, ShoppingCart, Plus, Minus, Heart, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCart } from '../../contexts/CartContext'
 import { useWishlist } from '../../contexts/WishlistContext'
 import { cn } from '@/lib/utils'
 import QuantityModal from './QuantityModal'
 import MobileQuantitySheet from './MobileQuantitySheet'
+import HighlightText from './HighlightText'
 import { useRequireAuth } from '../../hooks/useRequireAuth'
 
-export default function ProductCard({ product, layout = 'grid' }) {
+/** Light haptic tap on phones that support it (ignored elsewhere). */
+const tapFeedback = () => {
+    try { navigator.vibrate?.(10) } catch { /* not supported */ }
+}
+
+/**
+ * @param {string} highlight  optional search text; matching letters in the name are highlighted
+ */
+export default function ProductCard({ product, layout = 'grid', highlight = '' }) {
     const navigate = useNavigate()
     const { cartItems, addToCart, updateQuantity, removeFromCart, setQuantity } = useCart()
     const { toggleWishlist, isWishlisted } = useWishlist()
@@ -20,6 +29,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
     const [isMobile, setIsMobile] = useState(false)
     const [addAreaActive, setAddAreaActive] = useState(false)
     const [localQuantity, setLocalQuantity] = useState('')
+    const [imgLoaded, setImgLoaded] = useState(false)
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -43,21 +53,25 @@ export default function ProductCard({ product, layout = 'grid' }) {
         product.effectiveStorefrontPrice != null && catalogList > displayPrice ? catalogList : 0,
     )
     const hasComparePrice = strikePrice > displayPrice
+    const discountPercent = hasComparePrice ? Math.round((1 - displayPrice / strikePrice) * 100) : 0
     const isLoved = isWishlisted(productId)
     const productImage = product.primaryImage || product.image
 
     const handleAddToCart = requireAuth((e) => {
         e.stopPropagation()
+        tapFeedback()
         setIsModalOpen(true)
     })
 
     const handleWishlist = requireAuth((e) => {
         e.stopPropagation()
+        tapFeedback()
         toggleWishlist(product)
     })
 
     const handleIncrement = requireAuth((e) => {
         e.stopPropagation()
+        tapFeedback()
         updateQuantity(productId, 1)
     })
 
@@ -98,20 +112,28 @@ export default function ProductCard({ product, layout = 'grid' }) {
         return (
             <>
                 <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.25 }}
-                    onClick={() => navigate(`/product/${productId}`)}
-                    className="bg-white rounded-2xl p-1.5 border border-slate-100 flex gap-2 h-[94px] items-center group cursor-pointer shadow-sm hover:shadow-md transition-all duration-150 active:scale-[0.98] overflow-hidden md:rounded-xl md:border-slate-200 md:shadow-none md:hover:shadow-sm md:active:scale-100"
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '0px 0px -30px 0px' }}
+                    transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
                 >
-                    <div className="relative w-[76px] h-[76px] rounded-[16px] overflow-hidden shrink-0 bg-slate-50 md:rounded-lg">
+                {/* Entrance animation lives on the wrapper; press feedback on the card itself */}
+                <div
+                    onClick={() => navigate(`/product/${productId}`)}
+                    className={cn(
+                        "kk-press bg-white rounded-2xl p-1.5 border border-slate-100 flex gap-2 h-[94px] items-center group cursor-pointer shadow-sm overflow-hidden md:rounded-xl md:border-slate-200",
+                        quantity > 0 && "kk-in-cart"
+                    )}
+                >
+                    <div className={cn("relative w-[76px] h-[76px] rounded-[16px] overflow-hidden shrink-0 md:rounded-lg", imgLoaded ? "bg-slate-50" : "kk-shimmer")}>
                         <img
                             src={productImage}
                             alt={product.name}
-                            className="absolute inset-0 h-full w-full object-cover object-center"
+                            loading="lazy"
+                            onLoad={() => setImgLoaded(true)}
+                            className={cn("kk-press-img absolute inset-0 h-full w-full object-cover object-center", imgLoaded ? "opacity-100" : "opacity-0")}
                             draggable={false}
-                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80' }}
+                            onError={(e) => { setImgLoaded(true); e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80' }}
                         />
                         <button
                             onClick={handleWishlist}
@@ -122,7 +144,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
                     </div>
 
                     <div className="flex-1 min-w-0 pr-2">
-                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight line-clamp-1 md:text-sm md:font-bold md:normal-case md:tracking-normal">{product.name}</h3>
+                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight line-clamp-1 md:text-sm md:font-bold md:normal-case md:tracking-normal"><HighlightText text={product.name} query={highlight} /></h3>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 md:text-[10px] md:normal-case md:tracking-normal">{product.supplier}</p>
 
                         <div className="flex items-center justify-between mt-3">
@@ -164,6 +186,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
                             </div>
                         </div>
                     </div>
+                </div>
                 </motion.div>
                 {/* Desktop Quantity Modal */}
                 {!isMobile && (
@@ -190,22 +213,31 @@ export default function ProductCard({ product, layout = 'grid' }) {
     return (
         <>
             <motion.div
-                layout
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.25 }}
-                className="relative bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-slate-100 transition-all duration-300 overflow-hidden flex flex-col h-full group hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)]"
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '0px 0px -40px 0px' }}
+                transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+                className="h-full"
+            >
+            {/* Entrance animation lives on the wrapper; press feedback on the card itself */}
+            <div
+                className={cn(
+                    "kk-press relative bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden flex flex-col h-full group",
+                    quantity > 0 && "kk-in-cart"
+                )}
             >
                 {/* Image Area */}
-                <div 
-                    className="relative w-full aspect-square bg-slate-50/50 overflow-hidden cursor-pointer"
+                <div
+                    className={cn("relative w-full aspect-square overflow-hidden cursor-pointer", imgLoaded ? "bg-slate-50/50" : "kk-shimmer")}
                     onClick={() => navigate(`/product/${productId}`)}
                 >
                     <img
                         src={productImage}
                         alt={product.name}
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80' }}
+                        loading="lazy"
+                        onLoad={() => setImgLoaded(true)}
+                        className={cn("kk-press-img absolute inset-0 h-full w-full object-cover", imgLoaded ? "opacity-100" : "opacity-0")}
+                        onError={(e) => { setImgLoaded(true); e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80' }}
                     />
                     
                     {/* Top Badges */}
@@ -224,25 +256,41 @@ export default function ProductCard({ product, layout = 'grid' }) {
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleWishlist(e); }}
-                            className="w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-all pointer-events-auto"
+                            aria-label={isLoved ? "Remove from my list" : "Save to my list"}
+                            className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-all pointer-events-auto"
                         >
-                            <Heart size={14} className={isLoved ? "fill-red-500 text-red-500" : "text-slate-300"} />
+                            <Heart key={isLoved ? 'loved' : 'not'} size={15} className={cn(isLoved ? "kk-pop fill-red-500 text-red-500" : "text-slate-300")} />
                         </button>
                     </div>
 
-                    {/* Best Price Overlay (Optional, if we want it on image) */}
-                    {(product.bestPrice || displayPrice) && (
-                        <div className="absolute bottom-2 left-2 bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm uppercase tracking-tighter">
-                            Best Rate
+                    {/* Bottom badges: real discount, admin-set best rate, and in-cart tick */}
+                    <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-1 pointer-events-none">
+                        <div className="flex flex-col items-start gap-1">
+                            {discountPercent > 0 && (
+                                <div className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm tracking-tight whitespace-nowrap">
+                                    {discountPercent}% OFF
+                                </div>
+                            )}
+                            {/* One badge at a time so the photo stays visible: a real discount wins */}
+                            {discountPercent <= 0 && Number(product.bestPrice) > 0 && (
+                                <div className="bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm uppercase tracking-tighter whitespace-nowrap">
+                                    Best Rate
+                                </div>
+                            )}
                         </div>
-                    )}
+                        {quantity > 0 && (
+                            <div className="kk-pop shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white shadow-md ring-2 ring-white" aria-label="In your cart">
+                                <Check size={13} strokeWidth={3.5} />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Content Area */}
                 <div className="p-2.5 flex flex-col flex-1 gap-1.5">
                     <div className="flex-1 cursor-pointer" onClick={() => navigate(`/product/${productId}`)}>
-                        <h3 className="text-[13px] font-bold text-slate-800 leading-tight line-clamp-2 tracking-tight group-hover:text-emerald-700 transition-colors">
-                            {product.name}
+                        <h3 className="text-[13px] font-bold text-slate-800 leading-tight line-clamp-2 tracking-tight group-hover:text-emerald-700 group-active:text-emerald-700 transition-colors">
+                            <HighlightText text={product.name} query={highlight} />
                         </h3>
                         <p className="text-[10px] font-bold text-slate-400 mt-0.5">
                             {product.unitValue} {product.unit}
@@ -250,47 +298,53 @@ export default function ProductCard({ product, layout = 'grid' }) {
                     </div>
 
                     {/* Bottom Row: Price & Add */}
-                    <div className="mt-auto pt-1 flex items-center justify-between gap-2">
-                        <div className="flex flex-col">
+                    {/* Once in the cart, the quantity control gets its own full-width row so it never
+                        overflows narrow cards */}
+                    <div className={cn("mt-auto pt-1 flex gap-2", quantity > 0 ? "flex-col" : "items-center justify-between")}>
+                        <div className={cn("flex min-w-0", quantity > 0 ? "items-baseline gap-1.5" : "flex-col")}>
                             <span className="text-[15px] font-black text-slate-900 leading-none">₹{displayPrice}</span>
                             {hasComparePrice && (
-                                <span className="text-[10px] text-slate-400 line-through font-bold mt-0.5">₹{strikePrice}</span>
+                                <span className={cn("text-[10px] text-slate-400 line-through font-bold", quantity > 0 ? "" : "mt-0.5")}>₹{strikePrice}</span>
                             )}
                         </div>
 
-                        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <div className={cn(quantity > 0 ? "w-full" : "shrink-0")} onClick={(e) => e.stopPropagation()}>
                             <AnimatePresence mode="wait">
                                 {quantity === 0 ? (
                                     <button
                                         type="button"
                                         onClick={handleAddToCart}
-                                        className="size-8 rounded-lg bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center p-0"
+                                        className="size-9 rounded-xl bg-emerald-600 text-white shadow-[0_6px_14px_-6px_rgba(5,150,105,0.7)] hover:bg-emerald-700 active:scale-90 transition-all flex items-center justify-center p-0"
                                         aria-label="Add to cart"
                                     >
-                                        <Plus size={14} strokeWidth={3} />
+                                        <Plus size={16} strokeWidth={3} />
                                     </button>
                                 ) : (
-                                    <div className="inline-flex items-center bg-emerald-600 rounded-lg text-white shadow-sm overflow-hidden">
+                                    <div className="kk-pop flex w-full items-center justify-between bg-emerald-600 rounded-xl text-white shadow-[0_6px_14px_-6px_rgba(5,150,105,0.7)] overflow-hidden">
                                         <button
                                             type="button"
                                             onClick={handleDecrement}
-                                            className="size-8 flex items-center justify-center p-0 hover:bg-black/10 transition-colors"
+                                            aria-label="Remove one"
+                                            className="h-9 w-10 shrink-0 flex items-center justify-center p-0 hover:bg-black/10 active:bg-black/20 transition-colors"
                                         >
-                                            <Minus size={12} strokeWidth={3} />
+                                            <Minus size={14} strokeWidth={3} />
                                         </button>
                                         <input
                                             type="number"
+                                            inputMode="numeric"
                                             value={localQuantity}
                                             onChange={handleQuantityInput}
                                             onBlur={handleBlur}
-                                            className="text-[11px] font-black w-5 text-center bg-transparent border-none text-white focus:outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            aria-label="Quantity"
+                                            className="text-[13px] font-black min-w-0 flex-1 text-center bg-transparent border-none text-white focus:outline-none p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                         <button
                                             type="button"
                                             onClick={handleIncrement}
-                                            className="size-8 flex items-center justify-center p-0 hover:bg-black/10 transition-colors"
+                                            aria-label="Add one"
+                                            className="h-9 w-10 shrink-0 flex items-center justify-center p-0 hover:bg-black/10 active:bg-black/20 transition-colors"
                                         >
-                                            <Plus size={12} strokeWidth={3} />
+                                            <Plus size={14} strokeWidth={3} />
                                         </button>
                                     </div>
                                 )}
@@ -298,6 +352,7 @@ export default function ProductCard({ product, layout = 'grid' }) {
                         </div>
                     </div>
                 </div>
+            </div>
             </motion.div>
 
             {/* Desktop Quantity Modal */}

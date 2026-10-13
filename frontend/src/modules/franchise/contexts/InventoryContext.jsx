@@ -75,20 +75,6 @@ export const InventoryProvider = ({ children }) => {
 
     const categories = Array.from(new Set(inventory.map(item => item.category)));
 
-    const resetAllStockItems = async () => {
-        try {
-            const response = await api.post('/franchise/inventory/reset');
-            if (response.data.success) {
-                await fetchInventory();
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error("Reset inventory error:", error);
-            return false;
-        }
-    };
-
     const updateStock = (productId, newStock) => {
         const clamped = Math.max(0, Number(newStock) || 0);
         setInventory(prev => prev.map(item => {
@@ -107,7 +93,6 @@ export const InventoryProvider = ({ children }) => {
             loading,
             getLowStockItems,
             getStockStats,
-            resetAllStockItems,
             refreshInventory: fetchInventory,
             updateStock
         }}>

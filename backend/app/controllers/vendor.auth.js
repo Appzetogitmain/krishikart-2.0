@@ -1,7 +1,7 @@
 import Vendor from "../models/vendor.js";
 import OTP from "../models/otp.js";
 import handleResponse from "../utils/helper.js";
-import { generateOTP, hashOTP, verifyHashedOTP, matchesGlobalDefaultOtp, isGlobalDefaultOtpEnabled } from "../utils/otpHelper.js";
+import { generateOTP, hashOTP, verifyHashedOTP, verifyOtpRecord, matchesGlobalDefaultOtp, isGlobalDefaultOtpEnabled } from "../utils/otpHelper.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
@@ -253,7 +253,7 @@ export const verifyVendorOTP = async (req, res) => {
             return handleResponse(res, 400, "OTP expired");
         }
 
-        const isMatch = await verifyHashedOTP(otp, otpRecord.otp);
+        const isMatch = await verifyOtpRecord(otpRecord, otp);
         if (!isMatch) return handleResponse(res, 400, "Invalid OTP");
 
         await OTP.deleteOne({ mobile, role: "vendor" });
@@ -568,8 +568,9 @@ export const saveFCMToken = async (req, res) => {
  * @access Private (Vendor)
  */
 export const testPushByToken = async (req, res) => {
+    // Declared outside try so the catch block can clean up an invalid token
+    const { fcm_token, plateform } = req.body || {};
     try {
-        const { fcm_token, plateform } = req.body;
         if (!fcm_token) return handleResponse(res, 400, "fcm_token is required");
 
         console.log(`[FCM-Test-Vendor] Sending test ping to ${plateform || 'mobile'}:`, fcm_token);

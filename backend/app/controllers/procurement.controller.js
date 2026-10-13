@@ -12,6 +12,7 @@ import { emitToVendor, emitToAdmin, emitToFranchise } from "../lib/socket.js";
 import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
+import { takeStockUpTo, addStock } from "../utils/stock.js";
 
 // Get vendor assignments (Vendor)
 export const getVendorAssignments = async (req, res) => {
@@ -452,6 +453,8 @@ export const adminUpdateProcurementRequest = async (req, res) => {
         if (!request) {
             return handleResponse(res, 404, "Procurement request not found");
         }
+        // Remember the vendor before this update so we can tell a new assignment from an update
+        const previousVendorId = request.assignedVendorId ? String(request.assignedVendorId) : null;
 
         // Handle Item Edits by Admin (Price/Qty)
         if (editedItems && Array.isArray(editedItems)) {
@@ -522,7 +525,8 @@ export const adminUpdateProcurementRequest = async (req, res) => {
 
         // Notify Vendor
         if (requestToAssign.assignedVendorId) {
-            const isNew = !request.assignedVendorId;
+            // New when the vendor was just assigned (or changed), including split-off requests
+            const isNew = requestToAssign !== request || previousVendorId !== String(requestToAssign.assignedVendorId);
             const eventName = isNew ? "new_assignment" : "procurement_update";
             
             emitToVendor(requestToAssign.assignedVendorId, eventName, {
@@ -876,57 +880,22 @@ export const franchiseConfirmReceipt = async (req, res) => {
             });
         }
 
-        // Update Franchise Inventory
+        // Update Franchise Inventory: add only GOOD stock (received minus damaged; rejected items
+        // never enter inventory). Each product is changed atomically.
         try {
-            let inventory = await Inventory.findOne({ franchiseId: request.franchiseId });
-            if (!inventory) {
-                console.log(`[Inventory] Initializing missing inventory for franchise: ${request.franchiseId}`);
-                inventory = await Inventory.create({
-                    franchiseId: request.franchiseId,
-                    items: []
-                });
-            }
-
-            // Sync items from request to inventory
             for (const reqItem of request.items) {
                 const prodId = reqItem.productId;
                 if (!mongoose.Types.ObjectId.isValid(prodId)) continue;
-
-                // Skip completely rejected items - they should NOT enter inventory
-                if (reqItem.rejected === true) {
-                    console.log(`[Inventory] Skipping rejected item: ${reqItem.name}`);
-                    continue;
-                }
-
-                // Only add GOOD stock = received minus damaged
-                // Damaged items should never enter inventory
-                // Strictly use receivedQuantity. If rejected or not set, it should be 0.
+                if (reqItem.rejected === true) continue;
                 const received = Number(reqItem.receivedQuantity) || 0;
                 const damaged = Number(reqItem.damagedQuantity) || 0;
                 const quantityToAdd = Math.max(0, received - damaged);
-
-                const existingItem = inventory.items.find(i => i.productId.toString() === prodId.toString());
-
-                // CRITICAL: Ensure we skip if no valid quantity was received
-                if (quantityToAdd <= 0) continue;
-
-                if (existingItem) {
-                    existingItem.currentStock += quantityToAdd;
-                    existingItem.lastUpdated = new Date();
-                } else {
-                    inventory.items.push({
-                        productId: prodId,
-                        currentStock: quantityToAdd,
-                        lastUpdated: new Date()
-                    });
-                }
+                if (quantityToAdd > 0) await addStock(request.franchiseId, prodId, quantityToAdd);
             }
-
-            await inventory.save();
-            console.log(`Inventory updated for franchise: ${franchiseId} based on audit results. Rejected items were excluded from inventory.`);
         } catch (invErr) {
             console.error("Critical: Stock sync failed during receipt confirmation:", invErr);
         }
+
 
         // Update Order and Auto-Pack if exists
         if (request.orderId) {
@@ -1015,18 +984,10 @@ export const franchiseConfirmReceipt = async (req, res) => {
                         const wasAlreadyPacked = order.statusHistory.some(h => h.status === 'Packed' && h.updatedBy !== 'system');
                         
                         if (!wasAlreadyPacked) {
-                            const inventory = await Inventory.findOne({ franchiseId });
-                            if (inventory) {
-                                for (const item of order.items) {
-                                    const invItem = inventory.items.find(i =>
-                                        i.productId.toString() === (item.productId?._id?.toString() || item.productId?.toString())
-                                    );
-                                    if (invItem) {
-                                        invItem.currentStock = Math.max(0, invItem.currentStock - item.quantity);
-                                        invItem.lastUpdated = new Date();
-                                    }
-                                }
-                                await inventory.save();
+                            // Atomic per product; record what was packed so a later cancel returns it
+                            for (const item of order.items) {
+                                const pid = item.productId?._id || item.productId;
+                                item.packedQuantity = await takeStockUpTo(franchiseId, pid, Number(item.quantity || 0));
                             }
                         }
                     } else {
@@ -1387,7 +1348,7 @@ export const getVendorDashboardStats = async (req, res) => {
             pendingSettlement,
             totalTurnover,
             payoutCycleDays: avgPrepDays > 0 ? Number(avgPrepDays.toFixed(1)) : 7.0,
-            verificationStatus: vendor?.status === "active" ? "Alpha Verified" : "Pending Verification",
+            verificationStatus: vendor?.status === "active" ? "Verified" : "Pending Verification",
             syncMinutes,
             inventory: {
                 stockQuantity,
@@ -1399,10 +1360,6 @@ export const getVendorDashboardStats = async (req, res) => {
                 pendingSettlement: Number(settlementTrend.toFixed(1)),
                 yieldDelta: Number(turnoverTrend.toFixed(1)),
                 totalTurnover: Number(turnoverTrend.toFixed(1)),
-            },
-            inventory: {
-                stockQuantity,
-                availableProduce
             },
             performance: {
                 fulfillmentRate,

@@ -6,6 +6,7 @@ import {
   generateOTP,
   hashOTP,
   verifyHashedOTP,
+  verifyOtpRecord,
   matchesGlobalDefaultOtp,
   isGlobalDefaultOtpEnabled,
 } from "../utils/otpHelper.js";
@@ -424,7 +425,7 @@ export const verifyFranchiseOTP = async (req, res) => {
       return handleResponse(res, 400, "OTP expired");
     }
 
-    const isMatch = await verifyHashedOTP(otp, otpRecord.otp);
+    const isMatch = await verifyOtpRecord(otpRecord, otp);
 
     if (!isMatch) {
       return handleResponse(res, 400, "Invalid OTP");
@@ -856,7 +857,7 @@ export const resetFranchisePassword = async (req, res) => {
       return handleResponse(res, 400, "OTP expired");
     }
 
-    const isMatch = await verifyHashedOTP(otp, otpRecord.otp);
+    const isMatch = await verifyOtpRecord(otpRecord, otp);
     if (!isMatch) return handleResponse(res, 400, "Invalid OTP");
 
     const franchise = await Franchise.findOne({ mobile });

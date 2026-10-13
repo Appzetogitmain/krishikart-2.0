@@ -25,9 +25,23 @@ const otpSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // Wrong guesses for the current code (see verifyOtpRecord)
+        attempts: {
+            type: Number,
+            default: 0,
+        },
     },
     { timestamps: true }
 );
+
+// Issuing a new code (any update that sets `otp`) resets the wrong-attempt counter
+otpSchema.pre("findOneAndUpdate", function () {
+    const update = this.getUpdate() || {};
+    const sets = update.$set || update;
+    if (sets && Object.prototype.hasOwnProperty.call(sets, "otp")) {
+        this.set({ attempts: 0 });
+    }
+});
 
 // Compound index for faster lookups
 otpSchema.index({ mobile: 1, role: 1 });

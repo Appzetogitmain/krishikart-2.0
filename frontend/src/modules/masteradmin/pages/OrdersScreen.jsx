@@ -27,7 +27,6 @@ import {
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import OrdersTable from '../components/tables/OrdersTable';
-import mockVendors from '../data/mockVendors.json';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { getSocket, joinAdminDeliveryTracking } from '@/lib/socket';
@@ -777,11 +776,6 @@ export default function OrdersScreen() {
                                                     <div>
                                                         <h4 className="text-sm font-bold text-slate-900 tracking-tight">{vendor.fullName || vendor.name}</h4>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            <div className="flex items-center gap-1 text-slate-500 font-bold text-[10px]">
-                                                                <Star size={10} className="text-amber-500 fill-amber-500" />
-                                                                <span className="tabular-nums">{vendor.rating || '4.5'}</span>
-                                                            </div>
-                                                            <span className="text-[10px] text-slate-200">•</span>
                                                             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                                                                 {vendor.products?.length || 0} Products
                                                             </span>
@@ -789,8 +783,8 @@ export default function OrdersScreen() {
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1 tracking-widest">Available</span>
-                                                    <span className="text-xs font-bold text-slate-900 tabular-nums">{vendor.capacity || '100'}%</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1 tracking-widest">Status</span>
+                                                    <span className="text-xs font-bold text-slate-900 capitalize">{vendor.status || 'active'}</span>
                                                 </div>
                                             </div>
 

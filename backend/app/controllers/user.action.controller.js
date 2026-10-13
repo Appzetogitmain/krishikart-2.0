@@ -21,13 +21,22 @@ export const getCart = async (req, res) => {
     }
 }
 
+// Upper limit per product line, so typos like 100000000 can't create absurd orders
+const MAX_CART_ITEM_QTY = Number(process.env.MAX_CART_ITEM_QTY) || 10000
+const isValidQty = (q) => typeof q === "number" && Number.isFinite(q) && q > 0 && q <= MAX_CART_ITEM_QTY
+const qtyError = `Please enter a quantity between 1 and ${MAX_CART_ITEM_QTY.toLocaleString("en-IN")}.`
+
 export const addToCart = async (req, res) => {
     try {
         const userId = req.user.id
-        const { productId, quantity = 1 } = req.body
+        const { productId } = req.body
+        const quantity = Number(req.body.quantity ?? 1)
 
         if (!productId) {
             return handleResponse(res, 400, "Product ID is required")
+        }
+        if (!isValidQty(quantity)) {
+            return handleResponse(res, 400, qtyError)
         }
 
         let cart = await Cart.findOne({ userId })
@@ -38,7 +47,11 @@ export const addToCart = async (req, res) => {
         const itemIndex = cart.items.findIndex(item => item.productId.toString() === productId)
 
         if (itemIndex > -1) {
-            cart.items[itemIndex].quantity += quantity
+            const combined = cart.items[itemIndex].quantity + quantity
+            if (!isValidQty(combined)) {
+                return handleResponse(res, 400, qtyError)
+            }
+            cart.items[itemIndex].quantity = combined
         } else {
             cart.items.push({ productId, quantity })
         }
@@ -56,10 +69,14 @@ export const addToCart = async (req, res) => {
 export const updateCartQuantity = async (req, res) => {
     try {
         const userId = req.user.id
-        const { productId, quantity } = req.body
+        const { productId } = req.body
+        const quantity = Number(req.body.quantity)
 
-        if (!productId || quantity === undefined) {
+        if (!productId || req.body.quantity === undefined || !Number.isFinite(quantity)) {
             return handleResponse(res, 400, "Product ID and quantity are required")
+        }
+        if (quantity > MAX_CART_ITEM_QTY) {
+            return handleResponse(res, 400, qtyError)
         }
 
         const cart = await Cart.findOne({ userId })

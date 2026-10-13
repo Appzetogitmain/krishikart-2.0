@@ -243,10 +243,7 @@ export default function CreditManagementScreen() {
                 <MetricRow
                     label="Total Credit Given"
                     value={`₹${(customers.reduce((acc, curr) => acc + (curr.usedCredit || 0), 0) / 100000).toFixed(2)}L`}
-                    change={12.4}
-                    trend="up"
                     icon={IndianRupee}
-                    sparklineData={[3.8, 3.9, 4.1, 4.0, 4.2, 4.25, 4.28].map(v => ({ value: v }))}
                 />
                 <MetricRow
                     label="Total Credit Limit"
@@ -255,7 +252,7 @@ export default function CreditManagementScreen() {
                     icon={CreditCard}
                 />
                 <MetricRow
-                    label="Status"
+                    label="Customers Within 90% of Limit"
                     value={`${(customers.length > 0 ? ((customers.length - customers.filter(c => ((c.usedCredit || 0) / (c.creditLimit || 1)) > 0.9).length) / customers.length) * 100 : 100).toFixed(1)}%`}
                     trend="Stable"
                     isPositive={true}

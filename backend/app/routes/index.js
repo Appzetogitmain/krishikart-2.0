@@ -11,6 +11,7 @@ import paymentRoutes from "../../app/routes/payment.js";
 import procurementRoutes from "../../app/routes/procurement.routes.js";
 import geoRoute from "../../app/routes/geo.js";
 import couponRoutes from "../../app/routes/coupon.js";
+import reportRoutes from "../../app/routes/reports.js";
 
 const setupRoutes = (app) => {
     const apiRouter = express.Router();
@@ -27,6 +28,7 @@ const setupRoutes = (app) => {
     apiRouter.use("/procurement", procurementRoutes);
     apiRouter.use("/geo", geoRoute);
     apiRouter.use("/coupons", couponRoutes);
+    apiRouter.use("/reports", reportRoutes);
 
     // Apply all routes under /api
     app.use("/api", apiRouter);

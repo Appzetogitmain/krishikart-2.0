@@ -94,6 +94,23 @@ export default function DeliveryMonitoringScreen() {
         ['Delivered', 'Received'].includes(o.status) && matchesSearch(o)
     );
 
+    // Real figures for the summary cards (previously hard-coded sample numbers)
+    const todayKey = new Date().toDateString();
+    const allDelivered = orders.filter(o => ['Delivered', 'Received'].includes(o.status));
+    const deliveredToday = allDelivered.filter(o => o.timestamp?.delivered && new Date(o.timestamp.delivered).toDateString() === todayKey).length;
+    const deliveryDurations = allDelivered
+        .map(o => (o.timestamp?.delivered && o.timestamp?.created) ? new Date(o.timestamp.delivered) - new Date(o.timestamp.created) : null)
+        .filter(ms => ms !== null && ms > 0);
+    const avgDeliveryMs = deliveryDurations.length ? deliveryDurations.reduce((a, b) => a + b, 0) / deliveryDurations.length : 0;
+    const formatDuration = (ms) => {
+        if (!ms) return '—';
+        const mins = Math.round(ms / 60000);
+        if (mins < 60) return `${mins} min`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 48) return `${hrs}h ${mins % 60}m`;
+        return `${Math.round(hrs / 24)} days`;
+    };
+
     const handleExport = () => {
         const columns = [
             { header: 'Order ID', key: '_id' },
@@ -263,36 +280,24 @@ export default function DeliveryMonitoringScreen() {
             {/* Stat Cards */}
             <div className="bg-white border-b border-slate-200 grid grid-cols-1 md:grid-cols-4">
                 <MetricRow
-                    label="Success Rate"
-                    value="98.2%"
-                    change={0.4}
-                    trend="up"
-                    icon={Activity}
-                    sparklineData={[97, 97.5, 98, 97.8, 98.2, 98.1, 98.2].map(v => ({ value: v }))}
-                />
-                <MetricRow
                     label="Orders on the Way"
                     value={inTransitOrders.length.toString()}
-                    change={12.5}
-                    trend="up"
                     icon={Navigation}
-                    sparklineData={[1, 0, 1, 1, 2, 1, 1].map(v => ({ value: v }))}
                 />
                 <MetricRow
                     label="Delivered Today"
-                    value={deliveredOrders.length.toString()}
-                    change={5.2}
-                    trend="up"
+                    value={deliveredToday.toString()}
                     icon={CheckSquare}
-                    sparklineData={[0, 1, 1, 0, 1, 1, 1].map(v => ({ value: v }))}
                 />
                 <MetricRow
-                    label="Average Delivery Time"
-                    value="14.2m"
-                    change={-2.1}
-                    trend="up"
+                    label="Delivered (All Time)"
+                    value={allDelivered.length.toString()}
+                    icon={Activity}
+                />
+                <MetricRow
+                    label="Avg. Order-to-Delivery Time"
+                    value={formatDuration(avgDeliveryMs)}
                     icon={Timer}
-                    sparklineData={[16, 15.5, 15, 14.8, 14.2, 14.5, 14.2].map(v => ({ value: v }))}
                 />
             </div>
 
@@ -319,27 +324,6 @@ export default function DeliveryMonitoringScreen() {
                         density="compact"
                     />
 
-                    <div className="p-6 bg-slate-50 border-t border-slate-200">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Recent Updates</h4>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-white border border-slate-200 p-4 rounded-sm flex items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-xs font-bold text-slate-900">Busy evening expected</p>
-                                    <p className="text-[11px] text-slate-500 mt-1">Many orders are expected at 6 PM. Make sure enough riders are available.</p>
-                                </div>
-                            </div>
-                            <div className="bg-white border border-slate-200 p-4 rounded-sm flex items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
-                                <CheckSquare size={16} className="text-emerald-500 shrink-0 mt-0.5" />
-                                <div>
-                                    <p className="text-xs font-bold text-slate-900">Morning orders done</p>
-                                    <p className="text-[11px] text-slate-500 mt-1">All 145 orders from this morning were delivered on time. Good job!</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

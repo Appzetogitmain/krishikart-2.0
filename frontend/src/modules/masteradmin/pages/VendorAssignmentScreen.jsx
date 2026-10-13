@@ -17,7 +17,6 @@ import {
     Activity,
     Zap
 } from 'lucide-react';
-import mockVendors from '../data/mockVendors.json';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -96,9 +95,8 @@ export default function VendorAssignmentScreen() {
                 const mappedVendors = finalVendors.map(v => ({
                     id: v._id,
                     name: v.fullName,
-                    rating: 4.8, // Fallback rating
-                    category: v.farmLocation,
-                    capacity: 85, // Fallback capacity
+                    farmLocation: v.farmLocation,
+                    status: v.status,
                     products: v.products
                 }));
                 setVendors(mappedVendors);
@@ -458,24 +456,20 @@ export default function VendorAssignmentScreen() {
                                                             <div>
                                                                 <h4 className="font-black text-slate-900 text-xs tracking-tight leading-tight">{vendor.name}</h4>
                                                                 <div className="flex items-center gap-1.5 mt-1">
-                                                                    <div className="flex items-center gap-1 text-amber-500 font-black text-[10px] tabular-nums">
-                                                                        <Star size={9} fill="currentColor" /> {vendor.rating}
-                                                                    </div>
-                                                                    <span className="text-slate-200">•</span>
-                                                                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{vendor.category}</span>
+                                                                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{vendor.products?.length || 0} products</span>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Available</div>
-                                                            <div className="text-xs font-black text-slate-900 tabular-nums leading-none">{vendor.capacity}%</div>
+                                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Status</div>
+                                                            <div className="text-xs font-black text-slate-900 leading-none capitalize">{vendor.status || 'active'}</div>
                                                         </div>
                                                     </div>
 
                                                     <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-50">
                                                         <div className="flex items-center gap-1.5 text-slate-400">
                                                             <MapPin size={10} />
-                                                            <span className="text-[10px] font-bold tabular-nums">{index + 1}.2km away</span>
+                                                            <span className="text-[10px] font-bold tabular-nums">{vendor.farmLocation || vendor.location || "Location not set"}</span>
                                                         </div>
                                                         <button
                                                             disabled={isAssigning}

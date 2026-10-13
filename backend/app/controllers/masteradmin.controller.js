@@ -335,13 +335,42 @@ export const getAllFranchises = async (req, res) => {
     const franchises = await Franchise.find(query)
       .select("-password -resetPasswordToken -resetPasswordExpires")
       .populate("servedCategories", "name")
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    // Real per-franchise figures for the list (the screen used to show made-up defaults)
+    const stats = await Order.aggregate([
+      { $match: { franchiseId: { $in: franchises.map((f) => f._id) } } },
+      {
+        $group: {
+          _id: "$franchiseId",
+          deliveredSales: { $sum: { $cond: [{ $in: ["$orderStatus", ["Delivered", "Received"]] }, "$totalAmount", 0] } },
+          delivered: { $sum: { $cond: [{ $in: ["$orderStatus", ["Delivered", "Received"]] }, 1, 0] } },
+          cancelled: { $sum: { $cond: [{ $eq: ["$orderStatus", "Cancelled"] }, 1, 0] } },
+          activeOrders: {
+            $sum: { $cond: [{ $in: ["$orderStatus", ["Placed", "Assigned", "Accepted", "Procuring", "Packed", "Ready", "Dispatched", "Out for Delivery"]] }, 1, 0] },
+          },
+        },
+      },
+    ]);
+    const byId = new Map(stats.map((s) => [String(s._id), s]));
+    const result = franchises.map((f) => {
+      const s = byId.get(String(f._id));
+      const finished = (s?.delivered || 0) + (s?.cancelled || 0);
+      return {
+        ...f,
+        orderVolume: Math.round((s?.deliveredSales || 0) * 100) / 100,
+        activeOrders: s?.activeOrders || 0,
+        // Share of finished orders that were delivered (null when there are none yet)
+        performance: finished ? Math.round(((s?.delivered || 0) / finished) * 100) : null,
+      };
+    });
 
     return handleResponse(
       res,
       200,
       "Franchises fetched successfully",
-      franchises,
+      result,
     );
   } catch (err) {
     console.error(err);

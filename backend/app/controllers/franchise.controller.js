@@ -341,48 +341,6 @@ export const getActiveFranchises = async (req, res) => {
 };
 
 /**
- * @desc Reset All Inventory Stock to 100 (Dev/Test Helper)
- * @route POST /franchise/inventory/reset
- * @access Private (Franchise)
- */
-export const resetInventoryStock = async (req, res) => {
-  try {
-    const franchiseId = req.franchise._id;
-
-    // Fetch all products to ensure everything is included
-    const allProducts = await Product.find({});
-
-    let inventory = await Inventory.findOne({ franchiseId });
-
-    const newItems = allProducts.map((product) => ({
-      productId: product._id,
-      currentStock: 100,
-      mbq: 5,
-      lastUpdated: new Date(),
-    }));
-
-    if (!inventory) {
-      inventory = new Inventory({
-        franchiseId,
-        items: newItems,
-      });
-    } else {
-      inventory.items = newItems;
-    }
-
-    await inventory.save();
-
-    return handleResponse(
-      res,
-      200,
-      "All inventory items reset to 100 stock successfully",
-    );
-  } catch (err) {
-    console.error("Reset Stock Error:", err);
-    return handleResponse(res, 500, "Internal server error");
-  }
-};
-/**
  * @desc Update Franchise Availability and Location
  * @route PUT /franchise/availability
  * @access Private (Franchise)

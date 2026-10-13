@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getSocket } from '@/lib/socket';
-import mockOrders from '../data/mockVendorOrders.json';
 import { cn } from '@/lib/utils';
 import { useOrders } from '@/modules/user/contexts/OrderContext';
 // import { useProcurement } from '@/modules/franchise/contexts/ProcurementContext';

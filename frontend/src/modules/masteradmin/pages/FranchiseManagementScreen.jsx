@@ -155,36 +155,24 @@ export default function FranchiseManagementScreen() {
             {/* Network KPIs */}
             <div className="bg-white border-b border-slate-200 grid grid-cols-1 md:grid-cols-4">
                 <MetricRow
-                    label="Franchises Online"
-                    value={franchises.filter(f => f.status === 'active').length.toString()}
-                    change={4.2}
-                    trend="up"
+                    label="Active Franchises"
+                    value={`${franchises.filter(f => f.status === 'active').length} / ${franchises.length}`}
                     icon={Cpu}
-                    sparklineData={[22, 23, 24, 23, 24, 24, 24].map(v => ({ value: v }))}
                 />
                 <MetricRow
-                    label="Efficiency"
-                    value="89.4%"
-                    change={1.2}
-                    trend="up"
+                    label="Online Now"
+                    value={franchises.filter(f => f.isOnline).length.toString()}
                     icon={Activity}
-                    sparklineData={[88, 88.5, 89, 88.8, 89.4, 89.2, 89.4].map(v => ({ value: v }))}
                 />
                 <MetricRow
-                    label="Orders Handled"
-                    value="1.2M/h"
-                    change={8.4}
-                    trend="up"
+                    label="Open Orders"
+                    value={franchises.reduce((s, f) => s + (f.activeOrders || 0), 0).toString()}
                     icon={BarChart2}
-                    sparklineData={[1.0, 1.1, 1.2, 1.1, 1.2, 1.3, 1.2].map(v => ({ value: v }))}
                 />
                 <MetricRow
-                    label="On-Time Rate"
-                    value="99.2%"
-                    change={0.1}
-                    trend="up"
+                    label="Awaiting Verification"
+                    value={franchises.filter(f => !f.isVerified).length.toString()}
                     icon={ShieldCheck}
-                    sparklineData={[99, 99.1, 99.2, 99, 99.2, 99.3, 99.2].map(v => ({ value: v }))}
                 />
             </div>
 
@@ -208,9 +196,9 @@ export default function FranchiseManagementScreen() {
                         <thead>
                             <tr className="bg-white border-b border-slate-200">
                                 <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Franchise</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Efficiency</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Yearly Sales</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Orders</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Delivery Rate</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivered Sales</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Open Orders</th>
                                 <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                             </tr>
                         </thead>
@@ -253,30 +241,34 @@ export default function FranchiseManagementScreen() {
                                             </div>
                                         </td>
                                         <td className="px-4 py-4">
+                                            {franchise.performance === null || franchise.performance === undefined ? (
+                                                <div className="text-center text-[10px] font-bold text-slate-400">No orders yet</div>
+                                            ) : (
                                             <div className="flex flex-col items-center gap-1.5">
                                                 <div className="w-24 h-1 bg-slate-100 rounded-full overflow-hidden">
                                                     <motion.div
                                                         initial={{ width: 0 }}
-                                                        animate={{ width: `${franchise.performance || 85}%` }}
+                                                        animate={{ width: `${franchise.performance}%` }}
                                                         className={cn(
                                                             "h-full",
-                                                            (franchise.performance || 85) > 90 ? "bg-emerald-500" :
-                                                                (franchise.performance || 85) > 80 ? "bg-slate-900" : "bg-amber-400"
+                                                            franchise.performance > 90 ? "bg-emerald-500" :
+                                                                franchise.performance > 80 ? "bg-slate-900" : "bg-amber-400"
                                                         )}
                                                     />
                                                 </div>
-                                                <span className="text-[10px] font-black text-slate-900 tabular-nums">{franchise.performance || 85}%</span>
+                                                <span className="text-[10px] font-black text-slate-900 tabular-nums">{franchise.performance}% delivered</span>
                                             </div>
+                                            )}
                                         </td>
                                         <td className="px-4 py-4">
                                             <div className="flex flex-col">
-                                                <span className="font-bold text-slate-900 text-[11px] tabular-nums">₹{((franchise.orderVolume || 15000) / 1000).toFixed(1)}k</span>
-                                                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter">Total Sales</span>
+                                                <span className="font-bold text-slate-900 text-[11px] tabular-nums">₹{Number(franchise.orderVolume || 0).toLocaleString('en-IN')}</span>
+                                                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-tighter">Delivered Sales</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-4">
                                             <span className="px-2 py-0.5 bg-slate-900 text-white text-[10px] font-black rounded-sm uppercase tracking-widest tabular-nums">
-                                                {franchise.activeOrders || 0} Load
+                                                {franchise.activeOrders || 0} open
                                             </span>
                                         </td>
                                         <td className="px-4 py-4">

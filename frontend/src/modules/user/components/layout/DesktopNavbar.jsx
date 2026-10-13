@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { getReadableLocationError } from '@/lib/geo'
 import LocationActionPopup from '../common/LocationActionPopup'
 import api from '@/lib/axios'
+import HighlightText from '../common/HighlightText'
 
 const PLACEHOLDERS = [
     "Search 'Spring Caps'",
@@ -251,7 +252,7 @@ export default function DesktopNavbar() {
                                                         <img src={product.primaryImage || product.image} className="w-full h-full object-cover" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-bold text-slate-800 truncate group-hover:text-emerald-700">{product.name}</p>
+                                                        <p className="text-sm font-bold text-slate-800 truncate group-hover:text-emerald-700"><HighlightText text={product.name} query={searchValue} /></p>
                                                         <p className="text-[11px] font-medium text-slate-400">₹{product.effectiveStorefrontPrice || product.price} / {product.unitValue} {product.unit}</p>
                                                     </div>
                                                 </div>

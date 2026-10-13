@@ -94,6 +94,14 @@ export async function computeSplitCheckoutPayload({
   for (const item of cart.items) {
     const product = item.productId;
     if (!product) continue;
+    const maxQty = Number(process.env.MAX_CART_ITEM_QTY) || 10000;
+    if (!Number.isFinite(item.quantity) || item.quantity <= 0 || item.quantity > maxQty) {
+      return {
+        ok: false,
+        status: 400,
+        message: `The quantity for ${product.name || "an item"} is not valid. Please enter between 1 and ${maxQty.toLocaleString("en-IN")} and try again.`,
+      };
+    }
     const offer = offers.get(product._id.toString());
     if (!offer) {
       return {

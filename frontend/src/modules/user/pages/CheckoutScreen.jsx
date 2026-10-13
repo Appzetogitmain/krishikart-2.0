@@ -122,7 +122,7 @@ export default function CheckoutScreen() {
     const ctxHasDeliveryPinned = locationCtx?.hasDeliveryPinned
     const ctxUpdateDeliveryLocation = locationCtx?.updateDeliveryLocation
     const { placeOrder } = useOrders()
-    const { balance, payWithWallet, useCreditAmount, creditLimit, creditUsed, availableCredit } = useWallet()
+    const { balance, payWithWallet, useCreditAmount: deductCreditLocally, creditLimit, creditUsed, availableCredit } = useWallet()
 
     const [step, setStep] = useState(1) // 1: Address, 2: Payment, 3: Success
     /** After place / Razorpay verify: `{ orders, orderGroupId }` (split by category when multiple). */
@@ -504,8 +504,10 @@ export default function CheckoutScreen() {
             }
 
             // 2. Create Razorpay Order on Backend
+            // The server works out the amount from the cart; payableAmount is only a fallback
             const { data: { result: order } } = await api.post('/payment/create-order', {
-                amount: payableAmount
+                amount: payableAmount,
+                orderData
             })
 
             // 3. Open Razorpay Modal
@@ -531,7 +533,7 @@ export default function CheckoutScreen() {
                                 payWithWallet(orderData.walletAmountUsed)
                             }
                             if (orderData.paymentMethod === 'Credit + Online' && orderData.creditAmountUsed > 0) {
-                                useCreditAmount(orderData.creditAmountUsed)
+                                deductCreditLocally(orderData.creditAmountUsed)
                             }
                             const orders = Array.isArray(r?.orders)
                                 ? r.orders

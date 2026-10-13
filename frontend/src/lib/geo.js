@@ -177,7 +177,13 @@ export const getCurrentLocation = () => {
             return;
         }
 
-        const permissionState = await getGeolocationPermissionState();
+        // Errors inside an async Promise executor are swallowed, so guard this call explicitly
+        let permissionState = 'prompt';
+        try {
+            permissionState = await getGeolocationPermissionState();
+        } catch {
+            permissionState = 'prompt';
+        }
         if (permissionState === 'denied') {
             reject(new Error('Location access is blocked in browser site settings'));
             return;

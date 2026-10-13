@@ -82,9 +82,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         },
         {
           icon: BarChart3,
-          label: "Global Reports",
-          path: "/masteradmin/global-reports",
-          permissionKey: "dashboard",
+          label: "Reports",
+          path: "/masteradmin/reports",
+          permissionKey: "analytics",
         },
         {
           icon: ShoppingBag,

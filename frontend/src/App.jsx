@@ -64,7 +64,7 @@ const DocumentationScreen = lazy(() => import('./modules/franchise/pages/Documen
 const FranchiseLogin = lazy(() => import('./modules/franchise/pages/LoginScreen'));
 const FranchiseSignup = lazy(() => import('./modules/franchise/pages/SignupScreen'));
 const FranchisePaymentSettings = lazy(() => import('./modules/franchise/pages/PaymentSettingsScreen'));
-const FranchiseReports = lazy(() => import('./modules/franchise/pages/ReportsScreen'));
+const FranchiseReports = lazy(() => import('./modules/franchise/pages/FranchiseReportsHub'));
 const FranchiseTerms = lazy(() => import('./modules/franchise/pages/TermsScreen'));
 const FranchiseHelpSupport = lazy(() => import('./modules/franchise/pages/HelpSupportScreen'));
 const FranchisePrivacyPolicy = lazy(() => import('./modules/franchise/pages/PrivacyPolicyScreen'));
