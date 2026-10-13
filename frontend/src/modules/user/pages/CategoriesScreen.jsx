@@ -9,6 +9,7 @@ import PageTransition from '../components/layout/PageTransition'
 import api from '@/lib/axios'
 import { useLocation } from '../contexts/LocationContext'
 import { getBrowseLocationParams } from '../utils/storefrontParams'
+import { optimizedImage } from '../utils/optimizedImage'
 import ServiceUnavailable from '../components/common/ServiceUnavailable'
 
 export default function CategoriesScreen() {
@@ -85,7 +86,7 @@ export default function CategoriesScreen() {
                                         >
                                             <div className="w-full aspect-square rounded-[28px] md:rounded-xl overflow-hidden shadow-sm transition-all duration-300 group-active:scale-95 group-hover:shadow-md relative border border-slate-100 bg-white">
                                                 <img
-                                                    src={cat.image}
+                                                    src={optimizedImage(cat.image, 200)}
                                                     alt={cat.name}
                                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&q=80' }}

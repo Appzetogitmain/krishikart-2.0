@@ -10,6 +10,7 @@ import QuantityModal from './QuantityModal'
 import MobileQuantitySheet from './MobileQuantitySheet'
 import HighlightText from './HighlightText'
 import { useRequireAuth } from '../../hooks/useRequireAuth'
+import { optimizedImage } from '../../utils/optimizedImage'
 
 /** Light haptic tap on phones that support it (ignored elsewhere). */
 const tapFeedback = () => {
@@ -26,14 +27,15 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
     const { requireAuth } = useRequireAuth()
 
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [isMobile, setIsMobile] = useState(false)
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+    // The quantity picker is only mounted once it has been opened, to keep long lists light
+    const [pickerMounted, setPickerMounted] = useState(false)
     const [addAreaActive, setAddAreaActive] = useState(false)
     const [localQuantity, setLocalQuantity] = useState('')
     const [imgLoaded, setImgLoaded] = useState(false)
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768)
-        checkMobile()
         window.addEventListener('resize', checkMobile)
         return () => window.removeEventListener('resize', checkMobile)
     }, [])
@@ -55,11 +57,12 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
     const hasComparePrice = strikePrice > displayPrice
     const discountPercent = hasComparePrice ? Math.round((1 - displayPrice / strikePrice) * 100) : 0
     const isLoved = isWishlisted(productId)
-    const productImage = product.primaryImage || product.image
+    const productImage = optimizedImage(product.primaryImage || product.image, 400)
 
     const handleAddToCart = requireAuth((e) => {
         e.stopPropagation()
         tapFeedback()
+        setPickerMounted(true)
         setIsModalOpen(true)
     })
 
@@ -129,7 +132,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                         <img
                             src={productImage}
                             alt={product.name}
-                            loading="lazy"
+                            loading="lazy" decoding="async"
                             onLoad={() => setImgLoaded(true)}
                             className={cn("kk-press-img absolute inset-0 h-full w-full object-cover object-center", imgLoaded ? "opacity-100" : "opacity-0")}
                             draggable={false}
@@ -137,7 +140,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                         />
                         <button
                             onClick={handleWishlist}
-                            className="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-white/80 backdrop-blur-sm flex items-center justify-center text-slate-400 shadow-sm"
+                            className="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-white/90 flex items-center justify-center text-slate-400 shadow-sm"
                         >
                             <Heart size={12} fill={isLoved ? "currentColor" : "none"} className={isLoved ? "text-red-500" : ""} />
                         </button>
@@ -189,7 +192,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                 </div>
                 </motion.div>
                 {/* Desktop Quantity Modal */}
-                {!isMobile && (
+                {pickerMounted && !isMobile && (
                     <QuantityModal
                         isOpen={isModalOpen}
                         onClose={() => setIsModalOpen(false)}
@@ -198,7 +201,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                     />
                 )}
                 {/* Mobile Quantity Sheet */}
-                {isMobile && (
+                {pickerMounted && isMobile && (
                     <MobileQuantitySheet
                         isOpen={isModalOpen}
                         onClose={() => setIsModalOpen(false)}
@@ -234,7 +237,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                     <img
                         src={productImage}
                         alt={product.name}
-                        loading="lazy"
+                        loading="lazy" decoding="async"
                         onLoad={() => setImgLoaded(true)}
                         className={cn("kk-press-img absolute inset-0 h-full w-full object-cover", imgLoaded ? "opacity-100" : "opacity-0")}
                         onError={(e) => { setImgLoaded(true); e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80' }}
@@ -257,7 +260,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleWishlist(e); }}
                             aria-label={isLoved ? "Remove from my list" : "Save to my list"}
-                            className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm active:scale-90 transition-all pointer-events-auto"
+                            className="w-8 h-8 rounded-full bg-white/95 flex items-center justify-center shadow-sm active:scale-90 transition-all pointer-events-auto"
                         >
                             <Heart key={isLoved ? 'loved' : 'not'} size={15} className={cn(isLoved ? "kk-pop fill-red-500 text-red-500" : "text-slate-300")} />
                         </button>
@@ -356,7 +359,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
             </motion.div>
 
             {/* Desktop Quantity Modal */}
-            {!isMobile && (
+            {pickerMounted && !isMobile && (
                 <QuantityModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
@@ -366,7 +369,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
             )}
 
             {/* Mobile Quantity Sheet */}
-            {isMobile && (
+            {pickerMounted && isMobile && (
                 <MobileQuantitySheet
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}

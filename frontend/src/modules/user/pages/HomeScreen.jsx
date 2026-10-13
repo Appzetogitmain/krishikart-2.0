@@ -38,6 +38,7 @@ import LocationPermissionPopup from '../components/common/LocationPermissionPopu
 import { useFilter } from '../contexts/FilterContext'
 import { appendLocationToProductParams, getBrowseLocationParams } from '../utils/storefrontParams'
 import ServiceUnavailable from '../components/common/ServiceUnavailable'
+import { optimizedImage } from '../utils/optimizedImage'
 
 const isMobile = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
 
@@ -85,12 +86,14 @@ function CategoryCard({ cat, idx, navigate }) {
         >
             <div
                 ref={flipEl}
-                className="category-card-flip-target w-full aspect-square rounded-full md:rounded-[24px] bg-[var(--color-brand-subtle)]/50 backdrop-blur-xl border-2 border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-2.5 flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 relative overflow-hidden group-active:scale-95 p-2 md:bg-[var(--color-brand-subtle)] md:border md:border-slate-50 md:shadow-sm md:backdrop-blur-none"
+                className="category-card-flip-target w-full aspect-square rounded-full md:rounded-[24px] bg-[var(--color-brand-subtle)] border-2 border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.08)] mb-2.5 flex items-center justify-center transition-all duration-300 group-hover:-translate-y-1 relative overflow-hidden group-active:scale-95 p-2 md:bg-[var(--color-brand-subtle)] md:border md:border-slate-50 md:shadow-sm"
                 style={{ transformStyle: 'preserve-3d' }}
             >
                 <div className="w-full h-full relative z-10 transition-transform duration-500 group-hover:scale-110">
                     <img
-                        src={cat.image}
+                        src={optimizedImage(cat.image, 200)}
+                        loading="lazy"
+                        decoding="async"
                         alt={cat.name}
                         className="w-full h-full object-contain mix-blend-multiply"
                         onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&q=80' }}
@@ -104,12 +107,16 @@ function CategoryCard({ cat, idx, navigate }) {
     )
 }
 
+// Last loaded home data, kept while the app is open so coming back to Home (e.g. from a
+// product page) shows instantly; it is still refreshed quietly in the background.
+let homeCache = null
+
 export default function HomeScreen() {
-    const [categories, setCategories] = useState([])
-    const [products, setProducts] = useState([])
+    const [categories, setCategories] = useState(() => homeCache?.categories || [])
+    const [products, setProducts] = useState(() => homeCache?.products || [])
     const locationCtx = useLocation()
     const { location: userLocation, updateFranchiseLocation, address } = locationCtx
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(() => !homeCache)
     const [showLocationPopup, setShowLocationPopup] = useState(false)
     const navigate = useNavigate()
     const { vegMode } = useFilter()
@@ -141,6 +148,9 @@ export default function HomeScreen() {
                 ])
                 if (catRes.data.success) setCategories(catRes.data.results)
                 if (prodRes.data.success) setProducts(prodRes.data.results)
+                if (catRes.data.success && prodRes.data.success) {
+                    homeCache = { categories: catRes.data.results, products: prodRes.data.results }
+                }
             } catch (error) {
                 console.error('Error in home data initialization:', error)
             } finally {

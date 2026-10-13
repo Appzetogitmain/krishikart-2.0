@@ -30,6 +30,7 @@ import { useCart } from '../contexts/CartContext'
 import { useWishlist } from '../contexts/WishlistContext'
 import { useLocation } from '../contexts/LocationContext'
 import { getBrowseLocationParams } from '../utils/storefrontParams'
+import { optimizedImage } from '../utils/optimizedImage'
 import { useRequireAuth } from '../hooks/useRequireAuth'
 
 export default function ProductDetailScreen() {
@@ -163,7 +164,7 @@ export default function ProductDetailScreen() {
     )
   }
 
-  const productImage = product.primaryImage || product.image
+  const productImage = optimizedImage(product.primaryImage || product.image, 900)
   const productCategory = product.category?.name || product.category || 'General'
   const comparePrice = Number(product.comparePrice || product.mrp || 0)
   const standardUnit = Number(product.effectiveStorefrontPrice ?? product.price ?? 0)

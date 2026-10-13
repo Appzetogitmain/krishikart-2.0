@@ -1,5 +1,5 @@
-import { Outlet, useLocation } from 'react-router-dom'
-import { useEffect, useState, useMemo } from 'react'
+import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { useEffect, useMemo, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/layout/BottomNav'
 import FloatingCartBar from '../components/layout/FloatingCartBar'
@@ -10,8 +10,14 @@ import { useUserAuth } from '../contexts/UserAuthContext'
 import { useCart } from '../contexts/CartContext'
 import CreditOverdueModal from '../components/modals/CreditOverdueModal'
 
+// Where the customer had scrolled to on Home, so "back" returns them there
+let homeScrollTop = 0
+
 export default function AppLayout() {
     const location = useLocation()
+    const navigationType = useNavigationType()
+    const pathRef = useRef(location.pathname)
+    pathRef.current = location.pathname
     const { user } = useUserAuth()
     const { cartItems } = useCart()
 
@@ -20,14 +26,29 @@ export default function AppLayout() {
         return new Date() > new Date(user.creditOverdueDate);
     }, [user])
 
-    // Scroll to top on route change
+    // Scroll to top on route change. Coming BACK to Home (e.g. from a product page) returns to
+    // where the customer was instead of jumping to the top.
     useEffect(() => {
         // Scroll the app shell, not the window
         const root = document.querySelector('.user-app-theme')
-        if (root) {
-            root.scrollTo(0, 0)
-        } else if (typeof window !== 'undefined') {
-            window.scrollTo(0, 0)
+        if (!root) {
+            if (typeof window !== 'undefined') window.scrollTo(0, 0)
+            return
+        }
+        const isHome = location.pathname === '/home'
+        const savedTop = isHome && navigationType === 'POP' ? homeScrollTop : 0
+        root.scrollTo(0, savedTop)
+        if (!isHome) return
+        // Only remember positions while Home is really the page on screen: when Home is being
+        // replaced, the shrinking page fires a scroll event that must not overwrite the value.
+        const remember = () => { if (pathRef.current === '/home') homeScrollTop = root.scrollTop }
+        const frame = requestAnimationFrame(() => {
+            if (savedTop > 0) root.scrollTo(0, savedTop)
+            root.addEventListener('scroll', remember, { passive: true })
+        })
+        return () => {
+            cancelAnimationFrame(frame)
+            root.removeEventListener('scroll', remember)
         }
     }, [location.pathname])
 

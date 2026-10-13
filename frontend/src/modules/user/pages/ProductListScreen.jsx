@@ -14,6 +14,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { toast } from 'sonner'
 import { useLocation } from '../contexts/LocationContext'
 import { appendLocationToProductParams, getBrowseLocationParams } from '../utils/storefrontParams'
+import { optimizedImage } from '../utils/optimizedImage'
 import { useFilter } from '../contexts/FilterContext'
 import ServiceUnavailable from '../components/common/ServiceUnavailable'
 import {
@@ -361,7 +362,7 @@ export default function ProductListScreen() {
                                                                         {cat.icon && typeof cat.icon === 'function' ? (
                                                                             <cat.icon size={24} />
                                                                         ) : (
-                                                                            <img src={cat.image} className="w-full h-full object-cover rounded-2xl" />
+                                                                            <img src={optimizedImage(cat.image, 200)} className="w-full h-full object-cover rounded-2xl" />
                                                                         )}
                                                                     </div>
                                                                     <span className="text-[10px] font-bold text-center leading-tight">{cat.name}</span>
@@ -427,7 +428,7 @@ export default function ProductListScreen() {
                                                 <cat.icon size={24} strokeWidth={2.5} />
                                             ) : (
                                                 <img
-                                                    src={cat.image}
+                                                    src={optimizedImage(cat.image, 200)}
                                                     alt={cat.name}
                                                     className={cn(
                                                         "w-full h-full object-cover transition-transform duration-700",
@@ -614,7 +615,7 @@ export default function ProductListScreen() {
                                             <button key={cat._id} onClick={() => setSelectedCategory(cat._id)} className={cn("w-full px-6 py-4 text-[15px] font-bold text-left flex items-center gap-4 transition-all", selectedCategory === cat._id ? "bg-emerald-50 text-emerald-900" : "text-slate-500 hover:text-slate-900")}>
                                                 <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden text-center">
                                                     <img
-                                                        src={cat.image}
+                                                        src={optimizedImage(cat.image, 200)}
                                                         alt={cat.name}
                                                         className="w-full h-full object-cover"
                                                         onError={(e) => {
