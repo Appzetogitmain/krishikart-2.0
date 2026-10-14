@@ -66,6 +66,7 @@ const PERMISSION_GROUPS = [
         permissions: [
             { key: 'approvals', label: 'Approvals (Documents)' },
             { key: 'analytics', label: 'Analytics' },
+            { key: 'audit-logs', label: 'Activity Log (who changed what)' },
             { key: 'settings', label: 'System Settings' },
         ]
     }

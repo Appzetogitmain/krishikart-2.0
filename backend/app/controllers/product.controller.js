@@ -404,9 +404,10 @@ export const updateProduct = async (req, res) => {
             }
         }
 
-        // Sanitize ObjectId fields to prevent CastError for empty/null strings
-        if (isNull(updateData.category)) updateData.category = null;
-        if (isNull(updateData.subcategory)) updateData.subcategory = null;
+        // Sanitize ObjectId fields to prevent CastError for empty/null strings. Only when the
+        // field was actually sent: a partial update (e.g. the show/hide toggle) must not clear them.
+        if ("category" in updateData && isNull(updateData.category)) updateData.category = null;
+        if ("subcategory" in updateData && isNull(updateData.subcategory)) updateData.subcategory = null;
 
         if (updateData.name !== undefined) updateData.name = capitalizeFirst(updateData.name.trim());
 

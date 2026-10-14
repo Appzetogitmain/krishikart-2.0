@@ -23,7 +23,7 @@ import {
     getAdminDeliveryTracking
 } from "../controllers/order.controller.js";
 import { protect } from "../middlewares/authmiddleware.js";
-import { protectMasterAdmin } from "../middlewares/masteradmin.auth.js";
+import { protectMasterAdmin, requireAnyPermission } from "../middlewares/masteradmin.auth.js";
 import {
     protectFranchise,
     requireFranchiseAccountVerified,
@@ -40,10 +40,10 @@ router.put("/:id/status", protect, updateOrderStatus);
 router.post("/:id/return-request", protect, createReturnRequest);
 
 // Admin Routes
-router.get("/admin/all", protectMasterAdmin, getAllOrders);
-router.get("/admin/delivery-tracking", protectMasterAdmin, getAdminDeliveryTracking);
-router.get("/admin/:id", protectMasterAdmin, getOrderById);
-router.put("/admin/:id/status", protectMasterAdmin, updateOrderStatus);
+router.get("/admin/all", protectMasterAdmin, requireAnyPermission("orders"), getAllOrders);
+router.get("/admin/delivery-tracking", protectMasterAdmin, requireAnyPermission("delivery"), getAdminDeliveryTracking);
+router.get("/admin/:id", protectMasterAdmin, requireAnyPermission("orders", "delivery", "returns"), getOrderById);
+router.put("/admin/:id/status", protectMasterAdmin, requireAnyPermission("orders", "delivery"), updateOrderStatus);
 
 // Franchise Routes
 router.get(

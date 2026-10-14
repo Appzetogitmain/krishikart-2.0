@@ -12,10 +12,16 @@ import procurementRoutes from "../../app/routes/procurement.routes.js";
 import geoRoute from "../../app/routes/geo.js";
 import couponRoutes from "../../app/routes/coupon.js";
 import reportRoutes from "../../app/routes/reports.js";
+import auditLogRoutes from "../../app/routes/auditLogs.js";
+import auditTrail from "../utils/auditTrail.js";
 
 const setupRoutes = (app) => {
     const apiRouter = express.Router();
 
+    // Records who changed what (staff and partners only); must run before the routes
+    apiRouter.use(auditTrail);
+
+    apiRouter.use("/masteradmin/audit-logs", auditLogRoutes);
     apiRouter.use("/user", userRoute);
     apiRouter.use("/delivery", deliveryRoutes);
     apiRouter.use("/masteradmin", masteradminRoutes);

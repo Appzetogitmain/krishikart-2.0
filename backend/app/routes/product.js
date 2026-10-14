@@ -7,7 +7,7 @@ import {
     deleteProduct,
     importProductsFromExcel
 } from "../controllers/product.controller.js";
-import { protectMasterAdmin } from "../middlewares/masteradmin.auth.js";
+import { protectMasterAdmin, requirePermission } from "../middlewares/masteradmin.auth.js";
 import upload from "../middlewares/upload.js";
 
 const router = express.Router();
@@ -20,6 +20,7 @@ router.get("/:id", getProductById);
 router.post(
     "/",
     protectMasterAdmin,
+    requirePermission("products"),
     upload.fields([
         { name: 'primaryImage', maxCount: 1 },
         { name: 'images', maxCount: 5 }
@@ -30,6 +31,7 @@ router.post(
 router.put(
     "/:id",
     protectMasterAdmin,
+    requirePermission("products"),
     upload.fields([
         { name: 'primaryImage', maxCount: 1 },
         { name: 'images', maxCount: 5 }
@@ -37,7 +39,7 @@ router.put(
     updateProduct
 );
 
-router.post("/import", protectMasterAdmin, upload.single("file"), importProductsFromExcel);
-router.delete("/:id", protectMasterAdmin, deleteProduct);
+router.post("/import", protectMasterAdmin, requirePermission("products"), upload.single("file"), importProductsFromExcel);
+router.delete("/:id", protectMasterAdmin, requirePermission("products"), deleteProduct);
 
 export default router;

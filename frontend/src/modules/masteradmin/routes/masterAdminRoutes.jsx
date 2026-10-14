@@ -17,6 +17,7 @@ import TermsScreen from "../pages/TermsScreen";
 // Lazy loaded screens
 const Dashboard = lazy(() => import("../pages/DashboardScreen"));
 const Reports = lazy(() => import("../pages/ReportsScreen"));
+const ActivityLog = lazy(() => import("../pages/AuditLogScreen"));
 const TeamManagement = lazy(() => import("../pages/TeamManagementScreen"));
 const Orders = lazy(() => import("../pages/OrdersScreen"));
 const VendorAssignment = lazy(() => import("../pages/VendorAssignmentScreen"));
@@ -246,7 +247,7 @@ export const masterAdminRoutes = (
         </Route>
         <Route
           path="coupons"
-          element={<PermissionRoute permissionKey="coupons" />}>
+          element={<PermissionRoute permissionKey="campaigns" />}>
           <Route index element={<CouponManagement />} />
         </Route>
         <Route
@@ -297,6 +298,11 @@ export const masterAdminRoutes = (
           path="reports"
           element={<PermissionRoute permissionKey="analytics" />}>
           <Route index element={<Reports />} />
+        </Route>
+        <Route
+          path="activity-log"
+          element={<PermissionRoute permissionKey="audit-logs" />}>
+          <Route index element={<ActivityLog />} />
         </Route>
         <Route
           path="global-reports"

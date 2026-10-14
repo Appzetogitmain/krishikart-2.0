@@ -22,6 +22,7 @@ import {
   Percent,
   ClipboardCheck,
   Briefcase,
+  ScrollText,
   TrendingUp,
   Building,
   Home,
@@ -137,7 +138,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           icon: Ticket,
           label: "Coupons",
           path: "/masteradmin/coupons",
-          permissionKey: "coupons",
+          permissionKey: "campaigns",
         },
         {
           icon: Truck,
@@ -288,6 +289,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           label: "Terms, Privacy & Contact",
           path: "/masteradmin/settings/legal-pages",
           permissionKey: "settings",
+        },
+        {
+          icon: ScrollText,
+          label: "Activity Log",
+          path: "/masteradmin/activity-log",
+          permissionKey: "audit-logs",
         },
         {
           icon: Briefcase,

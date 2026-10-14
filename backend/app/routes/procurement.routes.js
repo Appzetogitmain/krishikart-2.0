@@ -20,7 +20,7 @@ import {
     protectFranchise,
     requireFranchiseAccountVerified,
 } from "../middlewares/franchise.auth.js";
-import { protectMasterAdmin } from "../middlewares/masteradmin.auth.js";
+import { protectMasterAdmin, requireAnyPermission } from "../middlewares/masteradmin.auth.js";
 import { protectVendor } from "../middlewares/vendor.auth.js";
 
 const router = express.Router();
@@ -56,10 +56,10 @@ router.post("/vendor/:requestId/quote", protectVendor, vendorSubmitQuotation);
 router.put("/vendor/:requestId/status", protectVendor, vendorUpdateStatus);
 
 // Admin Routes (Assign/View)
-router.get("/admin/all", protectMasterAdmin, getAllProcurementRequests);
-router.get("/admin/reports", protectMasterAdmin, getVendorReports);
-router.get("/admin/rejected-stock", protectMasterAdmin, getRejectedStockReport);
-router.put("/admin/:requestId/status", protectMasterAdmin, adminUpdateProcurementRequest);
-router.post("/admin/from-order/:orderId", protectMasterAdmin, createProcurementFromOrder);
+router.get("/admin/all", protectMasterAdmin, requireAnyPermission("assignment", "quotations"), getAllProcurementRequests);
+router.get("/admin/reports", protectMasterAdmin, requireAnyPermission("vendor-reports"), getVendorReports);
+router.get("/admin/rejected-stock", protectMasterAdmin, requireAnyPermission("vendor-reports"), getRejectedStockReport);
+router.put("/admin/:requestId/status", protectMasterAdmin, requireAnyPermission("assignment", "quotations"), adminUpdateProcurementRequest);
+router.post("/admin/from-order/:orderId", protectMasterAdmin, requireAnyPermission("orders", "assignment"), createProcurementFromOrder);
 
 export default router;

@@ -87,6 +87,7 @@ import { getComprehensiveReports } from "../controllers/reports.controller.js";
 import {
   protectMasterAdmin,
   requirePermission,
+  requireSuperAdmin,
 } from "../middlewares/masteradmin.auth.js";
 import upload from "../middlewares/upload.js";
 
@@ -122,6 +123,7 @@ router.get(
 router.post(
   "/vendors",
   protectMasterAdmin,
+  requirePermission("vendors"),
   upload.fields([
     { name: "profilePicture", maxCount: 1 },
     { name: "aadharFile", maxCount: 1 },
@@ -178,6 +180,7 @@ router.get(
 router.post(
   "/franchises",
   protectMasterAdmin,
+  requirePermission("franchises"),
   upload.fields([
     { name: "aadhaarImage", maxCount: 1 },
     { name: "panImage", maxCount: 1 },
@@ -348,6 +351,7 @@ router.post(
 router.get(
   "/franchise-payouts",
   protectMasterAdmin,
+  requirePermission("franchise-payouts"),
   getFranchisePayoutsSummary,
 );
 router.get(
@@ -362,10 +366,11 @@ router.post(
   requirePermission("franchise-payouts"),
   recordFranchiseAdminPayout,
 );
-router.get("/cod/remittances", protectMasterAdmin, getCodRemittances);
+router.get("/cod/remittances", protectMasterAdmin, requirePermission("cod-remittance"), getCodRemittances);
 router.put(
   "/cod/remittances/:remittanceId/review",
   protectMasterAdmin,
+  requirePermission("cod-remittance"),
   reviewCodRemittance,
 );
 
@@ -382,7 +387,7 @@ router.post(
   requirePermission("settings"),
   updateGlobalSetting,
 );
-router.get("/loyalty/history", protectMasterAdmin, getLoyaltyConfigHistory);
+router.get("/loyalty/history", protectMasterAdmin, requirePermission("loyalty"), getLoyaltyConfigHistory);
 router.get("/public-settings", getGlobalSettings); // Public route for user app
 router.get("/public-faqs", getPublicFAQs); // Public route for user app
 router.get("/public/legal-pages", getPublicLegalPages);
@@ -427,10 +432,11 @@ router.delete(
   deleteFAQ,
 );
 /* 👥 Sub-Admin Management (SuperAdmin Only) */
-router.get("/subadmins", protectMasterAdmin, listSubAdmins);
-router.post("/subadmins", protectMasterAdmin, createSubAdmin);
-router.put("/subadmins/:id", protectMasterAdmin, updateSubAdmin);
-router.delete("/subadmins/:id", protectMasterAdmin, deleteSubAdmin);
+// Team members and their access: main admin only (a sub-admin must not be able to grant itself access)
+router.get("/subadmins", protectMasterAdmin, requireSuperAdmin, listSubAdmins);
+router.post("/subadmins", protectMasterAdmin, requireSuperAdmin, createSubAdmin);
+router.put("/subadmins/:id", protectMasterAdmin, requireSuperAdmin, updateSubAdmin);
+router.delete("/subadmins/:id", protectMasterAdmin, requireSuperAdmin, deleteSubAdmin);
 
 /* 💡 Product Recommendations */
 router.get("/recommendations", protectMasterAdmin, requirePermission("products"), getAllRecommendations);
@@ -439,10 +445,10 @@ router.put("/recommendations/:id", protectMasterAdmin, requirePermission("produc
 router.delete("/recommendations/:id", protectMasterAdmin, requirePermission("products"), deleteRecommendation);
 router.patch("/recommendations/:id/toggle", protectMasterAdmin, requirePermission("products"), toggleRecommendationStatus);
 
-router.get("/returns", protectMasterAdmin, getAllReturnRequests);
+router.get("/returns", protectMasterAdmin, requirePermission("returns"), getAllReturnRequests);
 router.get("/reports/comprehensive", protectMasterAdmin, requirePermission("dashboard"), getComprehensiveReports);
 router.get("/dashboard/stats", protectMasterAdmin, getAdminDashboardStats);
 router.get("/search", protectMasterAdmin, globalSearch);
-router.post("/test-notification", protectMasterAdmin, testPushNotification);
+router.post("/test-notification", protectMasterAdmin, requireSuperAdmin, testPushNotification);
 
 export default router;
