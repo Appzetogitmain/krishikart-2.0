@@ -23,6 +23,14 @@ import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import DocumentViewer from '../../vendor/components/documents/DocumentViewer';
 
+// "Kisaankart 1 (Tikam Singh)": the franchise's name with its owner in brackets
+const franchiseLabel = (franchise) => {
+    const name = franchise?.franchiseName;
+    const owner = franchise?.ownerName;
+    if (name && owner) return `${name} (${owner})`;
+    return name || owner || 'Unknown Franchise';
+};
+
 export default function VendorReportsScreen() {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -58,7 +66,7 @@ export default function VendorReportsScreen() {
         return reports.filter(report => {
             const matchesSearch =
                 report.invoice?.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                report.franchiseId?.shopName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                report.franchiseId?.franchiseName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 report.franchiseId?.ownerName?.toLowerCase().includes(searchTerm.toLowerCase());
 
             if (!matchesSearch) return false;
@@ -106,7 +114,7 @@ export default function VendorReportsScreen() {
             return [
                 report.invoice?.invoiceNumber ?? '',
                 report.invoice?.invoiceDate ? new Date(report.invoice.invoiceDate).toLocaleDateString() : '',
-                report.franchiseId?.shopName ?? '',
+                report.franchiseId?.franchiseName ?? '',
                 report.franchiseId?.ownerName ?? '',
                 report.items?.length ?? 0,
                 report.actualWeight ?? 0,
@@ -281,8 +289,7 @@ export default function VendorReportsScreen() {
                                                     <Building size={18} />
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight leading-none mb-1.5">{report.franchiseId?.shopName}</span>
-                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{report.franchiseId?.ownerName || 'Unknown Owner'}</span>
+                                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight leading-snug">{franchiseLabel(report.franchiseId)}</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -475,8 +482,8 @@ export default function VendorReportsScreen() {
                             price: i.price || 0
                         })),
                         totalWeight: selectedReport.actualWeight,
-                        franchise: selectedReport.franchiseId?.shopName,
-                        destNode: selectedReport.franchiseId?.cityArea,
+                        franchise: franchiseLabel(selectedReport.franchiseId),
+                        destNode: [selectedReport.franchiseId?.area, selectedReport.franchiseId?.city].filter(Boolean).join(', '),
                         vendor: selectedReport.assignedVendorId?.shopName || 'Kisaankart Partner',
                         deductionAmount: calculateDamagedLoss(selectedReport),
                         netSettlement: (selectedReport.totalQuotedAmount || 0) - calculateDamagedLoss(selectedReport)
