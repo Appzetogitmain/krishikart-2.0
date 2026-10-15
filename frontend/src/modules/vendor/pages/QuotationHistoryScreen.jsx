@@ -42,7 +42,7 @@ export default function QuotationHistoryScreen() {
                 if (response.data.success) {
                     // Filter for requests that have at least been quoted
                     const quotedOnly = response.data.results.filter(req => 
-                        ['quoted', 'approved', 'preparing', 'ready_for_pickup', 'completed', 'rejected'].includes(req.status)
+                        ['quoted', 'approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed', 'rejected'].includes(req.status)
                     );
                     setProcurementRequests(quotedOnly);
                 }
@@ -58,7 +58,7 @@ export default function QuotationHistoryScreen() {
     const filteredOrders = procurementRequests.filter(order => {
         const matchesTab = activeTab === 'All' || 
             (activeTab === 'Quoted' && order.status === 'quoted') ||
-            (activeTab === 'Approved' && ['approved', 'preparing', 'ready_for_pickup', 'completed'].includes(order.status)) ||
+            (activeTab === 'Approved' && ['approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed'].includes(order.status)) ||
             (activeTab === 'Rejected' && order.status === 'rejected');
 
         const matchesSearch = (order.franchiseId?.shopName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -124,7 +124,7 @@ export default function QuotationHistoryScreen() {
             key: 'status',
             align: 'right',
             render: (val) => {
-                const displayStatus = ['approved', 'preparing', 'ready_for_pickup', 'completed'].includes(val) ? 'Approved' : val;
+                const displayStatus = ['approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed'].includes(val) ? 'Approved' : val;
                 return (
                     <span className={cn(
                         "px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border capitalize",
@@ -142,6 +142,7 @@ export default function QuotationHistoryScreen() {
         'approved': "bg-emerald-50 text-emerald-600 border-emerald-100",
         'preparing': "bg-emerald-50 text-emerald-600 border-emerald-100",
         'ready_for_pickup': "bg-emerald-50 text-emerald-600 border-emerald-100",
+        'picked_up': "bg-emerald-50 text-emerald-600 border-emerald-100",
         'completed': "bg-slate-50 text-slate-400 border-slate-100",
         'rejected': "bg-rose-50 text-rose-600 border-rose-100"
     };
@@ -207,7 +208,7 @@ export default function QuotationHistoryScreen() {
                             const authorizedTotal = order.totalQuotedAmount;
                             const variance = authorizedTotal - vendorTotal;
                             const hasBeenAudited = variance !== 0;
-                            const isApproved = ['approved', 'preparing', 'ready_for_pickup', 'completed'].includes(order.status);
+                            const isApproved = ['approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed'].includes(order.status);
 
                             return (
                                 <motion.div

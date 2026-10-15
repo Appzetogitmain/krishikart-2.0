@@ -10,6 +10,7 @@ import DataGrid from '../components/tables/DataGrid';
 function formatStatus(status) {
     const map = {
         ready_for_pickup: 'Ready for pickup',
+        picked_up: 'Picked up',
         completed: 'Completed',
     };
     return map[status] || status?.replace(/_/g, ' ') || '—';

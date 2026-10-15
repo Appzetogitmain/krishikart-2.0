@@ -102,7 +102,7 @@ export default function OrdersScreen() {
             'New': ['new', 'assigned', 'bidding', 'accepted', 'requested', 'quoted'],
             'Preparing': ['preparing', 'approved'],
             'Ready': ['ready', 'ready_for_pickup'],
-            'Completed': ['completed', 'delivered', 'shipped']
+            'Completed': ['completed', 'delivered', 'shipped', 'picked_up']
         };
 
         const matchesTab = statusMap[activeTab].includes(order.status);

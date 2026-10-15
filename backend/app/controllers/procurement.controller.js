@@ -191,6 +191,11 @@ export const vendorUpdateStatus = async (req, res) => {
             return handleResponse(res, 403, "Not authorized to update this request");
         }
 
+        // Goods can only be handed over once they have been packed and marked ready
+        if (status === 'picked_up' && request.status !== 'ready_for_pickup') {
+            return handleResponse(res, 400, "Only orders that are ready for pickup can be marked as picked up");
+        }
+
         // Update items if provided
         if (itemUpdates && Array.isArray(itemUpdates)) {
             const residualItems = [];
@@ -326,6 +331,9 @@ export const vendorUpdateStatus = async (req, res) => {
             if (status === 'ready_for_pickup') {
                 title = "Items Ready for Pickup";
                 body = `Your procurement items are ready at vendor location.`;
+            } else if (status === 'picked_up') {
+                title = "Items Picked Up";
+                body = `Your procurement items #${request._id.toString().slice(-6).toUpperCase()} have been picked up from the vendor and are on the way. Please confirm receipt on arrival.`;
             } else if (status === 'shipped') {
                 title = "Items Dispatched";
                 body = `The vendor has dispatched your procurement items. Check inbound logistics.`;
@@ -349,6 +357,7 @@ export const vendorUpdateStatus = async (req, res) => {
             switch (status) {
                 case 'preparing': userMessage = "Vendor is preparing your items."; break;
                 case 'ready_for_pickup': userMessage = "Items are ready at vendor location and will be picked up soon."; break;
+                case 'picked_up': userMessage = "Items have been picked up from the vendor and are on the way."; break;
                 case 'shipped': userMessage = "Items have been shipped from vendor to center."; break;
                 default: userMessage = `Procurement status updated to ${status}`;
             }
@@ -699,7 +708,7 @@ export const getVendorReports = async (req, res) => {
     try {
         // Fetch all requests that have an invoice/are dispatched
         const reports = await ProcurementRequest.find({
-            status: { $in: ['ready_for_pickup', 'completed'] },
+            status: { $in: ['ready_for_pickup', 'picked_up', 'completed'] },
             "invoice.invoiceNumber": { $exists: true }
         })
             .populate("franchiseId", "franchiseName ownerName mobile city area")
@@ -1180,7 +1189,7 @@ export const createProcurementFromOrder = async (req, res) => {
 };
 
 /** Post-delivery only: ready for franchise pickup or franchise receipt completed. */
-const POST_DELIVERY_STATUSES = ["ready_for_pickup", "completed"];
+const POST_DELIVERY_STATUSES = ["ready_for_pickup", "picked_up", "completed"];
 
 /**
  * Receivables from admin after delivery/handoff only.
@@ -1245,15 +1254,15 @@ export const getVendorDashboardStats = async (req, res) => {
         const stockQuantity = inventory?.items?.reduce((sum, item) => sum + (item.currentStock || 0), 0) || 0;
         const availableProduce = inventory?.items?.filter(item => item.available).length || 0;
 
-        // 3. Calculate Active Ops (approved, preparing, ready_for_pickup)
+        // 3. Calculate Active Ops (approved, preparing, ready_for_pickup, picked_up)
         const activeOps = allRequests.filter(r =>
-            ['approved', 'preparing', 'ready_for_pickup'].includes(r.status)
+            ['approved', 'preparing', 'ready_for_pickup', 'picked_up'].includes(r.status)
         ).length;
 
         // 4. Calculate Escrow Settlement (Sum of totalQuotedAmount for ready_for_pickup or completed but not settled)
-        // For now, let's say ready_for_pickup and completed are part of settlement
+        // For now, let's say ready_for_pickup, picked_up and completed are part of settlement
         const pendingSettlement = allRequests
-            .filter(r => ['ready_for_pickup', 'completed'].includes(r.status))
+            .filter(r => ['ready_for_pickup', 'picked_up', 'completed'].includes(r.status))
             .reduce((sum, r) => sum + (r.totalQuotedAmount || 0), 0);
 
         // 5. Calculate Metric Turnover (Total completed revenue)
@@ -1288,7 +1297,7 @@ export const getVendorDashboardStats = async (req, res) => {
         const yieldDelta = currentMonthTurnover - previousMonthTurnover;
 
         const completedOrReady = allRequests.filter(r =>
-            ['ready_for_pickup', 'completed'].includes(r.status)
+            ['ready_for_pickup', 'picked_up', 'completed'].includes(r.status)
         );
         const avgPrepMs = completedOrReady.length > 0
             ? completedOrReady.reduce((sum, r) => {
@@ -1300,7 +1309,7 @@ export const getVendorDashboardStats = async (req, res) => {
         const avgPrepDays = avgPrepMs / (1000 * 60 * 60 * 24);
 
         const oldestActive = allRequests
-            .filter(r => ['approved', 'preparing', 'ready_for_pickup'].includes(r.status))
+            .filter(r => ['approved', 'preparing', 'ready_for_pickup', 'picked_up'].includes(r.status))
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
         const syncMinutes = oldestActive
             ? Math.max(1, Math.round((Date.now() - new Date(oldestActive.createdAt).getTime()) / 60000))

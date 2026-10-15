@@ -54,7 +54,7 @@ export const getComprehensiveReports = async (req, res) => {
         let procurementRequests = [];
         try {
             procurementRequests = await ProcurementRequest.aggregate([
-                { $match: { ...dateFilter, status: { $in: ['approved', 'completed', 'ready_for_pickup'] } } },
+                { $match: { ...dateFilter, status: { $in: ['approved', 'completed', 'ready_for_pickup', 'picked_up'] } } },
                 { $group: {
                     _id: "$franchiseId",
                     totalProcured: { $sum: "$totalEstimatedAmount" },
@@ -83,7 +83,7 @@ export const getComprehensiveReports = async (req, res) => {
         let vendorSupplyRaw = [];
         try {
             vendorSupplyRaw = await ProcurementRequest.aggregate([
-                { $match: { ...dateFilter, assignedVendorId: { $ne: null }, status: { $in: ['approved', 'completed', 'ready_for_pickup'] } } },
+                { $match: { ...dateFilter, assignedVendorId: { $ne: null }, status: { $in: ['approved', 'completed', 'ready_for_pickup', 'picked_up'] } } },
                 { $addFields: { vendorIdObj: { $toObjectId: "$assignedVendorId" } } },
                 { $group: {
                     _id: "$vendorIdObj",

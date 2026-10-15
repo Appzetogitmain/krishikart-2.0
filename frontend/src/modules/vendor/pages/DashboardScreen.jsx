@@ -127,10 +127,10 @@ export default function DashboardScreen() {
             render: (val) => (
                 <span className={cn(
                     "px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter",
-                    val === 'ready_for_pickup' ? "bg-emerald-100 text-emerald-600" :
+                    val === 'ready_for_pickup' || val === 'picked_up' ? "bg-emerald-100 text-emerald-600" :
                         val === 'approved' ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"
                 )}>
-                    {val.replace('_', ' ')}
+                    {val.replace(/_/g, ' ')}
                 </span>
             )
         }

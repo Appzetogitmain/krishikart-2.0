@@ -243,10 +243,10 @@ export default function OrderDetailScreen() {
                                 "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                 status === 'assigned' || status === 'new' ? "bg-blue-50 text-blue-600 border-blue-100" :
                                     status === 'bidding' ? "bg-amber-50 text-amber-600 border-amber-100" :
-                                        status === 'accepted' || status === 'ready' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                        status === 'accepted' || status === 'ready' || status === 'ready_for_pickup' || status === 'picked_up' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                                             "bg-slate-50 text-slate-400 border-slate-100"
                             )}>
-                                {status}
+                                {status?.replace(/_/g, ' ')}
                             </div>
                         </div>
                     </div>
@@ -522,6 +522,40 @@ export default function OrderDetailScreen() {
                             Progress
                             <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                         </motion.button>
+                    )}
+
+                    {status === 'ready_for_pickup' && (
+                        <motion.div
+                            key="action-ready-for-pickup"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex-1 flex gap-4"
+                        >
+                            <button
+                                onClick={() => handleAction('picked_up', () => toast.success("Marked as picked up"))}
+                                disabled={isActionLoading}
+                                className="flex-1 bg-emerald-600 text-white py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-3 shadow-2xl shadow-emerald-100 active:scale-95 transition-all disabled:opacity-50 group"
+                            >
+                                {isActionLoading ? <Loader2 className="animate-spin" size={20} /> : (
+                                    <>
+                                        <Truck size={18} />
+                                        Mark as Picked Up
+                                        <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+                        </motion.div>
+                    )}
+
+                    {status === 'picked_up' && (
+                        <motion.div
+                            key="action-picked-up"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="flex-1 bg-slate-50 text-slate-400 py-5 rounded-[24px] font-black text-sm flex items-center justify-center gap-2 border border-dashed border-slate-200"
+                        >
+                            <Truck size={18} /> Picked up - waiting for the franchise to confirm receipt
+                        </motion.div>
                     )}
 
                     {status === 'completed' && (

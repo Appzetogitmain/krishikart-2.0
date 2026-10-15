@@ -43,6 +43,14 @@ const ProcurementUpdateAlert = () => {
                     icon: <Package className="w-10 h-10 animate-bounce" />,
                     title: 'Items Ready for Pickup'
                 };
+            case 'picked_up':
+                return {
+                    color: 'text-blue-600',
+                    bgColor: 'bg-blue-50',
+                    accentColor: 'bg-blue-500',
+                    icon: <Truck className="w-10 h-10 animate-pulse" />,
+                    title: 'Items Picked Up'
+                };
             case 'shipped':
                 return {
                     color: 'text-blue-600',

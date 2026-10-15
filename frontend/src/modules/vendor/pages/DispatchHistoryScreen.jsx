@@ -21,8 +21,14 @@ import VendorBackBar from '../components/navigation/VendorBackBar';
 const STATUS_OPTIONS = [
     { value: 'all', label: 'All' },
     { value: 'completed', label: 'Completed' },
-    { value: 'ready_for_pickup', label: 'In Transit' }
+    { value: 'ready_for_pickup', label: 'Ready for Pickup' },
+    { value: 'picked_up', label: 'In Transit' }
 ];
+
+const statusLabel = (status) => ({
+    ready_for_pickup: 'Ready for Pickup',
+    picked_up: 'In Transit'
+}[status] || status);
 
 export default function DispatchHistoryScreen() {
     const [dispatches, setDispatches] = useState([]);
@@ -48,7 +54,7 @@ export default function DispatchHistoryScreen() {
                 if (response.data.success) {
                     // Filter for completed or dispatched orders
                     const completed = (response.data.results || []).filter(o =>
-                        ['completed', 'ready_for_pickup'].includes(o.status)
+                        ['completed', 'ready_for_pickup', 'picked_up'].includes(o.status)
                     );
                     setDispatches(completed);
                 }
@@ -182,7 +188,7 @@ export default function DispatchHistoryScreen() {
                                                     <span className={cn(
                                                         "text-[10px] font-black uppercase tracking-widest",
                                                         dispatch.status === 'completed' ? "text-emerald-500" : "text-blue-500"
-                                                    )}>{dispatch.status === 'ready_for_pickup' ? 'In Transit' : dispatch.status}</span>
+                                                    )}>{statusLabel(dispatch.status)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -292,7 +298,7 @@ export default function DispatchHistoryScreen() {
                                         "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest",
                                         selectedDispatch.status === 'completed' ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-500"
                                     )}>
-                                        {selectedDispatch.status === 'ready_for_pickup' ? 'In Transit' : selectedDispatch.status}
+                                        {statusLabel(selectedDispatch.status)}
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">

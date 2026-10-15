@@ -27,8 +27,8 @@ import { getISTDayKey, istDayKeyToDate } from "../utils/deliverySchedule.js";
 
 const TZ = "Asia/Kolkata";
 const DELIVERED = ["Delivered", "Received"];
-const SUPPLY_APPROVED = ["approved", "preparing", "ready_for_pickup", "completed"];
-const SUPPLY_DISPATCHED = ["ready_for_pickup", "completed"];
+const SUPPLY_APPROVED = ["approved", "preparing", "ready_for_pickup", "picked_up", "completed"];
+const SUPPLY_DISPATCHED = ["ready_for_pickup", "picked_up", "completed"];
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const toObjectId = (id) => {
@@ -201,7 +201,7 @@ function damagedValue(req) {
 const requestValue = (req) => (SUPPLY_APPROVED.includes(req.status) ? (Number(req.totalQuotedAmount) || supplyValue(req)) : 0);
 const STATUS_LABEL = {
     pending_assignment: "Waiting for vendor", assigned: "Waiting for quote", quoted: "Quote sent",
-    approved: "Approved", preparing: "Packing", ready_for_pickup: "Dispatched", completed: "Received", rejected: "Rejected",
+    approved: "Approved", preparing: "Packing", ready_for_pickup: "Dispatched", picked_up: "Picked Up", completed: "Received", rejected: "Rejected",
 };
 
 /* ===================================================================== */

@@ -72,6 +72,7 @@ const ReceivingScreen = () => {
         'approved',
         'preparing',
         'ready_for_pickup',
+        'picked_up',
         'dispatched',
         'in_transit'
     ]);

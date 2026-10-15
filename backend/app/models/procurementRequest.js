@@ -54,7 +54,7 @@ const procurementRequestSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["pending_assignment", "assigned", "quoted", "approved", "preparing", "ready_for_pickup", "completed", "rejected"],
+        enum: ["pending_assignment", "assigned", "quoted", "approved", "preparing", "ready_for_pickup", "picked_up", "completed", "rejected"],
         default: "pending_assignment",
     },
     assignedVendorId: {
