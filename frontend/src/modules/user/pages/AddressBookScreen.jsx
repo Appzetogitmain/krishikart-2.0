@@ -13,6 +13,7 @@ import {
     buildFullAddress,
     deleteSavedAddress,
     loadSavedAddresses,
+    fetchSavedAddresses,
     saveSavedAddresses,
     upsertAddressByTag,
 } from '../utils/savedAddresses'
@@ -42,11 +43,12 @@ export default function AddressBookScreen() {
                 if (cached?._id) {
                     setUserId(cached._id)
                     setSavedAddresses(loadSavedAddresses(cached._id))
+                    setSavedAddresses(await fetchSavedAddresses(cached._id))
                 } else {
                     const response = await api.get('/user/me')
                     const userData = response.data.result
                     setUserId(userData._id)
-                    setSavedAddresses(loadSavedAddresses(userData._id))
+                    setSavedAddresses(await fetchSavedAddresses(userData._id))
                 }
             } catch (error) {
                 console.error('Failed to load address book:', error)

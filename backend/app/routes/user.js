@@ -33,6 +33,7 @@ import {
     markAllUserNotificationsRead
 } from "../controllers/user.notification.controller.js";
 import { protect } from "../middlewares/authmiddleware.js";
+import { getSavedAddresses, putSavedAddresses } from "../controllers/userAddress.controller.js";
 
 const router = express.Router();
 
@@ -42,6 +43,8 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/me", protect, getMe);
 router.put("/update-profile", protect, updateUserProfile);
+router.get("/addresses", protect, getSavedAddresses);
+router.put("/addresses", protect, putSavedAddresses);
 router.post("/change-password", protect, changeUserPassword);
 router.post("/wallet/recharge", protect, createWalletRechargeOrder); // backward-compatible alias
 router.post("/wallet/recharge/create-order", protect, createWalletRechargeOrder);

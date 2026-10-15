@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button'
 import { useCart } from '../contexts/CartContext'
 import { useOrders } from '@/modules/user/contexts/OrderContext'
 import { useWallet } from '../contexts/WalletContext'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import api from '@/lib/axios'
 import { toast } from 'sonner'
@@ -33,8 +33,10 @@ import { useLocation } from '../contexts/LocationContext'
 import {
     ADDRESS_TAGS,
     buildFullAddress,
-    loadSavedAddresses,
+    EMPTY_ADDRESS_DETAILS,
+    fetchSavedAddresses,
     saveSavedAddresses,
+    sortByRecent,
     upsertAddressByTag as upsertSavedAddress,
 } from '../utils/savedAddresses'
 
@@ -156,6 +158,19 @@ export default function CheckoutScreen() {
         state: 'Madhya Pradesh',
         pincode: '',
     });
+    // Where the delivery address came from: a saved address the customer picked ('saved'), a
+    // location they pinned on this visit ('pin'), or their profile ('profile'). A saved address is
+    // never overwritten by the phone's GPS text.
+    const addressSourceRef = useRef((() => {
+        try {
+            return sessionStorage.getItem('kk_checkout_prompt_address') === '1' ? 'pin' : 'profile'
+        } catch {
+            return 'profile'
+        }
+    })())
+    const autoPickedSavedRef = useRef(false)
+    const [selectedAddressId, setSelectedAddressId] = useState(null)
+    const [pinNonce, setPinNonce] = useState(0)
     const [deliveryShift, setDeliveryShift] = useState('');
     /** Re-render every minute so past slots become disabled without refresh */
     const [shiftTimeTick, setShiftTimeTick] = useState(0)
@@ -194,7 +209,10 @@ export default function CheckoutScreen() {
             return;
         }
         try {
+            addressSourceRef.current = 'pin';
+            setSelectedAddressId(null);
             await ctxUpdateDeliveryLocation(true);
+            setPinNonce((n) => n + 1);
             toast.success('Current location pinned for delivery.');
             // Already on checkout: open form only if house no. is missing
             setAddressDetails((current) => {
@@ -212,12 +230,6 @@ export default function CheckoutScreen() {
     const persistSavedAddresses = (addresses) => {
         setSavedAddresses(addresses)
         saveSavedAddresses(user?._id, addresses)
-    }
-
-    const upsertAddressByTag = (tag, details) => {
-        const next = upsertSavedAddress(savedAddresses, tag, details)
-        persistSavedAddresses(next)
-        return buildFullAddress(details)
     }
 
     const parseAddressToDetails = (address = '') => {
@@ -283,14 +295,30 @@ export default function CheckoutScreen() {
         setDeliveryAddress(fullAddress)
     }
 
-    const handleSelectSavedAddress = (saved) => {
+    const handleSelectSavedAddress = (saved, { silent = false } = {}) => {
         if (!saved?.details) return
+        addressSourceRef.current = 'saved'
+        setSelectedAddressId(saved.id || saved.tag)
         setAddressTag(saved.tag || 'other')
-        setAddressDetails(saved.details)
+        setAddressDetails({ ...EMPTY_ADDRESS_DETAILS, ...saved.details })
         const fullAddress = saved.fullAddress || buildFullAddress(saved.details)
         setDeliveryAddress(fullAddress)
         setIsManualAddress(true)
-        toast.success(`${saved.label || 'Address'} selected`)
+        if (!silent) toast.success(`${saved.label || 'Address'} selected`)
+    }
+
+    const openNewAddressForm = () => {
+        setSelectedAddressId(null)
+        setAddressTag('other')
+        const streetAddress = addressSourceRef.current === 'pin' ? extractStreetAddress(ctxDeliveryAddress, ctxDeliveryComponents) : ''
+        setAddressDetails({
+            ...EMPTY_ADDRESS_DETAILS,
+            colony: streetAddress || '',
+            city: ctxDeliveryComponents?.city || EMPTY_ADDRESS_DETAILS.city,
+            state: ctxDeliveryComponents?.state || EMPTY_ADDRESS_DETAILS.state,
+            pincode: ctxDeliveryComponents?.pincode || '',
+        })
+        setIsEditingAddress(true)
     }
 
     const handleSearchChange = async (val) => {
@@ -339,45 +367,58 @@ export default function CheckoutScreen() {
         fetchAvailableCoupons()
     }, [])
 
+    // Saved addresses come from the account (a returning customer's earlier order addresses are
+    // already there). Unless the customer just pinned a new location, start on the one they used last.
     useEffect(() => {
         if (!user?._id) return
-        setSavedAddresses(loadSavedAddresses(user._id))
+        let cancelled = false
+        fetchSavedAddresses(user._id).then((list) => {
+            if (cancelled) return
+            setSavedAddresses(list)
+            if (!autoPickedSavedRef.current && addressSourceRef.current !== 'pin' && list.length > 0) {
+                autoPickedSavedRef.current = true
+                handleSelectSavedAddress(sortByRecent(list)[0], { silent: true })
+            }
+        })
+        return () => { cancelled = true }
     }, [user?._id])
 
+    // A location pinned on the map / by GPS fills the area, city and pincode. It never touches a
+    // saved address the customer picked, and never keeps the house number of a different address.
     useEffect(() => {
         if (!ctxDeliveryAddress) return;
+        if (addressSourceRef.current === 'saved') return;
         setDeliveryAddress(ctxDeliveryAddress);
 
         if (ctxDeliveryComponents) {
             setAddressDetails(prev => {
                 const streetAddress = extractStreetAddress(ctxDeliveryAddress, ctxDeliveryComponents);
-                const newDetails = {
+                const colony = streetAddress || ctxDeliveryComponents.area || prev.colony;
+                // Same place as before: keep what the customer typed. A different place: start the
+                // house details afresh instead of mixing two addresses.
+                const samePlace = prev.colony && colony && prev.colony.trim().toLowerCase() === colony.trim().toLowerCase();
+                // Just pinned a new place: ask for the house number straight away
+                if (addressSourceRef.current === 'pin' && !(samePlace && prev.flat)) setIsEditingAddress(true);
+                return {
                     ...prev,
                     city: ctxDeliveryComponents.city || prev.city,
                     state: ctxDeliveryComponents.state || prev.state,
-                    colony: streetAddress || ctxDeliveryComponents.area || prev.colony,
+                    colony,
                     pincode: ctxDeliveryComponents.pincode || prev.pincode,
-                    // Keep house number if user already saved / entered it
-                    flat: prev.flat || '',
-                    floor: prev.floor || '',
-                    landmark: prev.landmark || '',
+                    flat: samePlace ? (prev.flat || '') : '',
+                    floor: samePlace ? (prev.floor || '') : '',
+                    landmark: samePlace ? (prev.landmark || '') : '',
                 };
-
-                return newDetails;
             });
             setIsManualAddress(false);
         } else {
             const parsed = parseAddressToDetails(ctxDeliveryAddress);
             if (parsed) {
-                setAddressDetails(prev => ({
-                    ...prev,
-                    ...parsed,
-                    flat: prev.flat || parsed.flat // Preserve flat if already entered
-                }));
+                setAddressDetails(prev => ({ ...prev, ...parsed }));
             }
             setIsManualAddress(false);
         }
-    }, [ctxDeliveryAddress, ctxDeliveryComponents, ctxHasDeliveryPinned])
+    }, [ctxDeliveryAddress, ctxDeliveryComponents, ctxHasDeliveryPinned, pinNonce])
 
     // Open address editor only after a fresh map/GPS pin when house no. is still missing.
     // Do NOT open on every checkout visit — that was spamming the Change Address popup.
@@ -621,7 +662,8 @@ export default function CheckoutScreen() {
             return;
         }
 
-        if (ctxDeliveryComponents?.city) {
+        // Only compare with the map pin when the address actually came from that pin
+        if (addressSourceRef.current === 'pin' && ctxDeliveryComponents?.city) {
             const manualCity = addressDetails.city.trim().toLowerCase();
             const pinnedCity = ctxDeliveryComponents.city.trim().toLowerCase();
             if (manualCity && !pinnedCity.includes(manualCity) && !manualCity.includes(pinnedCity)) {
@@ -659,15 +701,33 @@ export default function CheckoutScreen() {
             toast.error('Could not save address to profile')
         }
 
-        // Prefer the exact pinned delivery coordinates from the map unless a saved address was selected.
-        // Fallback to geocoding the typed address if coordinates are unavailable or manual address selected.
-        let coords = (!isManualAddress && ctxDeliveryLocation) ? ctxDeliveryLocation : null;
+        // Coordinates: the map pin if this address came from it; else the saved address's own
+        // location; else look the typed address up.
+        const selectedSaved = savedAddresses.find((a) => (a.id || a.tag) === selectedAddressId);
+        let coords = null;
+        if (addressSourceRef.current === 'pin' && ctxDeliveryLocation) {
+            coords = ctxDeliveryLocation;
+        } else if (selectedSaved?.location && selectedSaved.fullAddress === fullAddress) {
+            coords = selectedSaved.location;
+        }
         if (!coords) {
             try {
                 coords = await geocodeAddressFrontend(fullAddress);
             } catch (geoErr) {
                 // non-fatal
             }
+        }
+
+        // Remember this address on the account (most recently used comes first next time)
+        try {
+            const lat = Number(coords?.lat), lng = Number(coords?.lng);
+            const next = upsertSavedAddress(savedAddresses, selectedSaved?.tag || addressTag, addressDetails, {
+                location: Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined,
+                lastUsedAt: new Date().toISOString(),
+            });
+            persistSavedAddresses(next);
+        } catch (saveErr) {
+            console.error('Could not remember address:', saveErr);
         }
 
         const orderData = {
@@ -923,27 +983,52 @@ export default function CheckoutScreen() {
                                             <Edit3 size={16} />
                                         </button>
                                     </div>
-                                    {savedAddresses.length > 0 && (
-                                        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
-                                            {savedAddresses
-                                                .slice()
-                                                .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-                                                .map((saved) => (
-                                                    <button
-                                                        key={saved.id || saved.tag}
-                                                        onClick={() => handleSelectSavedAddress(saved)}
-                                                        className={cn(
-                                                            "px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all",
-                                                            addressTag === saved.tag
-                                                                ? "bg-primary/10 border-primary/30 text-primary"
-                                                                : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
-                                                        )}
-                                                    >
-                                                        {saved.label}
-                                                    </button>
-                                                ))}
-                                        </div>
-                                    )}
+                                    <div className="mt-4 pt-4 border-t border-slate-100">
+                                        {savedAddresses.length > 0 && (
+                                            <>
+                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                                    {savedAddresses.length === 1 ? 'Your saved address' : 'Choose from your saved addresses'}
+                                                </p>
+                                                <div className="space-y-2">
+                                                    {sortByRecent(savedAddresses).map((saved) => {
+                                                        const key = saved.id || saved.tag
+                                                        const active = key === selectedAddressId
+                                                        return (
+                                                            <button
+                                                                key={key}
+                                                                type="button"
+                                                                disabled={isPlacingOrder}
+                                                                onClick={() => handleSelectSavedAddress(saved)}
+                                                                className={cn(
+                                                                    "w-full text-left flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-all",
+                                                                    active ? "border-primary bg-primary/5" : "border-slate-200 bg-white hover:border-slate-300"
+                                                                )}
+                                                            >
+                                                                <span className={cn(
+                                                                    "mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
+                                                                    active ? "border-primary bg-primary" : "border-slate-300"
+                                                                )}>
+                                                                    {active && <Check size={10} strokeWidth={4} className="text-white" />}
+                                                                </span>
+                                                                <span className="min-w-0">
+                                                                    <span className="block text-xs font-bold text-slate-900">{saved.label || 'Saved address'}</span>
+                                                                    <span className="block text-[11px] text-slate-500 leading-snug line-clamp-2 break-words">{saved.fullAddress}</span>
+                                                                </span>
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </>
+                                        )}
+                                        <button
+                                            type="button"
+                                            disabled={isPlacingOrder}
+                                            onClick={openNewAddressForm}
+                                            className="mt-3 text-xs font-bold text-primary hover:text-primary/80"
+                                        >
+                                            + Add a new address
+                                        </button>
+                                    </div>
                                 </div>
                             </section>
 
@@ -1516,8 +1601,8 @@ export default function CheckoutScreen() {
                                                 return;
                                             }
 
-                                            // Validation: Check if manual city matches pinned city
-                                            if (ctxDeliveryComponents?.city) {
+                                            // Validation: Check if manual city matches pinned city (only for a pinned address)
+                                            if (addressSourceRef.current === 'pin' && ctxDeliveryComponents?.city) {
                                                 const manualCity = addressDetails.city.trim().toLowerCase();
                                                 const pinnedCity = ctxDeliveryComponents.city.trim().toLowerCase();
                                                 if (manualCity && !pinnedCity.includes(manualCity) && !manualCity.includes(pinnedCity)) {
@@ -1529,7 +1614,12 @@ export default function CheckoutScreen() {
                                             const fullAddress = buildFullAddress(addressDetails)
                                             try {
                                                 await persistAddressToProfile(fullAddress)
-                                                upsertAddressByTag(addressTag, addressDetails)
+                                                const lat = Number(ctxDeliveryLocation?.lat), lng = Number(ctxDeliveryLocation?.lng)
+                                                const pinLocation = addressSourceRef.current === 'pin' && Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined
+                                                const next = upsertSavedAddress(savedAddresses, addressTag, addressDetails, { location: pinLocation })
+                                                persistSavedAddresses(next)
+                                                const savedEntry = next.find((a) => a.fullAddress === fullAddress && (a.tag === addressTag || addressTag === 'other'))
+                                                if (savedEntry) handleSelectSavedAddress(savedEntry, { silent: true })
                                                 toast.success('Address saved')
                                             } catch (error) {
                                                 console.error('Save address error:', error)

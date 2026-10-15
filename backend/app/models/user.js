@@ -56,6 +56,37 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
 
+    // Delivery addresses the customer has used or saved (shown at checkout on any device)
+    savedAddresses: {
+      type: [
+        new mongoose.Schema(
+          {
+            id: { type: String, required: true },
+            tag: { type: String, enum: ["home", "work", "other"], default: "other" },
+            label: { type: String, default: "Other" },
+            details: {
+              flat: { type: String, default: "" },
+              floor: { type: String, default: "" },
+              colony: { type: String, default: "" },
+              landmark: { type: String, default: "" },
+              city: { type: String, default: "" },
+              state: { type: String, default: "" },
+              pincode: { type: String, default: "" },
+            },
+            fullAddress: { type: String, default: "" },
+            location: {
+              lat: { type: Number },
+              lng: { type: Number },
+            },
+            lastUsedAt: { type: Date },
+            updatedAt: { type: Date, default: Date.now },
+          },
+          { _id: false, id: false }
+        ),
+      ],
+      default: undefined,
+    },
+
     // Optional additional contact numbers for the user
     additionalNumbers: [
       {

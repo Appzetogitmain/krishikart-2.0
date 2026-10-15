@@ -1,3 +1,5 @@
+import api from '@/lib/axios'
+
 export const SAVED_ADDRESSES_KEY = 'kk_user_saved_addresses'
 
 export const ADDRESS_TAGS = [
@@ -55,47 +57,85 @@ export function loadSavedAddresses(userId) {
     return []
 }
 
+/** Saves on this device and on the account (so the list shows on any phone). */
 export function saveSavedAddresses(userId, addresses) {
     const key = getSavedAddressesStorageKey(userId)
-    localStorage.setItem(key, JSON.stringify(addresses))
+    try { localStorage.setItem(key, JSON.stringify(addresses)) } catch { /* storage full or blocked */ }
+    if (userId) {
+        api.put('/user/addresses', { addresses }).catch((error) => {
+            console.error('Failed to sync saved addresses:', error)
+        })
+    }
 }
 
-export function upsertAddressByTag(savedAddresses, tag, details) {
+/**
+ * Loads the account's saved addresses. For a returning customer the server starts the list
+ * from their earlier order addresses. Addresses saved only on this phone (older app versions)
+ * are uploaded once so they are not lost.
+ */
+export async function fetchSavedAddresses(userId) {
+    const local = loadSavedAddresses(userId)
+    try {
+        const res = await api.get('/user/addresses')
+        let list = res.data?.results || res.data?.result || []
+        if (!Array.isArray(list)) list = []
+        const missingLocal = local.filter((l) => !list.some((s) => s.fullAddress === l.fullAddress))
+        if (missingLocal.length) {
+            const merged = [...list, ...missingLocal]
+            const saved = await api.put('/user/addresses', { addresses: merged })
+            list = saved.data?.results || saved.data?.result || merged
+        }
+        try { localStorage.setItem(getSavedAddressesStorageKey(userId), JSON.stringify(list)) } catch { /* ignore */ }
+        return list
+    } catch (error) {
+        console.error('Failed to load saved addresses:', error)
+        return local
+    }
+}
+
+/** Most recently used (or edited) address first. */
+export function sortByRecent(addresses = []) {
+    const t = (a) => new Date(a.lastUsedAt || a.updatedAt || 0).getTime()
+    return [...addresses].sort((a, b) => t(b) - t(a))
+}
+
+/**
+ * Add or update an address. Home and Work are one each; "Other" entries are matched by text.
+ * `extra` may carry `location` ({lat,lng}) and `lastUsedAt`.
+ */
+export function upsertAddressByTag(savedAddresses, tag, details, extra = {}) {
     const normalizedTag = tag || 'other'
     const fullAddress = buildFullAddress(details)
     const label = ADDRESS_TAGS.find((item) => item.value === normalizedTag)?.label || 'Other'
+    const now = new Date().toISOString()
+    const withExtra = (entry, previous) => {
+        const next = { ...entry }
+        const location = extra.location || (previous && previous.fullAddress === fullAddress ? previous.location : undefined)
+        if (location) next.location = location
+        else delete next.location
+        const lastUsedAt = extra.lastUsedAt || previous?.lastUsedAt
+        if (lastUsedAt) next.lastUsedAt = lastUsedAt
+        return next
+    }
 
     if (normalizedTag === 'home' || normalizedTag === 'work') {
+        const previous = savedAddresses.find((entry) => entry.tag === normalizedTag)
         return [
             ...savedAddresses.filter((entry) => entry.tag !== normalizedTag),
-            {
-                id: normalizedTag,
-                tag: normalizedTag,
-                label,
-                details,
-                fullAddress,
-                updatedAt: new Date().toISOString()
-            }
+            withExtra({ id: normalizedTag, tag: normalizedTag, label, details, fullAddress, updatedAt: now }, previous)
         ]
     }
 
     const existingIdx = savedAddresses.findIndex((a) => a.fullAddress === fullAddress)
     if (existingIdx > -1) {
         const next = [...savedAddresses]
-        next[existingIdx] = { ...next[existingIdx], details, updatedAt: new Date().toISOString() }
+        next[existingIdx] = withExtra({ ...next[existingIdx], details, updatedAt: now }, next[existingIdx])
         return next
     }
 
     return [
         ...savedAddresses,
-        {
-            id: `other_${Date.now()}`,
-            tag: 'other',
-            label: 'Other',
-            details,
-            fullAddress,
-            updatedAt: new Date().toISOString()
-        }
+        withExtra({ id: `other_${Date.now()}`, tag: 'other', label: 'Other', details, fullAddress, updatedAt: now })
     ]
 }
 
