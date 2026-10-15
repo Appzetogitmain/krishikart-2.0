@@ -27,6 +27,7 @@ import {
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import OrdersTable from '../components/tables/OrdersTable';
+import { cityKeyOf, cityLabelOf } from '../utils/city';
 import { useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { getSocket, joinAdminDeliveryTracking } from '@/lib/socket';
@@ -56,6 +57,8 @@ export default function OrdersScreen() {
     const [vendors, setVendors] = useState([]);
     const [isVendorsLoading, setIsVendorsLoading] = useState(false);
     const [compatibleVendors, setCompatibleVendors] = useState([]);
+    // City filter for the vendor list; starts on the requesting franchise's city
+    const [vendorCity, setVendorCity] = useState('all');
 
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
@@ -266,35 +269,19 @@ export default function OrdersScreen() {
                     .map(p => p.category?.toString())
                     .filter(Boolean);
 
-                const franchiseCity = order.franchiseId?.city?.toLowerCase() || '';
-
-                // 2. Filter vendors who:
-                // - Match the city (if franchise city is known)
-                // - AND (have the product OR serve the category)
-                const compatible = allActiveVendors.filter(vendor => {
-                    // City Filter: Vendor farmLocation or city should contain the franchise city
-                    const vendorLocation = (vendor.farmLocation || vendor.city || '').toLowerCase();
-                    if (franchiseCity && !vendorLocation.includes(franchiseCity)) {
-                        return false;
-                    }
-
-                    // Product/Category Filter
-                    // Check explicit products
-                    const hasProduct = vendor.products?.some(p => {
-                        const vendorProdId = (p._id || p).toString();
-                        return shortageProductIds.includes(vendorProdId);
-                    });
-
-                    if (hasProduct) return true;
-
-                    // Check served categories
+                // 2. Note each vendor's city and whether it supplies the short items
+                //    (by product, or by serving the product's category). The list then shows
+                //    vendors of the franchise's own city first; other cities are one tap away.
+                const annotated = allActiveVendors.map(vendor => {
+                    const hasProduct = vendor.products?.some(p => shortageProductIds.includes((p._id || p).toString()));
                     const vendorCategories = (vendor.servedCategories || []).map(c => (c._id || c).toString());
                     const matchesCategory = shortageCategoryIds.some(catId => vendorCategories.includes(catId));
-
-                    return matchesCategory;
+                    return { ...vendor, _cityKey: cityKeyOf(vendor.farmLocation || vendor.city), _canSupply: !!(hasProduct || matchesCategory) };
                 });
 
-                setCompatibleVendors(compatible.length > 0 ? compatible : allActiveVendors);
+                const franchiseCityKey = cityKeyOf(order.franchiseId?.city);
+                setVendorCity(franchiseCityKey || 'all');
+                setCompatibleVendors(annotated);
             }
         } catch (error) {
             console.error('Fetch vendors error:', error);
@@ -303,6 +290,24 @@ export default function OrdersScreen() {
             setIsVendorsLoading(false);
         }
     };
+
+    // Vendor list for the "Stock Mangwayein" drawer: filtered by the chosen city, with vendors that
+    // supply the short items first
+    const franchiseCityKey = cityKeyOf(selectedOrderForProcurement?.franchiseId?.city);
+    const vendorCityCounts = compatibleVendors.reduce((acc, v) => {
+        if (v._cityKey) acc[v._cityKey] = (acc[v._cityKey] || 0) + 1;
+        return acc;
+    }, {});
+    const otherVendorCities = Object.keys(vendorCityCounts)
+        .filter((k) => k !== franchiseCityKey)
+        .sort((a, b) => a.localeCompare(b));
+    const visibleVendors = compatibleVendors
+        .filter((v) => vendorCity === 'all' || v._cityKey === vendorCity)
+        .sort((a, b) =>
+            (Number(b._cityKey === franchiseCityKey) - Number(a._cityKey === franchiseCityKey)) ||
+            (Number(b._canSupply) - Number(a._canSupply)) ||
+            String(a.fullName || '').localeCompare(String(b.fullName || ''))
+        );
 
     const handleProcure = (order) => {
         setSelectedOrderForProcurement({
@@ -746,10 +751,36 @@ export default function OrdersScreen() {
 
                             {/* Vendor Selection List */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
-                                <div className="flex items-center justify-between mb-2 px-1">
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Compatible Vendors</h3>
-                                    {isVendorsLoading && <div className="w-3 h-3 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin" />}
+                                <div className="flex items-center justify-between gap-3 mb-2 px-1">
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Vendors</h3>
+                                    <div className="flex items-center gap-2">
+                                        {isVendorsLoading && <div className="w-3 h-3 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin" />}
+                                        <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                            <MapPin size={12} />
+                                            City
+                                            <select
+                                                value={vendorCity}
+                                                onChange={(e) => setVendorCity(e.target.value)}
+                                                className="h-8 max-w-[210px] bg-white border border-slate-300 rounded-sm px-2 text-[11px] font-bold text-slate-900 normal-case tracking-normal focus:outline-none focus:border-slate-900"
+                                            >
+                                                {franchiseCityKey && (
+                                                    <option value={franchiseCityKey}>
+                                                        {cityLabelOf(franchiseCityKey)} (franchise city) · {vendorCityCounts[franchiseCityKey] || 0}
+                                                    </option>
+                                                )}
+                                                <option value="all">All cities · {compatibleVendors.length}</option>
+                                                {otherVendorCities.map((key) => (
+                                                    <option key={key} value={key}>{cityLabelOf(key)} · {vendorCityCounts[key]}</option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
                                 </div>
+                                {franchiseCityKey && vendorCity === franchiseCityKey && visibleVendors.length > 0 && (
+                                    <p className="px-1 -mt-1 mb-1 text-[11px] text-slate-500">
+                                        Showing vendors near the franchise in <b className="text-slate-800">{cityLabelOf(franchiseCityKey)}</b>. Change the city to see others.
+                                    </p>
+                                )}
 
                                 {isVendorsLoading ? (
                                     <div className="space-y-3">
@@ -757,13 +788,29 @@ export default function OrdersScreen() {
                                             <div key={i} className="h-32 bg-white border border-slate-200 rounded-sm animate-pulse" />
                                         ))}
                                     </div>
-                                ) : compatibleVendors.length === 0 ? (
-                                    <div className="py-10 text-center bg-white border border-dashed border-slate-200 rounded-sm">
+                                ) : visibleVendors.length === 0 ? (
+                                    <div className="py-10 px-6 text-center bg-white border border-dashed border-slate-200 rounded-sm">
                                         <Users className="mx-auto text-slate-200 mb-2" size={24} />
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No matching vendors found</p>
+                                        <p className="text-[11px] font-bold text-slate-700">
+                                            {vendorCity === 'all'
+                                                ? 'No active vendors yet'
+                                                : `No vendor in ${cityLabelOf(vendorCity)} yet`}
+                                        </p>
+                                        {vendorCity !== 'all' && compatibleVendors.length > 0 && (
+                                            <>
+                                                <p className="mt-1 text-[11px] text-slate-500">Pick another city from the list, or see all vendors.</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setVendorCity('all')}
+                                                    className="mt-3 h-8 px-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-slate-800"
+                                                >
+                                                    Show all cities
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 ) : (
-                                    compatibleVendors.map((vendor) => (
+                                    visibleVendors.map((vendor) => (
                                         <div
                                             key={vendor._id}
                                             className="bg-white p-4 border border-slate-200 rounded-sm hover:border-slate-400 transition-all group relative overflow-hidden"
@@ -775,10 +822,18 @@ export default function OrdersScreen() {
                                                     </div>
                                                     <div>
                                                         <h4 className="text-sm font-bold text-slate-900 tracking-tight">{vendor.fullName || vendor.name}</h4>
-                                                        <div className="flex items-center gap-2 mt-1">
+                                                        <div className="flex flex-wrap items-center gap-2 mt-1">
                                                             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                                                                 {vendor.products?.length || 0} Products
                                                             </span>
+                                                            {vendor._canSupply ? (
+                                                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-sm">Supplies these items</span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-sm">Items not in their list</span>
+                                                            )}
+                                                            {franchiseCityKey && vendor._cityKey === franchiseCityKey && (
+                                                                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-sm">Same city</span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>

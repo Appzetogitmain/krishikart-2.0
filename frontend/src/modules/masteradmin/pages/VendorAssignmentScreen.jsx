@@ -20,6 +20,7 @@ import {
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { cityKeyOf, cityLabelOf } from '../utils/city';
 
 export default function VendorAssignmentScreen() {
     const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +30,9 @@ export default function VendorAssignmentScreen() {
     const [pendingRequests, setPendingRequests] = useState([]);
     const [vendors, setVendors] = useState([]);
     const [isLoadingVendors, setIsLoadingVendors] = useState(false);
+    // City filter (starts on the requesting franchise's city) and name search for the vendor list
+    const [vendorCity, setVendorCity] = useState('all');
+    const [vendorSearch, setVendorSearch] = useState('');
     const [showVendorList, setShowVendorList] = useState(false);
 
     const fetchPendingRequests = async () => {
@@ -77,29 +81,21 @@ export default function VendorAssignmentScreen() {
 
             const response = await api.get(`/masteradmin/vendors?productId=${productId}&productName=${encodeURIComponent(productName)}`);
             if (response.data.success) {
-                const franchiseCity = order.city?.toLowerCase() || '';
                 const allVendors = response.data.results || [];
 
-                // Filter vendors who match the franchise city
-                const filteredVendors = allVendors.filter(v => {
-                    const vendorLocation = (v.farmLocation || v.city || '').toLowerCase();
-                    if (franchiseCity && !vendorLocation.includes(franchiseCity)) {
-                        return false;
-                    }
-                    return true;
-                });
-
-                // If no local vendors found, fallback to all vendors matching the product
-                const finalVendors = filteredVendors.length > 0 ? filteredVendors : allVendors;
-
-                const mappedVendors = finalVendors.map(v => ({
+                // Keep every vendor that sells the product; the list starts filtered to the
+                // franchise's own city and the admin can switch city if none is there.
+                const mappedVendors = allVendors.map(v => ({
                     id: v._id,
                     name: v.fullName,
                     farmLocation: v.farmLocation,
+                    cityKey: cityKeyOf(v.farmLocation || v.city),
                     status: v.status,
                     products: v.products
                 }));
                 setVendors(mappedVendors);
+                setVendorSearch('');
+                setVendorCity(cityKeyOf(order.city) || 'all');
             }
         } catch (error) {
             console.error('Failed to fetch vendors for order:', error);
@@ -131,6 +127,24 @@ export default function VendorAssignmentScreen() {
         fetchVendorsForOrder(selectedOrder, productId, item.name);
         setShowVendorList(true);
     };
+
+    // Vendor list: chosen city + name search, vendors of the franchise's own city first
+    const franchiseCityKey = cityKeyOf(selectedOrder?.city);
+    const vendorCityCounts = vendors.reduce((acc, v) => {
+        if (v.cityKey) acc[v.cityKey] = (acc[v.cityKey] || 0) + 1;
+        return acc;
+    }, {});
+    const otherVendorCities = Object.keys(vendorCityCounts)
+        .filter((k) => k !== franchiseCityKey)
+        .sort((a, b) => a.localeCompare(b));
+    const searchText = vendorSearch.trim().toLowerCase();
+    const visibleVendors = vendors
+        .filter((v) => vendorCity === 'all' || v.cityKey === vendorCity)
+        .filter((v) => !searchText || String(v.name || '').toLowerCase().includes(searchText))
+        .sort((a, b) =>
+            (Number(b.cityKey === franchiseCityKey) - Number(a.cityKey === franchiseCityKey)) ||
+            String(a.name || '').localeCompare(String(b.name || ''))
+        );
 
     const handleAssign = async (vendor) => {
         setIsAssigning(true);
@@ -427,10 +441,31 @@ export default function VendorAssignmentScreen() {
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={12} />
                                             <input
                                                 type="text"
+                                                value={vendorSearch}
+                                                onChange={(e) => setVendorSearch(e.target.value)}
                                                 placeholder="Search by vendor name..."
                                                 className="w-full bg-white border border-slate-200 rounded-sm py-2 pl-9 pr-4 outline-none text-[11px] font-bold focus:ring-2 focus:ring-slate-900/5 focus:border-slate-400 transition-all font-sans"
                                             />
                                         </div>
+                                        <label className="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                            <MapPin size={12} />
+                                            City
+                                            <select
+                                                value={vendorCity}
+                                                onChange={(e) => setVendorCity(e.target.value)}
+                                                className="flex-1 h-8 bg-white border border-slate-200 rounded-sm px-2 text-[11px] font-bold text-slate-900 normal-case tracking-normal focus:outline-none focus:border-slate-400"
+                                            >
+                                                {franchiseCityKey && (
+                                                    <option value={franchiseCityKey}>
+                                                        {cityLabelOf(franchiseCityKey)} (franchise city) · {vendorCityCounts[franchiseCityKey] || 0}
+                                                    </option>
+                                                )}
+                                                <option value="all">All cities · {vendors.length}</option>
+                                                {otherVendorCities.map((key) => (
+                                                    <option key={key} value={key}>{cityLabelOf(key)} · {vendorCityCounts[key]}</option>
+                                                ))}
+                                            </select>
+                                        </label>
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar bg-slate-50">
@@ -439,8 +474,8 @@ export default function VendorAssignmentScreen() {
                                                 <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin mb-3" />
                                                 <span className="text-[10px] font-black uppercase tracking-widest">Finding Best Matches...</span>
                                             </div>
-                                        ) : vendors.length > 0 ? (
-                                            vendors.map((vendor, index) => (
+                                        ) : visibleVendors.length > 0 ? (
+                                            visibleVendors.map((vendor, index) => (
                                                 <motion.div
                                                     key={vendor.id}
                                                     initial={{ opacity: 0, y: 10 }}
@@ -457,6 +492,9 @@ export default function VendorAssignmentScreen() {
                                                                 <h4 className="font-black text-slate-900 text-xs tracking-tight leading-tight">{vendor.name}</h4>
                                                                 <div className="flex items-center gap-1.5 mt-1">
                                                                     <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{vendor.products?.length || 0} products</span>
+                                                                    {franchiseCityKey && vendor.cityKey === franchiseCityKey && (
+                                                                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-sm">Same city</span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -483,10 +521,21 @@ export default function VendorAssignmentScreen() {
                                                 </motion.div>
                                             ))
                                         ) : (
-                                            <div className="py-20 flex flex-col items-center justify-center text-center opacity-30 border border-slate-200 border-dashed rounded-sm bg-white">
+                                            <div className="py-20 flex flex-col items-center justify-center text-center border border-slate-200 border-dashed rounded-sm bg-white">
                                                 <Users size={32} className="text-slate-300 mb-2" />
                                                 <h3 className="text-sm font-bold text-slate-900">No Match</h3>
-                                                <p className="text-[10px] font-bold uppercase tracking-widest px-10">No vendors sell this product</p>
+                                                <p className="text-[10px] font-bold uppercase tracking-widest px-10">
+                                                    {vendors.length === 0
+                                                        ? 'No vendors sell this product'
+                                                        : vendorSearch.trim()
+                                                            ? 'No vendor with this name'
+                                                            : `No vendor in ${cityLabelOf(vendorCity)} sells this product`}
+                                                </p>
+                                                {vendors.length > 0 && vendorCity !== 'all' && (
+                                                    <button type="button" onClick={() => setVendorCity('all')} className="mt-3 h-8 px-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm">
+                                                        Show all cities
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
