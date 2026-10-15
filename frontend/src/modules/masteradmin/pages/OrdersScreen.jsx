@@ -349,7 +349,7 @@ export default function OrdersScreen() {
                 customQuantities: finalQuantities
             });
             if (response.data.success) {
-                toast.success(`Procurement request initiated with ${vendor.fullName || vendor.name}`);
+                toast.success(`Stock request ${vendor.fullName || vendor.name} ko bhej di gayi`);
                 setSelectedOrderForProcurement(null);
                 fetchAllOrders();
             }
@@ -494,7 +494,7 @@ export default function OrdersScreen() {
                     <div className="px-4 border-b border-slate-200 flex items-center gap-1 overflow-x-auto no-scrollbar">
                         {[
                             { id: 'all', label: 'All Orders', count: allOrders.length },
-                            { id: 'Accepted', label: 'Accepted' },
+                            { id: 'Accepted', label: 'Order Accepted' },
                             { id: 'Packed', label: 'Packed' },
                             { id: 'Dispatched', label: 'Dispatched' },
                             { id: 'Delivered', label: 'Delivered' },
@@ -665,7 +665,7 @@ export default function OrdersScreen() {
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-2 text-rose-600">
                                         <AlertCircle size={14} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Procurement Plan</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Stock Mangwayein</span>
                                     </div>
                                     <div className="flex bg-white rounded-sm border border-rose-200 p-0.5">
                                         <button

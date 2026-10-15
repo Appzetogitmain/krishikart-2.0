@@ -978,7 +978,7 @@ export default function FranchiseStockMonitoringScreen() {
                                 </button>
                                 {item.alertStatus !== "ok" ? (
                                   <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm font-bold text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-sm">
-                                    Request Stock
+                                    Stock Mangwayein
                                   </button>
                                 ) : (
                                   <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-2 py-1 bg-slate-50 border border-slate-100 rounded-sm">

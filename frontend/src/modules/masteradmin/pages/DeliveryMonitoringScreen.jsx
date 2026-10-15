@@ -59,7 +59,8 @@ export default function DeliveryMonitoringScreen() {
 
         socket.on('order_status_updated', (updatedOrder) => {
             fetchOrders(); // Refresh to get the fully populated structure
-            toast.info(`Order Status updated to ${updatedOrder.orderStatus}`);
+            const friendly = { Accepted: 'Order Accepted', Procuring: 'Stock Arranging' }[updatedOrder.orderStatus] || updatedOrder.orderStatus;
+            toast.info(`Order status updated to ${friendly}`);
         });
 
         return () => {

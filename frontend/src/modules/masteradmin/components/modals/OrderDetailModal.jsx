@@ -269,11 +269,11 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between">
-                                                    <h3 className="text-[12px] font-black text-rose-900 uppercase tracking-widest">Not Enough Stock</h3>
+                                                    <h3 className="text-[12px] font-black text-rose-900 uppercase tracking-widest">Stock Kam Hai</h3>
                                                     <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] animate-pulse">Action Required</span>
                                                 </div>
                                                 <p className="text-[10px] text-rose-600 font-bold mt-1 leading-relaxed uppercase tracking-tight">
-                                                    The franchise doesn’t have enough stock for this order (some items may have been rejected or spoiled). You can either start a <b>Stock Request</b> or <b>Allow Partial Delivery</b>.
+                                                    Required quantity available nahi hai. Aap <b>Stock Mangwayein</b> (supplier se stock arrange karne ka request bhejein) ya <b>Partial Delivery Allow Karein</b> (jitna stock hai, utna deliver karne ki permission dein).
                                                 </p>
                                             </div>
                                         </div>
@@ -313,7 +313,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 {item.isShortage && (
                                                                     <div className="mt-1.5 flex items-center gap-1.5 text-rose-600 font-black text-[10px] uppercase tracking-[0.1em] bg-rose-50 px-2 py-0.5 rounded-sm border border-rose-100 w-fit animate-pulse">
                                                                         <AlertCircle size={10} />
-                                                                        Shortage: {item.shortageQty} {item.unit}
+                                                                        Stock Kam Hai: {item.shortageQty} {item.unit}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -339,7 +339,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 )}
                                                             >
                                                                 <Truck size={15} />
-                                                                {order.allowPartialFulfillment ? 'Partial Delivery Allowed' : 'Allow Partial Delivery'}
+                                                                {order.allowPartialFulfillment ? 'Partial Delivery Allowed' : 'Partial Delivery Allow Karein'}
                                                             </button>
                                                             <button
                                                                 onClick={() => {
@@ -349,7 +349,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 py-3 rounded-sm text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]"
                                                             >
                                                                 <Package size={16} />
-                                                                Request Missing Items
+                                                                Stock Mangwayein
                                                             </button>
                                                         </div>
                                                     )}
@@ -357,7 +357,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                     {(order.orderStatus || '').toLowerCase() === 'procuring' && (
                                                         <div className="mb-4 p-4 bg-slate-800 border border-slate-700 rounded-sm flex items-center justify-center gap-3">
                                                             <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                                                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Stock request in progress...</span>
+                                                            <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Stock Arranging · Samaan arrange ho raha hai</span>
                                                         </div>
                                                     )}
                                                     <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">

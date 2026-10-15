@@ -101,8 +101,8 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                         {order.items?.length || 0} {order.items?.length === 1 ? 'Item' : 'Items'}
                                     </span>
                                     {order.items?.some(i => i.isShortage) && (
-                                        <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter animate-pulse">
-                                            Stock Shortage
+                                        <span title="Required quantity available nahi hai" className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter animate-pulse">
+                                            Stock Kam Hai
                                         </span>
                                     )}
                                     {order.isPartOfGroup && (
@@ -156,7 +156,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                     onAllowPartial?.(order);
                                                 }}
                                                 disabled={!order.franchiseId || order.allowPartialFulfillment}
-                                                title={!order.franchiseId ? 'Assign franchise before allowing available delivery' : 'Allow franchise to dispatch current available stock'}
+                                                title={!order.franchiseId ? 'Pehle franchise assign karein' : 'Jitna stock hai, utna deliver karne ki permission dein.'}
                                                 className={cn(
                                                     "px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] rounded-sm transition-all flex items-center gap-2 border",
                                                     !order.franchiseId || order.allowPartialFulfillment
@@ -165,7 +165,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                 )}
                                             >
                                                 <Truck size={13} strokeWidth={3} />
-                                                {order.allowPartialFulfillment ? 'Approved' : 'Allow Partial'}
+                                                {order.allowPartialFulfillment ? 'Partial Delivery Allowed' : 'Partial Delivery Allow Karein'}
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -173,7 +173,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                     onProcure?.(order);
                                                 }}
                                                 disabled={!order.franchiseId}
-                                                title={!order.franchiseId ? 'Assign franchise before procurement' : 'Create procurement request'}
+                                                title={!order.franchiseId ? 'Pehle franchise assign karein' : 'Supplier se required stock arrange karne ka request bhejein.'}
                                                 className={cn(
                                                     "px-5 py-2.5 text-white text-[11px] font-black uppercase tracking-[0.15em] rounded-sm transition-all flex items-center gap-2.5 border-2 group/button",
                                                     order.franchiseId
@@ -182,7 +182,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                 )}
                                             >
                                                 <Package size={14} strokeWidth={3} className="group-hover/button:scale-110 transition-transform" />
-                                                Request Stock
+                                                Stock Mangwayein
                                             </button>
                                         </>
                                     )}
