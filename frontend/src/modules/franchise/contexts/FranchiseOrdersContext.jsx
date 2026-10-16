@@ -7,6 +7,9 @@ import { useNotificationSound } from '@/hooks/useNotificationSound';
 
 const FranchiseOrdersContext = createContext();
 
+// An order in one of these states is still waiting for the franchise to accept or reject it
+const AWAITING_DECISION = ['assigned', 'placed', 'pending', 'new'];
+
 export function FranchiseOrdersProvider({ children }) {
     const { franchise, isAuthenticated } = useFranchiseAuth();
     const [liveOrders, setLiveOrders] = useState([]);
@@ -19,8 +22,44 @@ export function FranchiseOrdersProvider({ children }) {
     const [isProcurementAlertOpen, setIsProcurementAlertOpen] = useState(false);
     const [procurementAlertData, setProcurementAlertData] = useState(null);
     
-    const { playNotificationSound } = useNotificationSound();
+    const { playNotificationSound, startRinging, stopRinging } = useNotificationSound();
     const knownOrderIdsRef = useRef(new Set());
+
+    // Orders that are ringing until the franchise accepts or rejects them. "Not Now" closes the
+    // pop-up but not the ring. seenRef marks ids the server list has confirmed, so an order that
+    // simply hasn't reached the list yet isn't dropped by a stale refresh.
+    const [ringingOrderIds, setRingingOrderIds] = useState([]);
+    const ringSeenRef = useRef(new Set());
+
+    const startRingingFor = (orderId) => {
+        if (!orderId) return;
+        const id = String(orderId);
+        setRingingOrderIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    };
+
+    const stopRingingFor = (orderId) => {
+        const id = String(orderId);
+        ringSeenRef.current.delete(id);
+        setRingingOrderIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : prev));
+    };
+
+    useEffect(() => {
+        if (ringingOrderIds.length > 0) startRinging();
+        else stopRinging();
+    }, [ringingOrderIds.length, startRinging, stopRinging]);
+
+    // Stop ringing for orders that were decided elsewhere (another device, admin, the orders page)
+    useEffect(() => {
+        if (ringingOrderIds.length === 0) return;
+        const byId = new Map(liveOrders.map((o) => [String(o._id), o]));
+        const decided = ringingOrderIds.filter((id) => {
+            const order = byId.get(id);
+            if (!order) return ringSeenRef.current.has(id); // gone from the list after being seen
+            ringSeenRef.current.add(id);
+            return !AWAITING_DECISION.includes(String(order.orderStatus || '').toLowerCase());
+        });
+        if (decided.length > 0) decided.forEach(stopRingingFor);
+    }, [liveOrders]);
 
     const fetchOrders = async () => {
         if (!isAuthenticated) return;
@@ -37,7 +76,11 @@ export function FranchiseOrdersProvider({ children }) {
                     if (newlyAddedOrder) {
                         setNewOrderData(newlyAddedOrder);
                         setIsAlertOpen(true);
-                        playNotificationSound();
+                        const needsDecision =
+                            !newlyAddedOrder.franchiseAutoAccepted &&
+                            AWAITING_DECISION.includes(String(newlyAddedOrder.orderStatus || '').toLowerCase());
+                        if (needsDecision) startRingingFor(newlyAddedOrder._id);
+                        else playNotificationSound();
                     }
                 }
 
@@ -92,7 +135,10 @@ export function FranchiseOrdersProvider({ children }) {
                 franchiseAutoAccepted: data?.franchiseAutoAccepted === true,
             });
             setIsAlertOpen(true);
-            playNotificationSound();
+            const autoAccepted =
+                data?.autoAccepted === true || data?.showRejectOnly === true || data?.franchiseAutoAccepted === true;
+            if (!autoAccepted && oid) startRingingFor(oid);
+            else playNotificationSound();
             fetchOrders(); // Immediate refresh
         };
 
@@ -181,6 +227,7 @@ export function FranchiseOrdersProvider({ children }) {
             });
             if (response.data.success) {
                 toast.success(`Order status updated to ${newStatus}`);
+                stopRingingFor(orderId);
                 setLiveOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: newStatus, ...extraData } : o));
                 return true;
             }
@@ -197,6 +244,7 @@ export function FranchiseOrdersProvider({ children }) {
             const response = await api.put(`/orders/franchise/${orderId}/accept`);
             if (response.data.success) {
                 toast.success('Order accepted successfully');
+                stopRingingFor(orderId);
                 setLiveOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: 'Accepted' } : o));
                 fetchOrders(); // Refresh to get full details from server
                 return true;
@@ -215,6 +263,7 @@ export function FranchiseOrdersProvider({ children }) {
             const response = await api.put(`/orders/franchise/${orderId}/reject`, { reason });
             if (response.data.success) {
                 toast.success(response.data.message || 'Order rejected');
+                stopRingingFor(orderId);
                 fetchOrders();
                 return true;
             }
@@ -265,6 +314,11 @@ export function FranchiseOrdersProvider({ children }) {
             isAlertOpen,
             setIsAlertOpen,
             newOrderData,
+            ringingOrderIds,
+            reopenOrderAlert: (orderId) => {
+                setNewOrderData((prev) => (String(prev?.orderId ?? prev?._id) === String(orderId) ? prev : { orderId }));
+                setIsAlertOpen(true);
+            },
             isProcurementAlertOpen,
             setIsProcurementAlertOpen,
             procurementAlertData,

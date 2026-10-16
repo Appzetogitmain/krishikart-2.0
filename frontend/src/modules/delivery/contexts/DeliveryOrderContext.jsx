@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import { getSocket, joinDeliveryRoom } from '@/lib/socket';
@@ -16,6 +16,7 @@ export function DeliveryOrderProvider({ children }) {
 
     const setActiveDeliveryId = (id) => {
         if (id) {
+            stopRingingFor(id); // accepting a task ends its ring
             localStorage.setItem('activeDeliveryId', id);
         } else {
             localStorage.removeItem('activeDeliveryId');
@@ -31,7 +32,41 @@ export function DeliveryOrderProvider({ children }) {
     const [isAlertOpen, setIsAlertOpen] = useState(false);
     const [newTaskData, setNewTaskData] = useState(null);
 
-    const { playNotificationSound } = useNotificationSound();
+    const { playNotificationSound, startRinging, stopRinging } = useNotificationSound();
+
+    // Delivery tasks that ring until the partner accepts or rejects them. Closing the pop-up does
+    // not stop the ring. seenRef marks ids the server list has confirmed, so a task that hasn't
+    // reached the list yet isn't dropped by a stale refresh.
+    const [ringingTaskIds, setRingingTaskIds] = useState([]);
+    const ringSeenRef = useRef(new Set());
+
+    const startRingingFor = (orderId) => {
+        if (!orderId) return;
+        const id = String(orderId);
+        setRingingTaskIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    };
+
+    function stopRingingFor(orderId) {
+        const id = String(orderId);
+        ringSeenRef.current.delete(id);
+        setRingingTaskIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : prev));
+    }
+
+    useEffect(() => {
+        if (ringingTaskIds.length > 0) startRinging();
+        else stopRinging();
+    }, [ringingTaskIds.length, startRinging, stopRinging]);
+
+    // Stop ringing for tasks that left the list (rejected, cancelled, reassigned) or were accepted
+    useEffect(() => {
+        if (ringingTaskIds.length === 0) return;
+        const present = new Set(dispatchedOrders.map((o) => String(o.id)));
+        ringingTaskIds.forEach((id) => {
+            if (present.has(id)) ringSeenRef.current.add(id);
+            const gone = !present.has(id) && ringSeenRef.current.has(id);
+            if (gone || id === String(activeDeliveryId)) stopRingingFor(id);
+        });
+    }, [dispatchedOrders]);
 
     const fetchDispatchedOrders = async () => {
         setLoading(true);
@@ -64,10 +99,14 @@ export function DeliveryOrderProvider({ children }) {
             if (response.data.success) {
                 toast.success(`Status updated to ${newStatus}`);
                 fetchDispatchedOrders();
+                return true;
             }
+            return false;
         } catch (error) {
             console.error('Update status error:', error);
             toast.error(error.response?.data?.message || 'Failed to update status');
+            fetchDispatchedOrders(); // the list on screen may be stale
+            return false;
         }
     };
 
@@ -89,6 +128,7 @@ export function DeliveryOrderProvider({ children }) {
             const response = await api.put(`/orders/delivery/${orderId}/reject`);
             if (response.data.success) {
                 toast.success(`Task rejected`);
+                stopRingingFor(orderId);
                 fetchDispatchedOrders();
             }
         } catch (error) {
@@ -109,7 +149,10 @@ export function DeliveryOrderProvider({ children }) {
             const handleNewTask = (data) => {
                 setNewTaskData(data);
                 setIsAlertOpen(true);
-                playNotificationSound();
+                // Delivery tasks can be accepted or rejected, so they ring until one happens.
+                // Return pickups have no such step and get a single chime.
+                if (data?.type !== 'RETURN' && data?.orderId) startRingingFor(data.orderId);
+                else playNotificationSound();
                 toast.success("New delivery task assigned!");
                 fetchDispatchedOrders();
                 fetchReturnPickups();
@@ -140,6 +183,11 @@ export function DeliveryOrderProvider({ children }) {
             isAlertOpen,
             setIsAlertOpen,
             newTaskData,
+            ringingTaskIds,
+            reopenTaskAlert: (orderId) => {
+                setNewTaskData({ orderId, type: 'DELIVERY', message: `Delivery task waiting for you: #${String(orderId).slice(-6)}` });
+                setIsAlertOpen(true);
+            },
             fetchDispatchedOrders,
             fetchReturnPickups,
             updateStatus,

@@ -15,6 +15,8 @@ const NewOrderAlert = () => {
         rejectFranchiseOrder,
         updateOrderStatus,
         refreshOrders,
+        ringingOrderIds,
+        reopenOrderAlert,
     } = useFranchiseOrders();
     const navigate = useNavigate();
 
@@ -61,6 +63,24 @@ const NewOrderAlert = () => {
     const items = orderDetail?.items || newOrderData?.items || [];
     const paymentMethod = orderDetail?.paymentMethod || newOrderData?.paymentMethod || '';
     const shippingAddress = orderDetail?.shippingAddress || '';
+
+    // The pop-up was closed with "Not Now" but an order is still ringing: keep a way back to it
+    if (!isAlertOpen && ringingOrderIds?.length > 0) {
+        const waitingId = ringingOrderIds[0];
+        return (
+            <button
+                type="button"
+                onClick={() => reopenOrderAlert(waitingId)}
+                className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9998] flex items-center gap-2.5 rounded-full bg-rose-600 px-5 py-3 text-white shadow-2xl animate-pulse"
+            >
+                <Bell size={16} />
+                <span className="text-[11px] font-black uppercase tracking-widest">
+                    Order #{String(waitingId).slice(-6).toUpperCase()} waiting
+                    {ringingOrderIds.length > 1 ? ` (+${ringingOrderIds.length - 1} more)` : ''} - tap to respond
+                </span>
+            </button>
+        );
+    }
 
     if (!isAlertOpen || !newOrderData) return null;
 

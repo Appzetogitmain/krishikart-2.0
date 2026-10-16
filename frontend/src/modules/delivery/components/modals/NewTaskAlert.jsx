@@ -1,11 +1,45 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, X, ArrowRight } from 'lucide-react';
+import { Package, X, ArrowRight, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDeliveryOrders } from '../../contexts/DeliveryOrderContext';
+import { ROUTES } from '../../utils/constants';
 
 export default function NewTaskAlert({ isOpen, onClose, data }) {
     const navigate = useNavigate();
+    const { ringingTaskIds, reopenTaskAlert, setActiveDeliveryId, rejectTask } = useDeliveryOrders();
+
+    // The pop-up was dismissed but a task is still ringing: keep a way back to it
+    if (!isOpen && ringingTaskIds?.length > 0) {
+        const waitingId = ringingTaskIds[0];
+        return (
+            <button
+                type="button"
+                onClick={() => reopenTaskAlert(waitingId)}
+                className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2.5 rounded-full bg-rose-600 px-5 py-3 text-white shadow-2xl animate-pulse"
+            >
+                <Bell className="w-4 h-4" />
+                <span className="text-xs font-bold uppercase tracking-wide">
+                    Task #{String(waitingId).slice(-6).toUpperCase()} waiting
+                    {ringingTaskIds.length > 1 ? ` (+${ringingTaskIds.length - 1} more)` : ''} - tap to respond
+                </span>
+            </button>
+        );
+    }
 
     if (!data) return null;
+
+    const isDeliveryTask = data.type !== 'RETURN' && !!data.orderId;
+
+    const handleAccept = () => {
+        onClose();
+        setActiveDeliveryId(data.orderId); // also stops the ring
+        navigate(ROUTES.ACTIVE);
+    };
+
+    const handleReject = async () => {
+        await rejectTask(data.orderId); // stops the ring once the server confirms
+        onClose();
+    };
 
     const handleViewTask = () => {
         onClose();
@@ -70,21 +104,51 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
 
                                 {/* Actions */}
                                 <div className="space-y-3">
-                                    <button
-                                        onClick={handleViewTask}
-                                        className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
-                                        style={{ WebkitTapHighlightColor: 'transparent' }}
-                                    >
-                                        View Task
-                                        <ArrowRight className="w-5 h-5" />
-                                    </button>
-                                    <button
-                                        onClick={onClose}
-                                        className="w-full py-3 px-4 text-slate-500 font-medium hover:bg-slate-50 rounded-xl transition-colors active:scale-[0.98]"
-                                        style={{ WebkitTapHighlightColor: 'transparent' }}
-                                    >
-                                        Dismiss
-                                    </button>
+                                    {isDeliveryTask ? (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button
+                                                    onClick={handleAccept}
+                                                    className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
+                                                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                                                >
+                                                    Accept
+                                                </button>
+                                                <button
+                                                    onClick={handleReject}
+                                                    className="flex items-center justify-center gap-2 border-2 border-rose-200 text-rose-600 font-semibold py-3 px-4 rounded-xl hover:bg-rose-50 transition-all active:scale-[0.98]"
+                                                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                                                >
+                                                    Reject
+                                                </button>
+                                            </div>
+                                            <button
+                                                onClick={onClose}
+                                                className="w-full py-3 px-4 text-slate-500 font-medium hover:bg-slate-50 rounded-xl transition-colors active:scale-[0.98]"
+                                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                                            >
+                                                Not Now
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={handleViewTask}
+                                                className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
+                                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                                            >
+                                                View Task
+                                                <ArrowRight className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={onClose}
+                                                className="w-full py-3 px-4 text-slate-500 font-medium hover:bg-slate-50 rounded-xl transition-colors active:scale-[0.98]"
+                                                style={{ WebkitTapHighlightColor: 'transparent' }}
+                                            >
+                                                Dismiss
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>

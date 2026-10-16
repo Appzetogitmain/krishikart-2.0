@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Camera,
@@ -32,11 +32,17 @@ const DeliveryCompletion = () => {
         }
     }, [dispatchedOrders]);
 
+    const submittingRef = useRef(false);
+
     const handleComplete = async () => {
-        if (!order) return;
+        // Ignore repeat taps while the first request is still in flight
+        if (!order || submittingRef.current) return;
+        submittingRef.current = true;
 
         // Update status to Delivered in backend
-        await updateStatus(order._id, 'Delivered');
+        const ok = await updateStatus(order._id, 'Delivered');
+        submittingRef.current = false;
+        if (!ok) return;
         localStorage.removeItem('activeDeliveryId');
 
         setIsSuccess(true);

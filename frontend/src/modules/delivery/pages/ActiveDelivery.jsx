@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     Phone,
@@ -6,7 +6,8 @@ import {
     MapPin,
     Clock,
     Loader2,
-    Package
+    Package,
+    Navigation
 } from 'lucide-react';
 import StatusProgress from '../components/ui/StatusProgress';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ const ActiveDelivery = () => {
     const navigate = useNavigate();
     const { dispatchedOrders, loading, updateStatus, activeDeliveryId, setActiveDeliveryId } = useDeliveryOrders();
     const [isUpdating, setIsUpdating] = useState(false);
+    const submittingRef = useRef(false);
     const [isDocOpen, setIsDocOpen] = useState(false);
 
     const order = useMemo(() => {
@@ -29,11 +31,26 @@ const ActiveDelivery = () => {
     const currentStatus = order?.orderStatus || 'Dispatched';
     const isCodOrder = String(order?.paymentMethod || '').toUpperCase() === 'COD';
 
+    // Open turn-by-turn directions to the customer's exact pin; fall back to a search on the
+    // typed address when the order has no saved coordinates.
+    const handleNavigate = () => {
+        const loc = order?.customerLocation;
+        const destination = loc
+            ? `${loc.lat},${loc.lng}`
+            : encodeURIComponent(order?.shippingAddress || '');
+        if (!destination) return;
+        window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank', 'noopener');
+    };
+
     const handleMarkDelivered = async () => {
-        if (!order || isUpdating) return;
+        // A ref, not state: a quick second tap runs before the re-render that disables the button
+        if (!order || submittingRef.current) return;
+        submittingRef.current = true;
         setIsUpdating(true);
-        await updateStatus(order.id, 'Delivered');
+        const ok = await updateStatus(order.id, 'Delivered');
         setIsUpdating(false);
+        submittingRef.current = false;
+        if (!ok) return; // stay on the page so the partner can see what went wrong
         setActiveDeliveryId(null);
         navigate(ROUTES.DASHBOARD);
     };
@@ -150,10 +167,25 @@ const ActiveDelivery = () => {
                             <div className="flex-1">
                                 <p className="text-[10px] font-bold text-muted-foreground uppercase mb-0.5">Deliver To — Customer</p>
                                 <h3 className="text-sm font-bold">{order?.userId?.fullName || 'Customer'}</h3>
-                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{order?.shippingAddress || '—'}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{order?.shippingAddress || '—'}</p>
+                                {order?.customerLocation ? (
+                                    <p className="text-[10px] font-bold text-emerald-600 mt-1.5 flex items-center gap-1">
+                                        <MapPin className="w-3 h-3" /> Exact location pinned by customer
+                                    </p>
+                                ) : (
+                                    <p className="text-[10px] font-bold text-amber-600 mt-1.5">
+                                        No pin saved - navigation uses the written address
+                                    </p>
+                                )}
                             </div>
                         </div>
                         <div className="mt-4 flex gap-2">
+                            <button
+                                onClick={handleNavigate}
+                                className="flex-1 bg-primary text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
+                            >
+                                <Navigation className="w-3.5 h-3.5" /> Navigate
+                            </button>
                             <button
                                 onClick={() => {
                                     if (order?.userId?.mobile) {

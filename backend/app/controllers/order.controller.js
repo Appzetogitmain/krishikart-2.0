@@ -1252,6 +1252,11 @@ export const updateOrderStatus = async (req, res) => {
       if (!partnerId || !order.deliveryPartnerId || order.deliveryPartnerId.toString() !== partnerId.toString()) {
         return handleResponse(res, 403, "This order is not assigned to you");
       }
+      // A repeat of the partner's own update (double tap, retry after a slow network) is not an
+      // error: the order is already where they wanted it. Return early so side effects don't rerun.
+      if (currentStatus === status) {
+        return handleResponse(res, 200, `Order is already ${status}`, order);
+      }
     }
 
     if (
@@ -2279,13 +2284,22 @@ export const getDispatchedOrders = async (req, res) => {
         distance = d < 1 ? `${(d * 1000).toFixed(0)}m` : `${d.toFixed(1)}km`;
       }
 
-      const franchiseAddr = order.franchiseId?.formattedAddress || 
-        [order.franchiseId?.area, order.franchiseId?.city].filter(Boolean).join(', ') || 
+      const franchiseAddr = order.franchiseId?.formattedAddress ||
+        [order.franchiseId?.area, order.franchiseId?.city].filter(Boolean).join(', ') ||
         "N/A";
+
+      // The customer's pinned drop point; [0, 0] is the "not set" default, so treat it as missing
+      const sLng = Number(sLoc?.[0]);
+      const sLat = Number(sLoc?.[1]);
+      const customerLocation =
+        Number.isFinite(sLat) && Number.isFinite(sLng) && (sLat !== 0 || sLng !== 0)
+          ? { lat: sLat, lng: sLng }
+          : null;
 
       return {
         id: order._id,
         _id: order._id,
+        customerLocation,
         franchise: order.franchiseId?.franchiseName || "Kisaankart Store",
         franchiseAddress: franchiseAddr,
         customerName: order.userId?.fullName || "Customer",
