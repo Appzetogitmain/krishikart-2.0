@@ -109,10 +109,21 @@ const toDayKey = (d) =>
 function getOffDayReason(date, offDays) {
     if (!date || !offDays) return null;
     const holiday = (offDays.dates || []).find((h) => h.date === toDayKey(date));
-    if (holiday) return holiday.reason?.trim() || 'Holiday';
+    // A half day (only some slots closed) keeps the day open
+    if (holiday && !(holiday.closedSlots || []).length) return holiday.reason?.trim() || 'Holiday';
     if ((offDays.weeklyOff || []).map(Number).includes(date.getDay())) return 'Weekly off';
     return null;
 }
+
+/** Half day: { reason, slots } when the admin closed only some slots on this day, else null. */
+function getPartDay(date, offDays) {
+    if (!date || !offDays) return null;
+    const holiday = (offDays.dates || []).find((h) => h.date === toDayKey(date));
+    if (!holiday || !(holiday.closedSlots || []).length) return null;
+    return { reason: holiday.reason?.trim() || 'Half day', slots: holiday.closedSlots };
+}
+
+const isSlotClosed = (date, shift, offDays) => !!getPartDay(date, offDays)?.slots.includes(shift);
 
 const getNext7Days = () => {
     const days = [];
@@ -232,10 +243,10 @@ export default function CheckoutScreen() {
 
     useEffect(() => {
         if (!deliveryShift) return
-        if (!isDeliveryShiftSelectable(deliveryShift, selectedDate)) {
+        if (!isDeliveryShiftSelectable(deliveryShift, selectedDate) || isSlotClosed(selectedDate, deliveryShift, offDays)) {
             setDeliveryShift('')
         }
-    }, [deliveryShift, shiftTimeTick, selectedDate])
+    }, [deliveryShift, shiftTimeTick, selectedDate, offDays])
 
     const handlePinCurrentLocation = async () => {
         if (!ctxUpdateDeliveryLocation) {
@@ -752,6 +763,11 @@ export default function CheckoutScreen() {
             setDeliveryShift('');
             return;
         }
+        if (isSlotClosed(selectedDate, deliveryShift, offDays)) {
+            toast.error("This delivery slot is closed on the chosen day. Please pick another slot.");
+            setDeliveryShift('');
+            return;
+        }
 
         setIsPlacingOrder(true)
 
@@ -1159,9 +1175,18 @@ export default function CheckoutScreen() {
                                                 <span className="text-lg md:text-xl font-black tabular-nums leading-none">
                                                     {date.getDate()}
                                                 </span>
-                                                <span className={cn("text-[10px] md:text-[10px] font-black uppercase", isSelected ? "text-emerald-100" : "text-slate-400")}>
-                                                    {isToday ? 'Today' : date.toLocaleDateString('en-US', { month: 'short' })}
-                                                </span>
+                                                {getPartDay(date, offDays) ? (
+                                                    <span
+                                                        title={`${getPartDay(date, offDays).reason}: some slots closed`}
+                                                        className={cn("text-[9px] font-black uppercase leading-tight text-center px-1 line-clamp-2", isSelected ? "text-amber-100" : "text-amber-600")}
+                                                    >
+                                                        Half day
+                                                    </span>
+                                                ) : (
+                                                    <span className={cn("text-[10px] md:text-[10px] font-black uppercase", isSelected ? "text-emerald-100" : "text-slate-400")}>
+                                                        {isToday ? 'Today' : date.toLocaleDateString('en-US', { month: 'short' })}
+                                                    </span>
+                                                )}
                                             </button>
                                         );
                                     })}
@@ -1181,8 +1206,9 @@ export default function CheckoutScreen() {
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                                     {DELIVERY_SHIFT_SLOTS.map(({ label: shift }) => {
+                                        const closedForDay = isSlotClosed(selectedDate, shift, offDays)
                                         const selectable =
-                                            !getOffDayReason(selectedDate, offDays) && isDeliveryShiftSelectable(shift, selectedDate)
+                                            !getOffDayReason(selectedDate, offDays) && !closedForDay && isDeliveryShiftSelectable(shift, selectedDate)
                                         const selected = deliveryShift === shift
                                         return (
                                             <button
@@ -1209,11 +1235,18 @@ export default function CheckoutScreen() {
                                                     className="shrink-0 md:w-[14px] md:h-[14px]"
                                                     strokeWidth={2.25}
                                                 />
-                                                <span className="leading-snug">{shift}</span>
+                                                <span className="leading-snug">
+                                                    {closedForDay ? <><s>{shift}</s> <span className="text-rose-500">Closed</span></> : shift}
+                                                </span>
                                             </button>
                                         )
                                     })}
                                 </div>
+                                {getPartDay(selectedDate, offDays) && (
+                                    <p className="mt-3 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                                        {getPartDay(selectedDate, offDays).reason}: the store is open for part of the day. Closed slots: {getPartDay(selectedDate, offDays).slots.join(', ')}.
+                                    </p>
+                                )}
                                 {DELIVERY_SHIFT_SLOTS.every(({ label }) => !isDeliveryShiftSelectable(label, selectedDate)) && (
                                     <p className="mt-3 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
                                         No delivery slots are left for today. Please try again tomorrow.

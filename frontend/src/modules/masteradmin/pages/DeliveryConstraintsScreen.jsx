@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// Same delivery slots the customer picks from at checkout
+const DELIVERY_SLOTS = ['6 AM - 8 AM', '8 AM - 10 AM', '10 AM - 12 PM', '12 PM - 2 PM', '2 PM - 4 PM', '4 PM - 6 PM', '6 PM - 8 PM'];
 
 /** Today's date in India as "YYYY-MM-DD" (the date picker's minimum). */
 const todayKeyIST = () => new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -43,6 +45,9 @@ export default function DeliveryConstraintsScreen() {
     const [offDays, setOffDays] = useState({ weeklyOff: [], dates: [] });
     const [newOffDate, setNewOffDate] = useState('');
     const [newOffReason, setNewOffReason] = useState('');
+    // 'full' = no delivery all day; 'slots' = store open, only the ticked slots are closed
+    const [newOffMode, setNewOffMode] = useState('full');
+    const [newOffSlots, setNewOffSlots] = useState([]);
 
     const toggleWeeklyOff = (day) => {
         setOffDays((prev) => ({
@@ -62,13 +67,24 @@ export default function DeliveryConstraintsScreen() {
             toast.error('This date is already in the list');
             return;
         }
+        if (newOffMode === 'slots' && newOffSlots.length === 0) {
+            toast.error('Tick the slots that are closed that day');
+            return;
+        }
+        if (newOffMode === 'slots' && newOffSlots.length === DELIVERY_SLOTS.length) {
+            toast.error('All slots are ticked. Choose "Full day off" instead.');
+            return;
+        }
+        const closedSlots = newOffMode === 'slots' ? DELIVERY_SLOTS.filter((s) => newOffSlots.includes(s)) : [];
         setOffDays((prev) => ({
             ...prev,
-            dates: [...prev.dates, { date: newOffDate, reason: newOffReason.trim() || 'Holiday' }]
+            dates: [...prev.dates, { date: newOffDate, reason: newOffReason.trim() || (closedSlots.length ? 'Half day' : 'Holiday'), closedSlots }]
                 .sort((a, b) => a.date.localeCompare(b.date)),
         }));
         setNewOffDate('');
         setNewOffReason('');
+        setNewOffMode('full');
+        setNewOffSlots([]);
     };
 
     const removeOffDate = (date) => {
@@ -354,6 +370,42 @@ export default function DeliveryConstraintsScreen() {
                                         <Plus size={12} /> Add
                                     </button>
                                 </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {[['full', 'Full day off'], ['slots', 'Only some slots closed (half day)']].map(([mode, label]) => (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            onClick={() => setNewOffMode(mode)}
+                                            className={`px-3 py-1.5 rounded-sm border text-[11px] font-bold transition-all ${newOffMode === mode ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 text-slate-600 hover:border-slate-400'}`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {newOffMode === 'slots' && (
+                                    <div className="p-3 border border-slate-200 rounded-sm bg-slate-50/50 space-y-2">
+                                        <p className="text-[11px] font-bold text-slate-500">Tick the slots that are closed. Customers can still book the other slots that day.</p>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            {DELIVERY_SLOTS.map((slot) => {
+                                                const on = newOffSlots.includes(slot);
+                                                return (
+                                                    <button
+                                                        key={slot}
+                                                        type="button"
+                                                        onClick={() => setNewOffSlots((prev) => (on ? prev.filter((s) => s !== slot) : [...prev, slot]))}
+                                                        className={`px-2 py-2 rounded-sm border text-[11px] font-bold transition-all ${on ? 'border-rose-300 bg-rose-50 text-rose-700 line-through' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-400'}`}
+                                                    >
+                                                        {slot}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={() => setNewOffSlots(DELIVERY_SLOTS.filter((s) => /^(2|4|6) PM/.test(s)))} className="text-[11px] font-bold text-slate-600 underline underline-offset-2">Close afternoon & evening</button>
+                                            <button type="button" onClick={() => setNewOffSlots(DELIVERY_SLOTS.filter((s) => /AM -|^12 PM/.test(s)))} className="text-[11px] font-bold text-slate-600 underline underline-offset-2">Close morning</button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {offDays.dates.filter((d) => d.date >= todayKeyIST()).length === 0 ? (
                                     <p className="text-[11px] font-bold text-slate-400 py-2">No holidays added.</p>
@@ -364,6 +416,9 @@ export default function DeliveryConstraintsScreen() {
                                                 <div>
                                                     <p className="text-sm font-black text-slate-900">{formatDayKey(d.date)}</p>
                                                     <p className="text-[11px] font-bold text-rose-500">{d.reason}</p>
+                                                    <p className="text-[11px] font-bold text-slate-500">
+                                                        {(d.closedSlots || []).length ? `Open, but closed: ${d.closedSlots.join(', ')}` : 'Full day off'}
+                                                    </p>
                                                 </div>
                                                 <button
                                                     type="button"

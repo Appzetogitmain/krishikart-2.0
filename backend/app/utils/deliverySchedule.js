@@ -18,7 +18,9 @@ const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "
 
 /**
  * Days the admin has closed for delivery:
- * { weeklyOff: [0-6] (0 = Sunday), dates: [{ date: "YYYY-MM-DD", reason }] }
+ * { weeklyOff: [0-6] (0 = Sunday), dates: [{ date: "YYYY-MM-DD", reason, closedSlots }] }
+ * A date with closedSlots (e.g. ["4 PM - 6 PM", "6 PM - 8 PM"]) is a part day: the store is open
+ * and only those slots are closed. Without them the whole day is off.
  */
 export async function getDeliveryOffDays() {
     try {
@@ -27,7 +29,9 @@ export async function getDeliveryOffDays() {
         return {
             weeklyOff: Array.isArray(value.weeklyOff) ? value.weeklyOff.map(Number).filter((n) => n >= 0 && n <= 6) : [],
             dates: Array.isArray(value.dates)
-                ? value.dates.filter((d) => d && /^\d{4}-\d{2}-\d{2}$/.test(String(d.date)))
+                ? value.dates
+                    .filter((d) => d && /^\d{4}-\d{2}-\d{2}$/.test(String(d.date)))
+                    .map((d) => ({ ...d, closedSlots: Array.isArray(d.closedSlots) ? d.closedSlots.map(String).filter(Boolean) : [] }))
                 : [],
         };
     } catch (err) {
@@ -40,10 +44,23 @@ export async function getDeliveryOffDays() {
 export function getOffDayReason(dayKey, offDays) {
     if (!offDays || !dayKey) return null;
     const holiday = (offDays.dates || []).find((d) => d.date === dayKey);
-    if (holiday) return String(holiday.reason || "").trim() || "Holiday";
+    // A part day (only some slots closed) keeps the day open
+    if (holiday && !(holiday.closedSlots || []).length) return String(holiday.reason || "").trim() || "Holiday";
     const weekday = new Date(`${dayKey}T00:00:00Z`).getUTCDay();
     if ((offDays.weeklyOff || []).includes(weekday)) return `weekly off on ${WEEKDAY_NAMES[weekday]}s`;
     return null;
+}
+
+const slotKey = (s) => String(s || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+/** Why this slot is closed on this IST day (part-day holiday), or null if it is open. */
+export function getClosedSlotReason(dayKey, shift, offDays) {
+    if (!offDays || !dayKey || !shift) return null;
+    const holiday = (offDays.dates || []).find((d) => d.date === dayKey);
+    if (!holiday || !(holiday.closedSlots || []).length) return null;
+    return holiday.closedSlots.some((s) => slotKey(s) === slotKey(shift))
+        ? String(holiday.reason || "").trim() || "Holiday"
+        : null;
 }
 
 /** Customer-facing message for an order placed on a closed day. */
@@ -132,6 +149,11 @@ export function resolveDeliverySchedule(scheduledDate, deliveryShift, now = new 
     const offReason = getOffDayReason(dayKey, offDays);
     if (offReason) {
         return { ok: false, status: 400, message: offDayMessage(dayKey, offReason) };
+    }
+    const slotReason = getClosedSlotReason(dayKey, deliveryShift, offDays);
+    if (slotReason) {
+        const label = new Date(`${dayKey}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+        return { ok: false, status: 400, message: `The ${deliveryShift} slot is closed on ${label} (${slotReason}). Please pick another slot.` };
     }
 
     if (dayKey === todayKey) {
