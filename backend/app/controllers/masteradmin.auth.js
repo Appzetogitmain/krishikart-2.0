@@ -87,6 +87,7 @@ export const loginMasterAdmin = async (req, res) => {
         fullName: admin.fullName,
         role: admin.role,
         permissions: admin.permissions || [],
+    priceZoneCodes: admin.priceZoneCodes || [],
       }
     });
   } catch (err) {
@@ -104,6 +105,7 @@ export const getMasterAdminMe = async (req, res) => {
     fullName: admin.fullName,
     role: admin.role,
     permissions: admin.permissions || [],
+    priceZoneCodes: admin.priceZoneCodes || [],
   });
 };
 
@@ -149,6 +151,7 @@ export const updateMasterAdminProfile = async (req, res) => {
       mobile: admin.mobile,
       role: admin.role,
       permissions: admin.permissions || [],
+    priceZoneCodes: admin.priceZoneCodes || [],
     });
   } catch (err) {
     console.error("Update Error:", err);
@@ -221,9 +224,13 @@ export const forgotMasterAdminPassword = async (req, res) => {
  * SUB-ADMIN CRUD (SUPERADMIN ONLY)
  */
 
+/** City price codes a team member may edit, e.g. ["JPR"] */
+const normalizeZoneCodes = (codes) =>
+  [...new Set((Array.isArray(codes) ? codes : []).map((c) => String(c || "").trim().toUpperCase()).filter((c) => /^[A-Z0-9_-]{2,12}$/.test(c)))];
+
 export const createSubAdmin = async (req, res) => {
   try {
-    const { email, password, fullName, mobile, permissions } = req.body;
+    const { email, password, fullName, mobile, permissions, priceZoneCodes } = req.body;
 
     if (!email || !password || !fullName) {
       return handleResponse(res, 400, "Required fields missing");
@@ -246,6 +253,7 @@ export const createSubAdmin = async (req, res) => {
       role: "subadmin",
       status: "active",
       permissions: permissions || [],
+      priceZoneCodes: normalizeZoneCodes(priceZoneCodes),
       createdBy: req.masteradmin._id
     });
 
@@ -274,7 +282,7 @@ export const listSubAdmins = async (req, res) => {
 export const updateSubAdmin = async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, password, fullName, mobile, permissions, status } = req.body;
+    const { email, password, fullName, mobile, permissions, status, priceZoneCodes } = req.body;
 
     const subAdmin = await SubAdmin.findById(id);
     if (!subAdmin) return handleResponse(res, 404, "Sub-admin not found");
@@ -283,6 +291,7 @@ export const updateSubAdmin = async (req, res) => {
     if (fullName) subAdmin.fullName = fullName;
     if (mobile) subAdmin.mobile = mobile;
     if (permissions) subAdmin.permissions = permissions;
+    if (priceZoneCodes !== undefined) subAdmin.priceZoneCodes = normalizeZoneCodes(priceZoneCodes);
     if (status) subAdmin.status = status;
 
     if (password) {

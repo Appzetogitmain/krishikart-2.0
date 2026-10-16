@@ -390,3 +390,40 @@ export const commissionSnap = async (franchiseId, categoryId) => {
     ]);
     return { label: `${store} – ${category}`, values: { Commission: c ? pct(c.commissionPercentage) : "Not set" } };
 };
+
+export const priceZoneSnap = async (code) => {
+    const Z = M("PriceZone");
+    if (!Z || !code) return null;
+    const z = await Z.findOne({ code: String(code).toUpperCase() }).lean();
+    if (!z) return null;
+    return {
+        label: `${z.code} – ${z.name}`,
+        values: { Code: z.code, Name: z.name, Cities: list((z.cities || []).map(human)), Active: yesNo(z.isActive) },
+    };
+};
+
+/** City rates of the products being saved, e.g. "Tomato – Rate: ₹30/kg". */
+export const zoneRatesSnap = async (code, productIds) => {
+    const ZP = M("ZonePrice");
+    const P = M("Product");
+    if (!ZP || !P || !code) return null;
+    const ids = (productIds || []).map(String).filter((x) => isId(x));
+    const [rows, products, zone] = await Promise.all([
+        ZP.find({ zoneCode: String(code).toUpperCase(), productId: { $in: ids } }).lean(),
+        P.find({ _id: { $in: ids } }).select("name unit price").lean(),
+        M("PriceZone")?.findOne({ code: String(code).toUpperCase() }).lean(),
+    ]);
+    const rowBy = new Map(rows.map((r) => [String(r.productId), r]));
+    const values = {};
+    for (const p of products) {
+        const r = rowBy.get(String(p._id));
+        const prefix = products.length > 1 ? `${p.name} – ` : "";
+        values[`${prefix}Rate`] = r?.price != null ? per(r.price, p.unit) : `Main rate (${per(p.price, p.unit)})`;
+        values[`${prefix}MRP`] = r?.comparePrice != null ? per(r.comparePrice, p.unit) : "Main MRP";
+        values[`${prefix}Bulk rates`] = Array.isArray(r?.bulkPricing)
+            ? (r.bulkPricing.length ? r.bulkPricing.map((t) => `${num(t.minQty)}+ ${p.unit}: ${per(t.price, p.unit)}`).join(", ") : "None")
+            : "Main bulk rates";
+    }
+    const where = zone ? `${zone.code} (${zone.name})` : String(code).toUpperCase();
+    return { label: products.length === 1 ? `${products[0].name} in ${where}` : `${products.length} products in ${where}`, values };
+};

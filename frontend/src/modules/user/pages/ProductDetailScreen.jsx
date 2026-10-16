@@ -32,6 +32,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { getBrowseLocationParams } from '../utils/storefrontParams'
 import { optimizedImage } from '../utils/optimizedImage'
 import { useRequireAuth } from '../hooks/useRequireAuth'
+import { unitPriceForQuantity, usefulBulkTiers } from '../utils/pricing'
 
 export default function ProductDetailScreen() {
   const { id } = useParams()
@@ -107,11 +108,7 @@ export default function ProductDetailScreen() {
     const baseUnit = Number(
       product.effectiveStorefrontPrice ?? product.price ?? 0
     )
-    if (!product.bulkPricing || product.bulkPricing.length === 0) return baseUnit
-    const applicableBulk = [...product.bulkPricing]
-      .reverse()
-      .find(b => quantity >= b.minQty)
-    return applicableBulk ? applicableBulk.price : baseUnit
+    return unitPriceForQuantity(baseUnit, product.bulkPricing, quantity)
   }, [product, quantity])
 
   const handleShare = async () => {
@@ -168,6 +165,8 @@ export default function ProductDetailScreen() {
   const productCategory = product.category?.name || product.category || 'General'
   const comparePrice = Number(product.comparePrice || product.mrp || 0)
   const standardUnit = Number(product.effectiveStorefrontPrice ?? product.price ?? 0)
+  // Only bulk rates that are actually cheaper than the normal rate are shown
+  const bulkTiers = usefulBulkTiers(standardUnit, product.bulkPricing)
   const hasComparePrice = comparePrice > Number(currentPrice || 0)
 
   return (
@@ -293,7 +292,7 @@ export default function ProductDetailScreen() {
                     <span className="text-lg text-slate-400 line-through font-bold">₹{comparePrice}</span>
                   )}
                   <span className="text-sm text-slate-400 font-bold md:font-medium">/ {product.unit}</span>
-                  {product.bulkPricing?.length > 0 && currentPrice < standardUnit && (
+                  {bulkTiers.length > 0 && currentPrice < standardUnit && (
                     <div className="flex items-center gap-1 ml-2 bg-orange-100 text-orange-600 px-2 py-0.5 rounded-lg text-[10px] font-black md:normal-case md:font-bold">
                       <TrendingDown size={12} />
                       Bulk Pricing Applied
@@ -303,14 +302,14 @@ export default function ProductDetailScreen() {
               </div>
 
               {/* Bulk Pricing Grid */}
-              {product.bulkPricing && (
+              {bulkTiers.length > 0 && (
                 <div className="mb-8 p-6 rounded-[28px] md:rounded-xl bg-white border border-slate-100 shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingDown size={18} className="text-orange-500" />
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest md:normal-case md:tracking-normal">Bulk savings for businesses</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {product.bulkPricing.map((tier, idx) => {
+                    {bulkTiers.map((tier, idx) => {
                       const isUnlocked = quantity >= tier.minQty;
                       return (
                         <div

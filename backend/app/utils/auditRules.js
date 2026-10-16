@@ -499,6 +499,32 @@ export const AUDIT_RULES = [
         details: (ctx) => [{ label: "Order", value: orderRef(P(ctx, "orderId")) }],
     },
 
+    // ── City rates (price codes) ─────────────────────────────────────────────────
+    {
+        m: "POST", p: "/masteradmin/city-rates/zones", module: "City Rates", action: "zone.create", kind: "create",
+        target: { type: "City code", id: (ctx) => B(ctx, "code") && String(B(ctx, "code")).toUpperCase(), snap: S.priceZoneSnap },
+        title: "New city price code created", severity: "important",
+    },
+    {
+        m: "PUT", p: "/masteradmin/city-rates/zones/:code", module: "City Rates", action: "zone.update", kind: "update",
+        target: { type: "City code", id: (ctx) => P(ctx, "code"), snap: S.priceZoneSnap },
+        title: "City price code changed", severity: "important",
+    },
+    {
+        m: "DELETE", p: "/masteradmin/city-rates/zones/:code", module: "City Rates", action: "zone.delete", kind: "delete",
+        target: { type: "City code", id: (ctx) => P(ctx, "code"), snap: S.priceZoneSnap },
+        title: "City price code deleted (its franchises now use the main rates)", severity: "critical",
+    },
+    {
+        m: "PUT", p: "/masteradmin/city-rates/zones/:code/rates", module: "City Rates", action: "zone.rates", kind: "update",
+        target: {
+            type: "City rates", id: (ctx) => P(ctx, "code"),
+            snap: (code, ctx) => S.zoneRatesSnap(code, (B(ctx, "items") || []).map((i) => i?.productId)),
+        },
+        title: ({ changes }) => (changes.every((c) => /Rate$/.test(c.field)) ? "City rate has been changed" : "City rates have been changed"),
+        severity: "important",
+    },
+
     // ── Store billing (POS) ─────────────────────────────────────────────────────
     {
         m: "POST", p: "/franchise/pos/sale", module: "Store Billing (POS)", action: "pos.sale", kind: "event",

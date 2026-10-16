@@ -4,6 +4,20 @@ import { toast } from 'sonner';
 
 const CartContext = createContext();
 
+/** The shopping location (same one the product pages use) so the cart shows local rates. */
+const cartLocationParams = () => {
+    const read = (key) => {
+        try {
+            const v = JSON.parse(localStorage.getItem(key) || 'null');
+            return v && Number.isFinite(Number(v.lat)) && Number.isFinite(Number(v.lng)) ? v : null;
+        } catch {
+            return null;
+        }
+    };
+    const loc = (localStorage.getItem('kk_franchise_location_pinned') === 'true' && read('kk_franchise_location')) || read('kk_delivery_location');
+    return loc ? { lat: loc.lat, lng: loc.lng } : {};
+};
+
 export function CartProvider({ children }) {
     const [cartItems, setCartItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +43,7 @@ export function CartProvider({ children }) {
         ) return;
 
         try {
-            const response = await api.get('/user/cart');
+            const response = await api.get('/user/cart', { params: cartLocationParams() });
             if (response.data.success) {
                 // Map API response to context structure
                 const items = (response.data.result?.items || [])
@@ -67,13 +81,13 @@ export function CartProvider({ children }) {
         fetchSettings();
     }, []);
 
+    // Same rule as checkout: the highest bulk tier reached, and only if it is cheaper
     const getPriceForQuantity = (product, quantity) => {
         const base = Number(product.effectiveStorefrontPrice ?? product.price ?? 0);
-        if (!product.bulkPricing) return base;
-        const applicableBulk = [...product.bulkPricing]
-            .reverse()
-            .find(b => quantity >= b.minQty);
-        return applicableBulk ? applicableBulk.price : base;
+        const tier = [...(product.bulkPricing || [])]
+            .sort((a, b) => Number(b.minQty) - Number(a.minQty))
+            .find(b => quantity >= Number(b.minQty));
+        return tier && Number(tier.price) < base ? Number(tier.price) : base;
     };
 
     const addToCart = async (product, quantity = 1) => {

@@ -13,6 +13,7 @@ import geoRoute from "../../app/routes/geo.js";
 import couponRoutes from "../../app/routes/coupon.js";
 import reportRoutes from "../../app/routes/reports.js";
 import auditLogRoutes from "../../app/routes/auditLogs.js";
+import cityRatesRoutes from "../../app/routes/cityRates.js";
 import auditTrail from "../utils/auditTrail.js";
 
 const setupRoutes = (app) => {
@@ -22,6 +23,7 @@ const setupRoutes = (app) => {
     apiRouter.use(auditTrail);
 
     apiRouter.use("/masteradmin/audit-logs", auditLogRoutes);
+    apiRouter.use("/masteradmin/city-rates", cityRatesRoutes);
     apiRouter.use("/user", userRoute);
     apiRouter.use("/delivery", deliveryRoutes);
     apiRouter.use("/masteradmin", masteradminRoutes);

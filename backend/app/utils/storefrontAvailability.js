@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Inventory from "../models/inventory.js";
 import Product from "../models/product.js";
 import { findFranchisesServingLocation } from "./assignment.js";
+import { buildPriceResolver } from "./pricing.js";
 
 /** Franchise lists categories it serves; empty means all (legacy). */
 export function franchiseServesCategory(franchise, categoryId) {
@@ -14,7 +15,7 @@ export function franchiseServesCategory(franchise, categoryId) {
 /**
  * Nearest franchise wins per product: first covering node (distance-sorted) with stock
  * that serves the product category. Values are plain numbers / ObjectIds.
- * @returns {Map<string, { franchiseId: import('mongoose').Types.ObjectId, listPrice: number, effectivePrice: number }>}
+ * @returns {Map<string, { franchiseId, listPrice, effectivePrice, comparePrice, bulkPricing, zoneCode }>}
  */
 export async function getStorefrontOffersByProduct(lat, lng, city = null) {
   const franchises = await findFranchisesServingLocation(lat, lng, city);
@@ -84,8 +85,11 @@ export async function getStorefrontOffersByProduct(lat, lng, city = null) {
     status: "active",
     $or: productOrFilters,
   })
-    .select("_id category price")
+    .select("_id category price comparePrice bulkPricing")
     .lean();
+
+  // City rates (by price code) and franchise overrides, decided in one place
+  const resolvePrice = await buildPriceResolver(franchises, productDocs.map((p) => p._id));
 
   const productMap = new Map(productDocs.map((p) => [p._id.toString(), p]));
   const productsByCategory = new Map();
@@ -115,15 +119,14 @@ export async function getStorefrontOffersByProduct(lat, lng, city = null) {
           const pid = prod._id.toString();
           if (offerMap.has(pid)) continue;
           const row = inventoryRows.get(pid);
-          const listPrice = Number(prod.price) || 0;
-          const eff =
-            row?.franchisePrice != null && row.franchisePrice !== ""
-              ? Number(row.franchisePrice)
-              : listPrice;
+          const r = resolvePrice(f, prod, row);
           offerMap.set(pid, {
             franchiseId: f._id,
-            listPrice,
-            effectivePrice: eff,
+            listPrice: r.listPrice,
+            effectivePrice: r.price,
+            comparePrice: r.comparePrice,
+            bulkPricing: r.bulkPricing,
+            zoneCode: r.zoneCode,
           });
         }
       }
@@ -138,15 +141,14 @@ export async function getStorefrontOffersByProduct(lat, lng, city = null) {
       if (!prod) continue;
       const catId = prod.category?.toString();
       if (!catId || !franchiseServesCategory(f, catId)) continue;
-      const listPrice = Number(prod.price) || 0;
-      const eff =
-        row.franchisePrice != null && row.franchisePrice !== ""
-          ? Number(row.franchisePrice)
-          : listPrice;
+      const r = resolvePrice(f, prod, row);
       offerMap.set(pid, {
         franchiseId: f._id,
-        listPrice,
-        effectivePrice: eff,
+        listPrice: r.listPrice,
+        effectivePrice: r.price,
+        comparePrice: r.comparePrice,
+        bulkPricing: r.bulkPricing,
+        zoneCode: r.zoneCode,
       });
     }
   }

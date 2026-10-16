@@ -29,6 +29,7 @@ const MODULE_STYLE = {
     'Settings': { icon: Settings, tone: 'slate' },
     'Team & Access': { icon: Users, tone: 'fuchsia' },
     'Sign-in & Security': { icon: KeyRound, tone: 'slate' },
+    'City Rates': { icon: Tags, tone: 'emerald' },
 };
 
 const TONES = {

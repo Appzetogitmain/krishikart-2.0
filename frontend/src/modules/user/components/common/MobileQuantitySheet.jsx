@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Plus, Minus } from 'lucide-react'
+import { usefulBulkTiers } from '../../utils/pricing'
 import { motion } from 'framer-motion'
 import {
     Sheet,
@@ -26,9 +27,8 @@ export default function MobileQuantitySheet({ isOpen, onClose, product, onAdd })
         onClose()
     }
 
-    const activeBulkDeal = product.bulkPricing && product.bulkPricing.length > 0
-        ? product.bulkPricing[0]
-        : { price: Math.floor(unitBase * 0.95), minQty: 3 };
+    // First bulk rate that is actually cheaper than the normal rate (none = no bulk offer shown)
+    const activeBulkDeal = usefulBulkTiers(unitBase, product.bulkPricing)[0] || null;
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
@@ -122,7 +122,7 @@ export default function MobileQuantitySheet({ isOpen, onClose, product, onAdd })
                                 Add to cart · ₹{unitBase * (Number(qty) || 1)}
                             </button>
 
-                            {(product.bulkPricing && product.bulkPricing.length > 0) && (
+                            {activeBulkDeal && (
                                 <button
                                     onClick={() => {
                                         setQty(activeBulkDeal.minQty)

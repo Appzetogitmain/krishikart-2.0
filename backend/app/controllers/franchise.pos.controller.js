@@ -1,6 +1,9 @@
 import POSSale from "../models/posSale.js";
 import { takeStock, addStock } from "../utils/stock.js";
 import handleResponse from "../utils/helper.js";
+import Product from "../models/product.js";
+import Inventory from "../models/inventory.js";
+import { buildPriceResolver } from "../utils/pricing.js";
 
 /**
  * @desc Create a new POS Sale
@@ -37,11 +40,20 @@ export const createPOSSale = async (req, res) => {
             taken.push({ productId: item.productId, quantity: Number(item.quantity) });
         }
 
-        // Totals are worked out on the server from price x quantity (not trusted from the browser)
+        // Prices come from the server (store override, else city rate, else main rate), never
+        // from the browser, so a bill always uses the admin-set rate
+        const [products, inventory] = await Promise.all([
+            Product.find({ _id: { $in: items.map((i) => i.productId) } }).select("price comparePrice bulkPricing name unit").lean(),
+            Inventory.findOne({ franchiseId }).lean(),
+        ]);
+        const productById = new Map(products.map((p) => [String(p._id), p]));
+        const invById = new Map((inventory?.items || []).map((r) => [String(r.productId), r]));
+        const resolvePrice = await buildPriceResolver([req.franchise], products.map((p) => p._id));
         const saleItems = items.map(item => {
             const quantity = Number(item.quantity);
-            const price = Number(item.price);
-            return { productId: item.productId, name: item.name, unit: item.unit, quantity, price, subtotal: Math.round(quantity * price * 100) / 100 };
+            const product = productById.get(String(item.productId));
+            const price = product ? resolvePrice(req.franchise, product, invById.get(String(item.productId))).price : Number(item.price);
+            return { productId: item.productId, name: item.name || product?.name, unit: item.unit || product?.unit, quantity, price, subtotal: Math.round(quantity * price * 100) / 100 };
         });
         const totalAmount = Math.round(saleItems.reduce((s, i) => s + i.subtotal, 0) * 100) / 100;
 

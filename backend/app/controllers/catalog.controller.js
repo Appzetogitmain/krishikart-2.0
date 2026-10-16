@@ -2,6 +2,8 @@ import Category from "../models/category.js";
 import Subcategory from "../models/subcategory.js";
 import Product from "../models/product.js";
 import Inventory from "../models/inventory.js";
+import Franchise from "../models/franchise.js";
+import { buildPriceResolver } from "../utils/pricing.js";
 import handleResponse, { capitalizeFirst } from "../utils/helper.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import GlobalSetting from "../models/globalSetting.js";
@@ -288,13 +290,15 @@ export const getProductsByFranchise = async (req, res) => {
       ];
     }
 
-    const [products, inventory] = await Promise.all([
+    const [products, inventory, franchise] = await Promise.all([
       Product.find(filter)
         .populate("category", "name")
         .populate("subcategory", "name")
         .lean(),
       Inventory.findOne({ franchiseId }).lean(),
+      Franchise.findById(franchiseId).select("city").lean(),
     ]);
+    const resolvePrice = await buildPriceResolver(franchise ? [franchise] : [], products.map((p) => p._id));
 
     const inventoryItems = inventory?.items || [];
     const inventoryMap = new Map(
@@ -303,10 +307,15 @@ export const getProductsByFranchise = async (req, res) => {
 
     const results = products.map((product) => {
       const invItem = inventoryMap.get(product._id.toString());
+      const selling = franchise ? resolvePrice(franchise, product, invItem) : null;
       return {
         ...product,
-        // Override global price if franchisePrice exists
-        price: invItem?.franchisePrice || product.price,
+        // Store override, else city rate (price code), else main rate
+        price: selling ? selling.price : (invItem?.franchisePrice || product.price),
+        comparePrice: selling ? selling.comparePrice : product.comparePrice,
+        bulkPricing: selling ? selling.bulkPricing : product.bulkPricing,
+        cityPrice: selling ? selling.listPrice : product.price,
+        priceZoneCode: selling?.zoneCode || null,
         globalPrice: product.price,
         franchisePrice: invItem?.franchisePrice || null,
         stock: invItem?.currentStock || 0,

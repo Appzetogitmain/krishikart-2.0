@@ -51,6 +51,7 @@ const PERMISSION_GROUPS = [
             { key: 'vendors', label: 'Vendors' },
             { key: 'vendor-reports', label: 'Vendor Invoices' },
             { key: 'stock-monitoring', label: 'Stock Levels' },
+            { key: 'city-rates', label: 'City Rates (set rates by city code)' },
             { key: 'quotations', label: 'Vendor Quotations' },
         ]
     },
@@ -101,13 +102,19 @@ export default function TeamManagementScreen() {
         password: '',
         mobile: '',
         status: 'active',
-        permissions: []
+        permissions: [],
+        priceZoneCodes: []
     });
+    const [cityCodes, setCityCodes] = useState([]);
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchSubAdmins();
+        // City price codes that can be given to a city admin
+        api.get('/masteradmin/city-rates/zones')
+            .then((res) => setCityCodes(res.data?.result?.zones || []))
+            .catch(() => setCityCodes([]));
     }, []);
 
     const fetchSubAdmins = async () => {
@@ -133,7 +140,8 @@ export default function TeamManagementScreen() {
                 password: '', // Don't show hashed password
                 mobile: admin.mobile || '',
                 status: admin.status || 'active',
-                permissions: admin.permissions || []
+                permissions: admin.permissions || [],
+                priceZoneCodes: admin.priceZoneCodes || []
             });
         } else {
             setEditingAdmin(null);
@@ -143,7 +151,8 @@ export default function TeamManagementScreen() {
                 password: '',
                 mobile: '',
                 status: 'active',
-                permissions: []
+                permissions: [],
+                priceZoneCodes: []
             });
         }
         setIsDrawerOpen(true);
@@ -543,6 +552,34 @@ export default function TeamManagementScreen() {
                                             </div>
                                         ))}
                                     </div>
+                                </section>
+
+                                {/* City codes for City Rates */}
+                                <section className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.15em]">City codes for rates</h3>
+                                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{(formData.priceZoneCodes || []).length} Selected</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500">This person can set rates only for the cities picked here (needs the City Rates permission above).</p>
+                                    {cityCodes.length === 0 ? (
+                                        <p className="text-[11px] text-amber-700 bg-amber-50 rounded-sm px-3 py-2">No city codes yet. Create them on the City Rates page.</p>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {cityCodes.map((z) => {
+                                                const on = (formData.priceZoneCodes || []).includes(z.code);
+                                                return (
+                                                    <button key={z.code} type="button"
+                                                        onClick={() => setFormData((prev) => ({ ...prev, priceZoneCodes: on ? prev.priceZoneCodes.filter((c) => c !== z.code) : [...(prev.priceZoneCodes || []), z.code] }))}
+                                                        className={`flex items-center justify-between p-3 rounded-sm border text-left transition-all ${on ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                                                        <span className="text-[11px] font-bold text-slate-800">{z.code} <span className="font-semibold text-slate-500">· {z.name}</span></span>
+                                                        <span className={`w-4 h-4 rounded-sm flex items-center justify-center border ${on ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300'}`}>
+                                                            {on && <Check size={10} className="text-white" />}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </section>
                             </form>
 

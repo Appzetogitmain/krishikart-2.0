@@ -29,6 +29,12 @@ const subAdminSchema = new mongoose.Schema(
             default: [],
         },
 
+        // City price codes this person may edit rates for (e.g. ["JPR"]). Empty = none.
+        priceZoneCodes: {
+            type: [String],
+            default: [],
+        },
+
         otp: String,
         otpExpiresAt: Date,
 

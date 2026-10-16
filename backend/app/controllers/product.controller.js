@@ -257,9 +257,7 @@ export const getProducts = async (req, res) => {
             if (!offer) return p;
             return {
                 ...p,
-                effectiveStorefrontPrice: offer.effectivePrice,
-                storefrontListPrice: offer.listPrice,
-                storefrontServingFranchiseId: offer.franchiseId,
+                ...storefrontPriceFields(offer, p),
             };
         });
 
@@ -268,6 +266,17 @@ export const getProducts = async (req, res) => {
         return handleResponse(res, 500, "Server error: " + err.message);
     }
 };
+
+/** Price fields for the customer app: the serving franchise's rate (city rate / override). */
+const storefrontPriceFields = (offer, product) => ({
+    effectiveStorefrontPrice: offer.effectivePrice,
+    storefrontListPrice: offer.listPrice,
+    storefrontServingFranchiseId: offer.franchiseId,
+    storefrontZoneCode: offer.zoneCode || null,
+    // City MRP and bulk rates replace the main ones so every screen shows the local values
+    comparePrice: offer.comparePrice ?? product.comparePrice,
+    bulkPricing: offer.bulkPricing ?? product.bulkPricing,
+});
 
 export const getProductById = async (req, res) => {
     try {
@@ -299,9 +308,7 @@ export const getProductById = async (req, res) => {
             if (offer) {
                 payload = {
                     ...product,
-                    effectiveStorefrontPrice: offer.effectivePrice,
-                    storefrontListPrice: offer.listPrice,
-                    storefrontServingFranchiseId: offer.franchiseId,
+                    ...storefrontPriceFields(offer, product),
                 };
             }
         }

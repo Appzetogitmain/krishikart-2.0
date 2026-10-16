@@ -1,6 +1,7 @@
 import Franchise from "../models/franchise.js";
 import Inventory from "../models/inventory.js";
 import Product from "../models/product.js";
+import { buildPriceResolver } from "../utils/pricing.js";
 import handleResponse from "../utils/helper.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import {
@@ -243,7 +244,7 @@ export const getInventory = async (req, res) => {
   try {
     const franchiseId = req.franchise._id;
     const franchise = await Franchise.findById(franchiseId).select(
-      "servedCategories",
+      "servedCategories city",
     );
 
     if (!franchise) {
@@ -263,11 +264,15 @@ export const getInventory = async (req, res) => {
       .populate("category", "name")
       .populate("subcategory", "name");
 
+    // Selling price at this store: store override, else city rate (price code), else main rate
+    const resolvePrice = await buildPriceResolver([franchise], allProducts.map((p) => p._id));
+
     // Map all products to include stock info
     const items = allProducts.map((product) => {
       const stockItem = inventoryRecord?.items?.find(
         (i) => i.productId.toString() === product._id.toString(),
       );
+      const selling = resolvePrice(franchise, product, stockItem);
 
       return {
         id: product._id,
@@ -277,6 +282,11 @@ export const getInventory = async (req, res) => {
           stockItem ? Number(stockItem.currentStock) : 0,
         ),
         franchisePrice: stockItem?.franchisePrice || null,
+        sellingPrice: selling.price,
+        cityPrice: selling.listPrice,
+        sellingComparePrice: selling.comparePrice,
+        sellingBulkPricing: selling.bulkPricing,
+        priceZoneCode: selling.zoneCode,
         mbq: stockItem ? stockItem.mbq : product.stock || 5, // Use product stock as fallback mbq
         lastUpdated: stockItem ? stockItem.lastUpdated : null,
       };

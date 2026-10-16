@@ -27,6 +27,7 @@ import {
   normalizeFranchiseGst14,
 } from "../utils/gstFranchiseKyc.js";
 import { geocodeAddress } from "../utils/geo.js";
+import { loadZones, cityKeyOf } from "../utils/pricing.js";
 import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import FAQ from "../models/faq.js";
 import { syncInventoryToAssignedProducts } from "../utils/vendorInventorySync.js";
@@ -1554,6 +1555,31 @@ export const getFranchiseCommissions = async (req, res) => {
   }
 };
 
+/**
+ * City admins (sub-admins) may change a franchise's own price only if the franchise is in one of
+ * their city price codes. Returns a message when not allowed.
+ */
+const denyPriceEditOutsideZone = async (admin, franchiseId) => {
+  const role = String(admin?.role || "").toLowerCase();
+  if (role === "superadmin" || role === "masteradmin") return null;
+  const franchise = await Franchise.findById(franchiseId).select("city franchiseName").lean();
+  if (!franchise) return "Franchise not found";
+  const { byCity } = await loadZones();
+  const zone = byCity.get(cityKeyOf(franchise.city));
+  const codes = (admin?.priceZoneCodes || []).map((c) => String(c).toUpperCase());
+  if (zone && codes.includes(zone.code)) return null;
+  return zone
+    ? `Prices for ${franchise.franchiseName} are managed under city code ${zone.code}, which is not assigned to you`
+    : `${franchise.franchiseName}'s city has no price code yet. Ask the main admin to set one up.`;
+};
+
+const priceIsChanging = (incoming, existingItem) => {
+  if (incoming === undefined) return false;
+  const next = incoming === null || incoming === "" ? null : Number(incoming);
+  const current = existingItem?.franchisePrice ?? null;
+  return next !== (current === null ? null : Number(current));
+};
+
 export const updateFranchiseInventoryItem = async (req, res) => {
   try {
     const { id } = req.params; // franchiseId
@@ -1562,7 +1588,6 @@ export const updateFranchiseInventoryItem = async (req, res) => {
     if (!productId) {
       return handleResponse(res, 400, "Product ID is required");
     }
-
     let inventory = await Inventory.findOne({ franchiseId: id });
     if (!inventory) {
       inventory = await Inventory.create({ franchiseId: id, items: [] });
@@ -1571,6 +1596,12 @@ export const updateFranchiseInventoryItem = async (req, res) => {
     const existingItem = inventory.items.find(
       (item) => item.productId.toString() === productId.toString(),
     );
+
+    // Only a real price change needs city-code access (the edit form always sends the price)
+    if (priceIsChanging(franchisePrice, existingItem)) {
+      const denied = await denyPriceEditOutsideZone(req.masteradmin, id);
+      if (denied) return handleResponse(res, 403, denied);
+    }
 
     if (existingItem) {
       if (currentStock !== undefined)
@@ -1619,10 +1650,19 @@ export const bulkUpdateFranchiseInventory = async (req, res) => {
     if (!Array.isArray(items)) {
       return handleResponse(res, 400, "Items must be an array");
     }
-
     let inventory = await Inventory.findOne({ franchiseId: id });
     if (!inventory) {
       inventory = await Inventory.create({ franchiseId: id, items: [] });
+    }
+
+    const changesPrice = items.some((u) => {
+      if (!u || u.franchisePrice === undefined) return false;
+      const current = inventory.items.find((it) => String(it.productId) === String(u.productId));
+      return priceIsChanging(u.franchisePrice, current);
+    });
+    if (changesPrice) {
+      const denied = await denyPriceEditOutsideZone(req.masteradmin, id);
+      if (denied) return handleResponse(res, 403, denied);
     }
 
     for (const update of items) {

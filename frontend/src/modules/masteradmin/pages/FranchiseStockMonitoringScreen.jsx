@@ -25,14 +25,19 @@ import {
   Edit3,
   ExternalLink,
   X,
+  MapPinned,
 } from "lucide-react";
 import api from "@/lib/axios";
+import { useNavigate } from "react-router-dom";
+import { useMasterAdminAuth } from "../contexts/MasterAdminAuthContext";
 import StockAlertBadge from "../components/badges/StockAlertBadge";
 import MetricRow from "../components/cards/MetricRow";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function FranchiseStockMonitoringScreen() {
+  const navigate = useNavigate();
+  const { hasPermission } = useMasterAdminAuth();
   const [viewMode, setViewMode] = useState("network"); // 'network', 'categories', or 'detail'
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFranchiseId, setSelectedFranchiseId] = useState(null);
@@ -520,6 +525,16 @@ export default function FranchiseStockMonitoringScreen() {
           </div>
 
           <div className="flex items-center gap-2">
+            {hasPermission("city-rates") && (
+              <button
+                type="button"
+                onClick={() => navigate("/masteradmin/city-rates")}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-sm bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-700 transition-colors"
+                title="Set rates for all franchises of a city using its city code">
+                <MapPinned size={14} />
+                City rates (by code)
+              </button>
+            )}
             {viewMode !== "network" && (
               <button
                 onClick={handleBack}

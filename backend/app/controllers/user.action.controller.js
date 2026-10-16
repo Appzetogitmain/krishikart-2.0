@@ -2,6 +2,7 @@ import Cart from "../models/cart.js"
 import Wishlist from "../models/wishlist.js"
 import Product from "../models/product.js"
 import handleResponse from "../utils/helper.js"
+import { getStorefrontOffersByProduct } from "../utils/storefrontAvailability.js"
 
 // --- CART OPERATIONS ---
 
@@ -12,6 +13,34 @@ export const getCart = async (req, res) => {
 
         if (!cart) {
             cart = await Cart.create({ userId, items: [] })
+        }
+
+        // With the customer's location, show the local rate (city rate / store price) so the
+        // cart matches what checkout will charge
+        const lat = parseFloat(req.query.lat)
+        const lng = parseFloat(req.query.lng)
+        if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && cart.items?.length) {
+            try {
+                const offers = await getStorefrontOffersByProduct(lat, lng, req.query.city || null)
+                const plain = cart.toObject()
+                plain.items = plain.items.map((item) => {
+                    const offer = item.productId && offers.get(String(item.productId._id))
+                    if (!offer) return item
+                    return {
+                        ...item,
+                        productId: {
+                            ...item.productId,
+                            effectiveStorefrontPrice: offer.effectivePrice,
+                            storefrontListPrice: offer.listPrice,
+                            comparePrice: offer.comparePrice ?? item.productId.comparePrice,
+                            bulkPricing: offer.bulkPricing ?? item.productId.bulkPricing,
+                        },
+                    }
+                })
+                return handleResponse(res, 200, "Cart fetched successfully", plain)
+            } catch (priceError) {
+                console.error("Cart local prices failed:", priceError)
+            }
         }
 
         return handleResponse(res, 200, "Cart fetched successfully", cart)

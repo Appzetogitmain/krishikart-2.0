@@ -18,6 +18,7 @@ import TermsScreen from "../pages/TermsScreen";
 const Dashboard = lazy(() => import("../pages/DashboardScreen"));
 const Reports = lazy(() => import("../pages/ReportsScreen"));
 const ActivityLog = lazy(() => import("../pages/AuditLogScreen"));
+const CityRates = lazy(() => import("../pages/CityRatesScreen"));
 const TeamManagement = lazy(() => import("../pages/TeamManagementScreen"));
 const Orders = lazy(() => import("../pages/OrdersScreen"));
 const VendorAssignment = lazy(() => import("../pages/VendorAssignmentScreen"));
@@ -261,6 +262,11 @@ export const masterAdminRoutes = (
           path="stock-monitoring"
           element={<PermissionRoute permissionKey="stock-monitoring" />}>
           <Route index element={<FranchiseStockMonitoring />} />
+        </Route>
+        <Route
+          path="city-rates"
+          element={<PermissionRoute permissionKey="city-rates" />}>
+          <Route index element={<CityRates />} />
         </Route>
         <Route
           path="purchase"

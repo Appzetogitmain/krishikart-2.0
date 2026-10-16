@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, Minus } from 'lucide-react'
+import { unitPriceForQuantity, usefulBulkTiers } from '../../utils/pricing'
 import { Button } from '@/components/ui/button'
 
 export default function QuantityModal({ isOpen, onClose, product, onAdd }) {
@@ -20,9 +21,7 @@ export default function QuantityModal({ isOpen, onClose, product, onAdd }) {
 
     const unitPriceForQty = (qty) => {
         const q = Math.max(1, Number(qty) || 1);
-        if (!product.bulkPricing?.length) return unitBase;
-        const tier = [...product.bulkPricing].reverse().find((b) => q >= b.minQty);
-        return tier ? tier.price : unitBase;
+        return unitPriceForQuantity(unitBase, product.bulkPricing, q);
     };
     const lineTotal = (qty) => unitPriceForQty(qty) * Math.max(1, Number(qty) || 1);
 
@@ -126,7 +125,7 @@ export default function QuantityModal({ isOpen, onClose, product, onAdd }) {
 
                             {/* Bulk Tiers */}
                             <div className="mt-8 space-y-3">
-                                {product.bulkPricing?.map((tier, idx) => (
+                                {usefulBulkTiers(unitBase, product.bulkPricing).map((tier, idx) => (
                                     <div key={idx} className="bg-[#f4f7ff] rounded-2xl px-6 py-4 flex items-center justify-between">
                                         <div className="text-[#3b5998] font-bold text-sm">
                                             ₹{tier.price}/{product.unit === 'pcs' ? 'pc' : product.unit} for {tier.minQty} {product.unit}+

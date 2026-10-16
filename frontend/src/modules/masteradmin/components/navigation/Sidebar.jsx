@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   Briefcase,
   ScrollText,
+  MapPinned,
   TrendingUp,
   Building,
   Home,
@@ -192,6 +193,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           label: "Stock Levels",
           path: "/masteradmin/stock-monitoring",
           permissionKey: "stock-monitoring",
+        },
+        {
+          icon: MapPinned,
+          label: "City Rates",
+          path: "/masteradmin/city-rates",
+          permissionKey: "city-rates",
         },
         {
           icon: Star,

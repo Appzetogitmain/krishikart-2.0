@@ -4,25 +4,11 @@ import Order from "../models/order.js";
 import GlobalSetting from "../models/globalSetting.js";
 import { geocodeAddress } from "./geo.js";
 import { getStorefrontOffersByProduct } from "./storefrontAvailability.js";
+import { priceForQuantity } from "./pricing.js";
 
-export const calculateItemPriceForCheckout = (product, quantity) => {
-  let price = product.price;
-  let isBulkRate = false;
-
-  if (product.bulkPricing && product.bulkPricing.length > 0) {
-    const sortedBulk = [...product.bulkPricing].sort(
-      (a, b) => b.minQty - a.minQty,
-    );
-    const applicableBulk = sortedBulk.find((bp) => quantity >= bp.minQty);
-
-    if (applicableBulk) {
-      price = applicableBulk.price;
-      isBulkRate = true;
-    }
-  }
-
-  return { price, isBulkRate };
-};
+// Bulk tiers apply only when cheaper than the normal rate (see utils/pricing.js)
+export const calculateItemPriceForCheckout = (product, quantity) =>
+  priceForQuantity(product.price, product.bulkPricing, quantity);
 
 /**
  * Resolve map pin; same rules as order placement.
@@ -113,6 +99,7 @@ export async function computeSplitCheckoutPayload({
     const productWithResolvedPrice = {
       ...product.toObject(),
       price: offer.effectivePrice,
+      bulkPricing: offer.bulkPricing ?? product.bulkPricing,
     };
     const { price, isBulkRate } = calculateItemPriceForCheckout(
       productWithResolvedPrice,
