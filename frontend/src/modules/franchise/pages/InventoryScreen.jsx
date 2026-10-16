@@ -26,7 +26,6 @@ import { toast } from 'sonner';
 // Enterprise Components
 import MetricRow from '../components/cards/MetricRow';
 import DataGrid from '../components/tables/DataGrid';
-import FilterBar from '../components/tables/FilterBar';
 
 export default function InventoryScreen() {
     const navigate = useNavigate();
@@ -50,7 +49,11 @@ export default function InventoryScreen() {
 
     const filteredItems = inventory.filter(item => {
         const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        // Match the name or the item code shown under it (e.g. "9E291951")
+        const term = searchQuery.trim().toLowerCase();
+        const matchesSearch = !term ||
+            (item.name || '').toLowerCase().includes(term) ||
+            String(item.id || '').toLowerCase().includes(term.replace(/^#/, ''));
         return matchesCategory && matchesSearch;
     });
 
@@ -201,40 +204,52 @@ export default function InventoryScreen() {
             </div>
 
             <div className="p-px bg-slate-200">
-                <FilterBar
-                    actions={
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center bg-slate-100 p-0.5 rounded-sm mr-4">
-                                {['All', ...categories].map((cat) => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => {
-                                            setActiveCategory(cat);
-                                        }}
-                                        className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
-                                            activeCategory === cat
-                                                ? "bg-white text-slate-900 shadow-sm rounded-sm"
-                                                : "text-slate-500 hover:text-slate-900"
-                                        )}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="relative group w-full max-w-xs">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={14} />
-                                <input
-                                    type="text"
-                                    placeholder="Search items..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value.trim())}
-                                    className="bg-white border border-slate-200 rounded-sm py-1.5 pl-9 pr-4 outline-none text-[11px] font-black text-slate-900 placeholder:text-slate-400 focus:border-slate-400 transition-all font-sans min-w-[240px]"
-                                />
-                            </div>
-                        </div>
-                    }
-                />
+                {/* Search sits on its own row so it is always visible, however many categories there are */}
+                <div className="bg-white px-4 py-3 space-y-3">
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={16} />
+                        <input
+                            type="search"
+                            placeholder="Search items by name or code..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-sm py-2.5 pl-10 pr-24 outline-none text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:bg-white transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 bg-slate-100 rounded-sm"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-sm overflow-x-auto">
+                        {['All', ...categories].map((cat) => (
+                            <button
+                                key={cat}
+                                onClick={() => {
+                                    setActiveCategory(cat);
+                                }}
+                                className={cn(
+                                    "shrink-0 whitespace-nowrap px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
+                                    activeCategory === cat
+                                        ? "bg-white text-slate-900 shadow-sm rounded-sm"
+                                        : "text-slate-500 hover:text-slate-900"
+                                )}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                    {searchQuery.trim() && (
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} found for "{searchQuery.trim()}"
+                            {activeCategory !== 'All' ? ` in ${activeCategory}` : ''}
+                        </p>
+                    )}
+                </div>
 
                 <div className="bg-white border-t border-slate-200">
                     <AnimatePresence mode="wait">

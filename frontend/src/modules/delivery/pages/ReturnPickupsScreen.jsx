@@ -4,12 +4,14 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '../hooks/useConfirm';
 
 export default function ReturnPickupsScreen() {
     const [pickups, setPickups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [processingKey, setProcessingKey] = useState('');
+    const [confirm, confirmDialog] = useConfirm();
 
     const fetchPickups = async (isRefresh = false) => {
         if (isRefresh) setRefreshing(true);
@@ -34,6 +36,22 @@ export default function ReturnPickupsScreen() {
     }, []);
 
     const updatePickupStatus = async (pickup, status) => {
+        const ref = `#${String(pickup.orderId).slice(-6).toUpperCase()}`;
+        const confirmed = await confirm(
+            status === 'picked_up'
+                ? {
+                    title: `Picked up return ${ref}?`,
+                    message: `Only continue if you have collected the items from ${pickup.customerName || 'the customer'}.`,
+                    confirmLabel: 'Yes, picked up',
+                }
+                : {
+                    title: `Complete return ${ref}?`,
+                    message: `Only continue if you have handed the items to ${pickup.franchiseName || 'the franchise'}.`,
+                    confirmLabel: 'Yes, complete',
+                }
+        );
+        if (!confirmed) return;
+
         const key = `${pickup.orderId}-${pickup.requestIndex}`;
         setProcessingKey(key);
         try {
@@ -165,6 +183,7 @@ export default function ReturnPickupsScreen() {
                     </div>
                 )}
             </div>
+            {confirmDialog}
         </div>
     );
 }

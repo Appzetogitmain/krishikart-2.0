@@ -45,6 +45,7 @@ import {
   reviewVendorCategoryRequest,
   getAllCustomers,
   getCustomerDetails,
+  getCustomerCreditHistory,
   updateCustomerCredit,
   deleteCustomer,
   assignProductsToVendor,
@@ -295,6 +296,12 @@ router.get(
   protectMasterAdmin,
   requirePermission("credit"),
   getCustomerDetails,
+);
+router.get(
+  "/customers/:id/credit-history",
+  protectMasterAdmin,
+  requirePermission("credit"),
+  getCustomerCreditHistory,
 );
 router.put(
   "/customers/:id/credit",

@@ -16,7 +16,8 @@ import {
     QrCode,
     Ticket,
     CheckCircle2,
-    Percent
+    Percent,
+    LocateFixed
 } from 'lucide-react'
 import PageTransition from '../components/layout/PageTransition'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,7 @@ import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import api from '@/lib/axios'
 import { toast } from 'sonner'
-import { geocodeAddressFrontend, fetchAddressSuggestions, geocodePlaceId } from '@/lib/geo'
+import { geocodeAddressFrontend, fetchAddressSuggestions, geocodePlaceId, getCurrentLocation, reverseGeocodeWithComponents } from '@/lib/geo'
 import { useLocation } from '../contexts/LocationContext'
 
 import {
@@ -100,6 +101,19 @@ function isDeliveryShiftSelectable(shiftLabel, targetDate, now = new Date()) {
     return nowIST.getTime() < start.getTime();
 }
 
+/** "YYYY-MM-DD" of a date strip entry (entries hold IST wall-clock values). */
+const toDayKey = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+/** Why there is no delivery on this day (admin holiday or weekly off), or null when it's open. */
+function getOffDayReason(date, offDays) {
+    if (!date || !offDays) return null;
+    const holiday = (offDays.dates || []).find((h) => h.date === toDayKey(date));
+    if (holiday) return holiday.reason?.trim() || 'Holiday';
+    if ((offDays.weeklyOff || []).map(Number).includes(date.getDay())) return 'Weekly off';
+    return null;
+}
+
 const getNext7Days = () => {
     const days = [];
     const nowIST = getISTDate();
@@ -124,18 +138,41 @@ export default function CheckoutScreen() {
     const ctxHasDeliveryPinned = locationCtx?.hasDeliveryPinned
     const ctxUpdateDeliveryLocation = locationCtx?.updateDeliveryLocation
     const { placeOrder } = useOrders()
-    const { balance, payWithWallet, useCreditAmount: deductCreditLocally, creditLimit, creditUsed, availableCredit } = useWallet()
+    const { balance, payWithWallet, useCreditAmount: deductCreditLocally, creditLimit, creditUsed, availableCredit, creditBlocked } = useWallet()
 
     const [step, setStep] = useState(1) // 1: Address, 2: Payment, 3: Success
     /** After place / Razorpay verify: `{ orders, orderGroupId }` (split by category when multiple). */
     const [lastPlacement, setLastPlacement] = useState(null)
     const [selectedMethod, setSelectedMethod] = useState('upi')
+    useEffect(() => {
+        if (creditBlocked && selectedMethod === 'credit') setSelectedMethod('upi')
+    }, [creditBlocked, selectedMethod])
     const [isPlacingOrder, setIsPlacingOrder] = useState(false)
     const [isEditingAddress, setIsEditingAddress] = useState(false)
 
     // Pre-order States
     const [availableDates, setAvailableDates] = useState(getNext7Days)
     const [selectedDate, setSelectedDate] = useState(availableDates[0])
+    // Days the admin closed for delivery (festivals, weekly off); the server rejects them too
+    const [offDays, setOffDays] = useState({ weeklyOff: [], dates: [] })
+
+    useEffect(() => {
+        // Fetched on every checkout visit so a holiday added today shows up without an app restart
+        api.get('/catalog/settings')
+            .then((res) => {
+                const list = res.data?.results || res.data?.result || []
+                const setting = Array.isArray(list) ? list.find((s) => s.key === 'delivery_off_days') : null
+                if (setting?.value) setOffDays(setting.value)
+            })
+            .catch(() => { /* the server still checks the date when the order is placed */ })
+    }, [])
+
+    // Never leave a closed day selected: move to the first open one
+    useEffect(() => {
+        if (!getOffDayReason(selectedDate, offDays)) return
+        const firstOpen = availableDates.find((d) => !getOffDayReason(d, offDays))
+        if (firstOpen) setSelectedDate(firstOpen)
+    }, [offDays, availableDates, selectedDate])
 
     // Coupon States
     const [couponCode, setCouponCode] = useState('')
@@ -331,6 +368,40 @@ export default function CheckoutScreen() {
         const results = await fetchAddressSuggestions(val);
         setSuggestions(results);
         setIsSearching(false);
+    }
+
+    // "Use my current location" inside the address form: GPS -> fill area / city / state /
+    // pincode and pin the exact spot for delivery. House no. and floor still come from the customer.
+    const [isLocatingInForm, setIsLocatingInForm] = useState(false)
+    const handleUseCurrentLocationInForm = async () => {
+        if (isLocatingInForm) return
+        setIsLocatingInForm(true)
+        try {
+            const { lat, lng } = await getCurrentLocation()
+            const geo = await reverseGeocodeWithComponents(lat, lng)
+            const components = geo?.addressComponents || {}
+            const street = extractStreetAddress(geo?.formattedAddress, components)
+            setAddressDetails(prev => ({
+                ...prev,
+                colony: street || components.area || prev.colony,
+                city: components.city || prev.city,
+                state: components.state || prev.state,
+                pincode: components.pincode || prev.pincode,
+            }))
+            addressSourceRef.current = 'pin' // use these exact coordinates for the order
+            setSelectedAddressId(null)
+            await locationCtx?.setPinnedDeliveryLocation?.({
+                lat, lng, address: geo?.formattedAddress, addressComponents: geo?.addressComponents,
+            })
+            setSearchQuery('')
+            setSuggestions([])
+            toast.success('Current location filled in. Please add your house / flat number.')
+        } catch (err) {
+            console.error('Use current location error:', err)
+            toast.error(err?.message || 'Unable to fetch your current location. Please allow location access.')
+        } finally {
+            setIsLocatingInForm(false)
+        }
     }
 
     const handleSelectSuggestion = async (s) => {
@@ -1047,6 +1118,29 @@ export default function CheckoutScreen() {
                                     {availableDates.map((date, idx) => {
                                         const isSelected = selectedDate.toDateString() === date.toDateString();
                                         const isToday = getISTDate().toDateString() === date.toDateString();
+                                        const offReason = getOffDayReason(date, offDays);
+                                        if (offReason) {
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    disabled
+                                                    aria-disabled
+                                                    title={`No delivery: ${offReason}`}
+                                                    className="shrink-0 w-16 h-20 md:w-20 md:h-24 rounded-2xl md:rounded-xl border border-dashed border-rose-200 bg-rose-50/60 text-slate-400 flex flex-col items-center justify-center gap-1 cursor-not-allowed"
+                                                >
+                                                    <span className="text-[10px] font-black uppercase tracking-tighter">
+                                                        {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                                                    </span>
+                                                    <span className="text-lg md:text-xl font-black tabular-nums leading-none line-through">
+                                                        {date.getDate()}
+                                                    </span>
+                                                    <span className="text-[9px] font-black uppercase text-rose-500 leading-tight text-center px-1 line-clamp-2">
+                                                        {offReason}
+                                                    </span>
+                                                </button>
+                                            );
+                                        }
                                         return (
                                             <button
                                                 key={idx}
@@ -1054,8 +1148,8 @@ export default function CheckoutScreen() {
                                                 onClick={() => setSelectedDate(date)}
                                                 className={cn(
                                                     "shrink-0 w-16 h-20 md:w-20 md:h-24 rounded-2xl md:rounded-xl border flex flex-col items-center justify-center gap-1 transition-all",
-                                                    isSelected 
-                                                        ? "bg-primary border-primary text-white shadow-lg shadow-emerald-100" 
+                                                    isSelected
+                                                        ? "bg-primary border-primary text-white shadow-lg shadow-emerald-100"
                                                         : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
                                                 )}
                                             >
@@ -1087,7 +1181,8 @@ export default function CheckoutScreen() {
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
                                     {DELIVERY_SHIFT_SLOTS.map(({ label: shift }) => {
-                                        const selectable = isDeliveryShiftSelectable(shift, selectedDate)
+                                        const selectable =
+                                            !getOffDayReason(selectedDate, offDays) && isDeliveryShiftSelectable(shift, selectedDate)
                                         const selected = deliveryShift === shift
                                         return (
                                             <button
@@ -1261,9 +1356,12 @@ export default function CheckoutScreen() {
                                                 name: 'KK Credit',
                                                 icon: CreditCard,
                                                 color: 'text-amber-600 bg-amber-50',
-                                                subtitle: creditShortfall > 0
-                                                    ? `Use ₹${creditContribution.toLocaleString()} from credit, pay ₹${creditShortfall.toLocaleString()} online`
-                                                    : 'Available: ₹' + availableCredit.toLocaleString()
+                                                disabled: creditBlocked,
+                                                subtitle: creditBlocked
+                                                    ? 'On hold - please contact support'
+                                                    : creditShortfall > 0
+                                                        ? `Use ₹${creditContribution.toLocaleString()} from credit, pay ₹${creditShortfall.toLocaleString()} online`
+                                                        : 'Available: ₹' + availableCredit.toLocaleString()
                                             },
                                             { id: 'upi', name: 'Google Pay / UPI', icon: Sparkles, color: 'text-blue-500 bg-blue-50' },
                                             { id: 'cod', name: 'Cash on Delivery', icon: ShieldCheck, color: 'text-emerald-500 bg-emerald-50' }
@@ -1272,10 +1370,12 @@ export default function CheckoutScreen() {
                                         return paymentMethods.map((method) => (
                                             <button
                                                 key={method.id}
-                                                onClick={() => setSelectedMethod(method.id)}
+                                                disabled={method.disabled}
+                                                onClick={() => { if (!method.disabled) setSelectedMethod(method.id) }}
                                                 className={cn(
                                                     "w-full p-4 rounded-[28px] md:rounded-xl bg-white border flex items-center justify-between transition-all outline-none text-left",
-                                                    selectedMethod === method.id ? "border-primary bg-primary/2 shadow-sm" : "border-slate-100 hover:border-slate-200"
+                                                    selectedMethod === method.id ? "border-primary bg-primary/2 shadow-sm" : "border-slate-100 hover:border-slate-200",
+                                                    method.disabled && "opacity-50 cursor-not-allowed"
                                                 )}
                                             >
                                                 <div className="flex items-center gap-4">
@@ -1484,6 +1584,19 @@ export default function CheckoutScreen() {
                                         </div>
                                     </div>
                                     <div className="space-y-3">
+                                        <button
+                                            type="button"
+                                            onClick={handleUseCurrentLocationInForm}
+                                            disabled={isLocatingInForm}
+                                            className="w-full flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 py-3 text-sm font-bold text-primary active:scale-[0.99] transition-all disabled:opacity-60"
+                                        >
+                                            {isLocatingInForm
+                                                ? <><Loader2 size={16} className="animate-spin" /> Fetching your location...</>
+                                                : <><LocateFixed size={16} /> Use my current location</>}
+                                        </button>
+                                        <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-300">
+                                            <span className="h-px flex-1 bg-slate-100" /> or search <span className="h-px flex-1 bg-slate-100" />
+                                        </div>
                                         <div className="relative group">
                                             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                                                 <MapPin size={16} />

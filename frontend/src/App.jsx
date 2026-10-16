@@ -37,6 +37,7 @@ import { LocationProvider } from './modules/user/contexts/LocationContext'
 import { UserAuthProvider } from './modules/user/contexts/UserAuthContext'
 import { UserNotificationsProvider } from './modules/user/contexts/UserNotificationsContext'
 import UserAuthGuard from './modules/user/components/auth/UserAuthGuard'
+import ShoppingLocationGate from './modules/user/components/auth/ShoppingLocationGate'
 import FranchiseAuthGuard from './modules/franchise/components/auth/FranchiseAuthGuard'
 import FranchiseVerificationGuard from './modules/franchise/components/auth/FranchiseVerificationGuard'
 
@@ -159,6 +160,8 @@ function App() {
 
             {/* User Module */}
             <Route element={<UserProviders><Outlet /></UserProviders>}>
+              {/* Logged-in customers set their location first: prices come from the nearest franchise */}
+              <Route element={<ShoppingLocationGate />}>
               <Route element={<AppLayout />}>
                 <Route path="/home" element={<HomeScreen />} />
                 <Route path="/offers" element={<HomeScreen />} />
@@ -168,7 +171,9 @@ function App() {
                 <Route path="/product/:id" element={<ProductDetailScreen />} />
                 <Route path="/help-support" element={<HelpSupportScreen />} />
                 <Route path="/about" element={<AboutScreen />} />
-                
+                {/* Open to guests too: the location step comes before login */}
+                <Route path="/location-picker" element={<LocationMapPicker />} />
+
                 {/* Protected User Routes */}
                 <Route element={<UserAuthGuard />}>
                   <Route path="/cart" element={<CartScreen />} />
@@ -186,9 +191,9 @@ function App() {
                   <Route path="/notifications" element={<NotificationsScreen />} />
                   <Route path="/favorites" element={<FavoritesScreen />} />
                   <Route path="/wishlist" element={<WishlistScreen />} />
-                  <Route path="/location-picker" element={<LocationMapPicker />} />
                   <Route path="/verification" element={<VerificationScreen />} />
                 </Route>
+              </Route>
               </Route>
             </Route>
 

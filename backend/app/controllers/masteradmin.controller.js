@@ -12,6 +12,7 @@ import LoyaltyConfigHistory from "../models/loyaltyConfigHistory.js";
 import DeliveryCodRemittance from "../models/deliveryCodRemittance.js";
 import FranchiseAdminPayout from "../models/franchiseAdminPayout.js";
 import AdminNotification from "../models/adminNotification.js";
+import AuditLog from "../models/auditLog.js";
 import handleResponse from "../utils/helper.js";
 import bcrypt from "bcryptjs";
 import Delivery from "../models/delivery.js";
@@ -1190,6 +1191,106 @@ export const getCustomerDetails = async (req, res) => {
   }
 };
 
+/**
+ * KK Credit history for one customer: credit purchases, refunds and repayments (from the
+ * wallet ledger), admin changes to the limit / block status (from the activity log), and
+ * summary figures for judging how the customer uses credit.
+ */
+export const getCustomerCreditHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return handleResponse(res, 400, "Invalid customer id");
+    }
+    const customer = await User.findById(id)
+      .select("fullName mobile creditLimit usedCredit creditOverdueDate creditBlocked creditBlockedReason creditBlockedAt walletTransactions createdAt")
+      .lean();
+    if (!customer) return handleResponse(res, 404, "Customer not found");
+
+    // Repayments are stored as "Paid" with a CRD-PAY id; other "Paid" rows are wallet spends
+    const kindOf = (t) => {
+      if (t.type === "Credit Used") return "used";
+      if (t.type === "Credit Refunded") return "refunded";
+      if (t.type === "Paid" && (String(t.txnId || "").startsWith("CRD-PAY") || /credit repayment/i.test(t.note || ""))) {
+        return "repaid";
+      }
+      return null;
+    };
+
+    const transactions = (customer.walletTransactions || [])
+      .map((t) => ({ ...t, kind: kindOf(t) }))
+      .filter((t) => t.kind && t.status !== "Failed")
+      .map((t) => ({
+        txnId: t.txnId,
+        kind: t.kind,
+        amount: Number(t.amount) || 0,
+        note: t.note || "",
+        orderId: t.referenceOrderId || null,
+        createdAt: t.createdAt,
+      }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const sum = (kind) => transactions.filter((t) => t.kind === kind).reduce((s, t) => s + t.amount, 0);
+    const purchases = transactions.filter((t) => t.kind === "used");
+    const repayments = transactions.filter((t) => t.kind === "repaid");
+    const round2 = (n) => Math.round(n * 100) / 100;
+
+    // Last 6 months of credit spent vs repaid (IST months)
+    const monthKey = (d) => new Date(new Date(d).getTime() + 5.5 * 3600 * 1000).toISOString().slice(0, 7);
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 15));
+      months.push({ month: d.toISOString().slice(0, 7), used: 0, repaid: 0 });
+    }
+    for (const t of transactions) {
+      const m = months.find((x) => x.month === monthKey(t.createdAt));
+      if (!m) continue;
+      if (t.kind === "used") m.used = round2(m.used + t.amount);
+      if (t.kind === "repaid") m.repaid = round2(m.repaid + t.amount);
+    }
+
+    const adminChanges = await AuditLog.find({ action: "customer.credit", targetId: String(id), outcome: "success" })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select("createdAt actorName actorRole title changes details")
+      .lean();
+
+    const isOverdue = customer.usedCredit > 0 && customer.creditOverdueDate && new Date() > new Date(customer.creditOverdueDate);
+
+    return handleResponse(res, 200, "Credit history fetched", {
+      customer: {
+        _id: customer._id,
+        fullName: customer.fullName || "",
+        mobile: customer.mobile || "",
+        creditLimit: customer.creditLimit || 0,
+        usedCredit: customer.usedCredit || 0,
+        creditOverdueDate: customer.creditOverdueDate || null,
+        creditBlocked: !!customer.creditBlocked,
+        creditBlockedReason: customer.creditBlockedReason || "",
+        creditBlockedAt: customer.creditBlockedAt || null,
+        isOverdue: !!isOverdue,
+      },
+      summary: {
+        totalUsed: round2(sum("used")),
+        totalRepaid: round2(sum("repaid")),
+        totalRefunded: round2(sum("refunded")),
+        purchaseCount: purchases.length,
+        averagePurchase: purchases.length ? round2(sum("used") / purchases.length) : 0,
+        largestPurchase: purchases.length ? Math.max(...purchases.map((t) => t.amount)) : 0,
+        lastUsedAt: purchases[0]?.createdAt || null,
+        lastRepaidAt: repayments[0]?.createdAt || null,
+      },
+      months,
+      transactions,
+      adminChanges,
+    });
+  } catch (err) {
+    console.error("Get customer credit history error:", err);
+    return handleResponse(res, 500, "Server error");
+  }
+};
+
 export const deleteCustomer = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1209,11 +1310,18 @@ export const deleteCustomer = async (req, res) => {
 export const updateCustomerCredit = async (req, res) => {
   try {
     const { id } = req.params;
-    const { creditLimit, usedCredit, resetOverdue } = req.body;
+    const { creditLimit, usedCredit, resetOverdue, creditBlocked, creditBlockReason } = req.body;
 
     const updateData = {};
     if (typeof creditLimit === "number" && creditLimit >= 0) {
       updateData.creditLimit = creditLimit;
+    }
+
+    // Block / unblock KK Credit for this customer
+    if (typeof creditBlocked === "boolean") {
+      updateData.creditBlocked = creditBlocked;
+      updateData.creditBlockedReason = creditBlocked ? String(creditBlockReason || "").trim().slice(0, 200) : "";
+      updateData.creditBlockedAt = creditBlocked ? new Date() : null;
     }
 
     if (typeof usedCredit === "number" && usedCredit >= 0) {

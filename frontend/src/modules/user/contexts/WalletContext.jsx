@@ -8,6 +8,8 @@ export function WalletProvider({ children }) {
     const [balance, setBalance] = useState(0);
     const [loyaltyPoints, setLoyaltyPoints] = useState(0);
     const [creditLimit, setCreditLimit] = useState(0);
+    // Admin put KK Credit on hold: nothing is available to spend until it's lifted
+    const [creditBlocked, setCreditBlocked] = useState(false);
     const [creditUsed, setCreditUsed] = useState(0);
     const [transactions, setTransactions] = useState([]);
     const [loyaltyConfig, setLoyaltyConfig] = useState({
@@ -24,6 +26,7 @@ export function WalletProvider({ children }) {
         if (!userData) return;
         setBalance(userData.walletBalance || 0);
         setCreditLimit(userData.creditLimit || 0);
+        setCreditBlocked(!!userData.creditBlocked);
         setCreditUsed(userData.usedCredit || userData.creditUsed || 0);
         setLoyaltyPoints(userData.loyaltyPoints || 0);
         const txns = (userData.walletTransactions || []).map((txn, idx) => ({
@@ -240,7 +243,7 @@ export function WalletProvider({ children }) {
         return false;
     }, [balance]);
 
-    const availableCredit = Math.max(0, creditLimit - creditUsed);
+    const availableCredit = creditBlocked ? 0 : Math.max(0, creditLimit - creditUsed);
 
     const useCreditAmount = useCallback((amount) => {
         const value = Number(amount || 0);
@@ -269,6 +272,7 @@ export function WalletProvider({ children }) {
         creditLimit,
         creditUsed,
         availableCredit,
+        creditBlocked,
         loyaltyPoints,
         addLoyaltyPoints,
         redeemLoyaltyPoints,
@@ -277,6 +281,7 @@ export function WalletProvider({ children }) {
         fetchWalletData,
         isLoading
     }), [
+        creditBlocked,
         balance,
         transactions,
         addMoney,

@@ -146,6 +146,19 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    // Admin hold on KK Credit: no new credit purchases while true (repaying dues still works)
+    creditBlocked: {
+      type: Boolean,
+      default: false
+    },
+    creditBlockedReason: {
+      type: String,
+      default: ""
+    },
+    creditBlockedAt: {
+      type: Date,
+      default: null
+    },
 
     walletTransactions: {
       type: [walletTransactionSchema],

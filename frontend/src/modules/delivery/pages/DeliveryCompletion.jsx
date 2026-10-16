@@ -14,6 +14,7 @@ import { ROUTES } from '../utils/constants';
 import { useDeliveryOrders } from '../contexts/DeliveryOrderContext';
 import DocumentViewer from '../../vendor/components/documents/DocumentViewer';
 import { Package } from 'lucide-react';
+import { useConfirm } from '../hooks/useConfirm';
 
 const DeliveryCompletion = () => {
     const [photo, setPhoto] = useState(null);
@@ -33,10 +34,17 @@ const DeliveryCompletion = () => {
     }, [dispatchedOrders]);
 
     const submittingRef = useRef(false);
+    const [confirm, confirmDialog] = useConfirm();
 
     const handleComplete = async () => {
         // Ignore repeat taps while the first request is still in flight
         if (!order || submittingRef.current) return;
+        const confirmed = await confirm({
+            title: 'Mark this order as delivered?',
+            message: 'Only continue if you have handed over the order to the customer.',
+            confirmLabel: 'Yes, delivered',
+        });
+        if (!confirmed || submittingRef.current) return;
         submittingRef.current = true;
 
         // Update status to Delivered in backend
@@ -211,6 +219,7 @@ const DeliveryCompletion = () => {
                     Finish Delivery
                 </motion.button>
             </div>
+            {confirmDialog}
         </div>
     );
 };

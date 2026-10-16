@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import CreditLimitCard from '../components/cards/CreditLimitCard';
 import CreditOverrideModal from '../components/modals/CreditOverrideModal';
+import CreditHistoryDrawer from '../components/modals/CreditHistoryDrawer';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -35,6 +36,38 @@ export default function CreditManagementScreen() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [historyCustomer, setHistoryCustomer] = useState(null);
+    // Block / unblock confirmation: { customer, block: boolean }
+    const [blockTarget, setBlockTarget] = useState(null);
+    const [blockReason, setBlockReason] = useState('');
+    const [isBlocking, setIsBlocking] = useState(false);
+
+    const openBlock = (customer) => {
+        setBlockReason('');
+        setBlockTarget({ customer, block: !customer.creditBlocked });
+    };
+
+    const confirmBlock = async () => {
+        if (!blockTarget) return;
+        if (blockTarget.block && !blockReason.trim()) {
+            toast.error('Please write a reason for blocking');
+            return;
+        }
+        setIsBlocking(true);
+        try {
+            await api.put(`/masteradmin/customers/${blockTarget.customer._id}/credit`, {
+                creditBlocked: blockTarget.block,
+                creditBlockReason: blockTarget.block ? blockReason.trim() : undefined,
+            });
+            toast.success(blockTarget.block ? 'Credit blocked for this customer' : 'Credit unblocked');
+            setBlockTarget(null);
+            fetchCustomers();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not update credit status');
+        } finally {
+            setIsBlocking(false);
+        }
+    };
 
     useEffect(() => {
         fetchCustomers();
@@ -67,6 +100,7 @@ export default function CreditManagementScreen() {
         try {
             const response = await api.put(`/masteradmin/customers/${selectedCustomer._id}/credit`, {
                 creditLimit: Number(data.limit),
+                reason: data.reason?.trim() || undefined, // kept in the activity log / credit history
                 usedCredit: data.resetBalance ? 0 : undefined,
                 resetOverdue: data.resetBalance ? true : undefined
             });
@@ -175,7 +209,10 @@ export default function CreditManagementScreen() {
                 let status = "Stabilized";
                 let styles = "bg-emerald-50 text-emerald-600 border-emerald-100";
 
-                if (isOverdue) {
+                if (row.creditBlocked) {
+                    status = "Credit Blocked";
+                    styles = "bg-slate-900 text-white border-slate-900";
+                } else if (isOverdue) {
                     status = "Default / Account Locked";
                     styles = "bg-red-500 text-white border-red-600 shadow-sm";
                 } else if (percentage > 90) {
@@ -200,8 +237,28 @@ export default function CreditManagementScreen() {
             key: 'actions',
             align: 'center',
             render: (_, row) => (
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center gap-1.5">
                     <button onClick={() => handleOverride(row)} className="p-1 px-2 text-[10px] font-black uppercase text-slate-900 border border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all">Change Limit</button>
+                    <button
+                        onClick={() => openBlock(row)}
+                        title={row.creditBlocked ? 'Allow this customer to use credit again' : 'Stop this customer from using credit'}
+                        className={cn(
+                            "p-1 px-2 text-[10px] font-black uppercase rounded-sm border transition-all flex items-center gap-1",
+                            row.creditBlocked
+                                ? "text-emerald-700 border-emerald-600 hover:bg-emerald-600 hover:text-white"
+                                : "text-rose-600 border-rose-500 hover:bg-rose-600 hover:text-white"
+                        )}
+                    >
+                        {row.creditBlocked ? <Unlock size={10} /> : <Lock size={10} />}
+                        {row.creditBlocked ? 'Unblock' : 'Block'}
+                    </button>
+                    <button
+                        onClick={() => setHistoryCustomer(row)}
+                        title="Credit usage and repayment history"
+                        className="p-1 px-2 text-[10px] font-black uppercase text-slate-600 border border-slate-300 rounded-sm hover:border-slate-900 hover:text-slate-900 transition-all flex items-center gap-1"
+                    >
+                        <History size={10} /> History
+                    </button>
                 </div>
             )
         }
@@ -243,12 +300,13 @@ export default function CreditManagementScreen() {
                 <MetricRow
                     label="Total Credit Given"
                     value={`₹${(customers.reduce((acc, curr) => acc + (curr.usedCredit || 0), 0) / 100000).toFixed(2)}L`}
+                    sub="Unpaid credit right now"
                     icon={IndianRupee}
                 />
                 <MetricRow
                     label="Total Credit Limit"
                     value={`₹${(customers.reduce((acc, curr) => acc + (curr.creditLimit || 0), 0) / 100000).toFixed(2)}L`}
-                    sub="Allocated Capital"
+                    sub="Sum of every customer's limit"
                     icon={CreditCard}
                 />
                 <MetricRow
@@ -281,6 +339,67 @@ export default function CreditManagementScreen() {
                 customer={selectedCustomer}
                 onSave={handleSaveOverride}
             />
+
+            <CreditHistoryDrawer customer={historyCustomer} onClose={() => setHistoryCustomer(null)} />
+
+            {/* Block / unblock confirmation */}
+            {blockTarget && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/40" onClick={() => !isBlocking && setBlockTarget(null)} />
+                    <div className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-6 space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className={cn("w-10 h-10 rounded-sm flex items-center justify-center", blockTarget.block ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600")}>
+                                {blockTarget.block ? <Lock size={18} /> : <Unlock size={18} />}
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-slate-900">
+                                    {blockTarget.block ? 'Block credit for this customer?' : 'Unblock credit for this customer?'}
+                                </h3>
+                                <p className="text-[11px] font-bold text-slate-400">
+                                    {blockTarget.customer.fullName || 'Unnamed Customer'} · {blockTarget.customer.mobile}
+                                </p>
+                            </div>
+                        </div>
+                        <p className="text-[12px] font-medium text-slate-600 leading-relaxed">
+                            {blockTarget.block
+                                ? 'They will not be able to pay with KK Credit until you unblock them. They can still pay back what they owe and use other payment methods. Their limit and dues stay as they are.'
+                                : 'They will be able to pay with KK Credit again, up to their limit.'}
+                        </p>
+                        {blockTarget.block && (
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason (required)</label>
+                                <input
+                                    autoFocus
+                                    value={blockReason}
+                                    maxLength={200}
+                                    onChange={(e) => setBlockReason(e.target.value)}
+                                    placeholder="e.g. Payments late twice"
+                                    className="w-full border border-slate-200 rounded-sm px-3 py-2 text-sm font-bold outline-none focus:border-slate-900"
+                                />
+                            </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                            <button
+                                disabled={isBlocking}
+                                onClick={() => setBlockTarget(null)}
+                                className="py-2.5 border border-slate-200 rounded-sm text-[11px] font-black uppercase tracking-widest text-slate-600"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                disabled={isBlocking}
+                                onClick={confirmBlock}
+                                className={cn(
+                                    "py-2.5 rounded-sm text-[11px] font-black uppercase tracking-widest text-white disabled:opacity-60",
+                                    blockTarget.block ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700"
+                                )}
+                            >
+                                {isBlocking ? 'Saving...' : blockTarget.block ? 'Yes, block' : 'Yes, unblock'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

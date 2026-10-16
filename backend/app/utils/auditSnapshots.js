@@ -210,6 +210,7 @@ export const customerSnap = async (id) => {
             "Credit limit": money(u.creditLimit),
             "Credit used": money(u.usedCredit),
             "Credit due date": date(u.creditOverdueDate),
+            "Credit status": u.creditBlocked ? `Blocked${u.creditBlockedReason ? ` (${u.creditBlockedReason})` : ""}` : "Active",
             "Wallet balance": money(u.walletBalance),
         },
     };

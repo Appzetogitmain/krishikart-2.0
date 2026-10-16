@@ -3,10 +3,12 @@ import { Package, X, ArrowRight, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDeliveryOrders } from '../../contexts/DeliveryOrderContext';
 import { ROUTES } from '../../utils/constants';
+import { useConfirm } from '../../hooks/useConfirm';
 
 export default function NewTaskAlert({ isOpen, onClose, data }) {
     const navigate = useNavigate();
     const { ringingTaskIds, reopenTaskAlert, setActiveDeliveryId, rejectTask } = useDeliveryOrders();
+    const [confirm, confirmDialog] = useConfirm();
 
     // The pop-up was dismissed but a task is still ringing: keep a way back to it
     if (!isOpen && ringingTaskIds?.length > 0) {
@@ -30,13 +32,28 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
 
     const isDeliveryTask = data.type !== 'RETURN' && !!data.orderId;
 
-    const handleAccept = () => {
+    const shortRef = `#${String(data.orderId).slice(-6).toUpperCase()}`;
+
+    const handleAccept = async () => {
+        const confirmed = await confirm({
+            title: `Accept task ${shortRef}?`,
+            message: 'This becomes your active delivery.',
+            confirmLabel: 'Yes, accept',
+        });
+        if (!confirmed) return;
         onClose();
         setActiveDeliveryId(data.orderId); // also stops the ring
         navigate(ROUTES.ACTIVE);
     };
 
     const handleReject = async () => {
+        const confirmed = await confirm({
+            title: `Reject task ${shortRef}?`,
+            message: 'The order goes back to the franchise to assign someone else.',
+            confirmLabel: 'Yes, reject',
+            tone: 'danger',
+        });
+        if (!confirmed) return;
         await rejectTask(data.orderId); // stops the ring once the server confirms
         onClose();
     };
@@ -155,6 +172,7 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
                     </motion.div>
                 </>
             )}
+            {confirmDialog}
         </AnimatePresence>
     );
 }

@@ -9,11 +9,22 @@ import {
     ShieldCheck,
     Info,
     Settings2,
-    CheckCircle2
+    CheckCircle2,
+    CalendarOff,
+    Plus,
+    Trash2
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** Today's date in India as "YYYY-MM-DD" (the date picker's minimum). */
+const todayKeyIST = () => new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+const formatDayKey = (key) =>
+    new Date(`${key}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 export default function DeliveryConstraintsScreen() {
     const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +39,42 @@ export default function DeliveryConstraintsScreen() {
         activeZones: false
     });
 
+    // Days with no delivery: weekly off days (0 = Sunday) and specific dates such as festivals
+    const [offDays, setOffDays] = useState({ weeklyOff: [], dates: [] });
+    const [newOffDate, setNewOffDate] = useState('');
+    const [newOffReason, setNewOffReason] = useState('');
+
+    const toggleWeeklyOff = (day) => {
+        setOffDays((prev) => ({
+            ...prev,
+            weeklyOff: prev.weeklyOff.includes(day)
+                ? prev.weeklyOff.filter((d) => d !== day)
+                : [...prev.weeklyOff, day].sort(),
+        }));
+    };
+
+    const addOffDate = () => {
+        if (!newOffDate) {
+            toast.error('Please pick a date');
+            return;
+        }
+        if (offDays.dates.some((d) => d.date === newOffDate)) {
+            toast.error('This date is already in the list');
+            return;
+        }
+        setOffDays((prev) => ({
+            ...prev,
+            dates: [...prev.dates, { date: newOffDate, reason: newOffReason.trim() || 'Holiday' }]
+                .sort((a, b) => a.date.localeCompare(b.date)),
+        }));
+        setNewOffDate('');
+        setNewOffReason('');
+    };
+
+    const removeOffDate = (date) => {
+        setOffDays((prev) => ({ ...prev, dates: prev.dates.filter((d) => d.date !== date) }));
+    };
+
     useEffect(() => {
         const fetchSettings = async () => {
             try {
@@ -36,6 +83,13 @@ export default function DeliveryConstraintsScreen() {
                     const deliverySetting = response.data.results.find(s => s.key === 'delivery_constraints');
                     if (deliverySetting) {
                         setConstraints(deliverySetting.value);
+                    }
+                    const offSetting = response.data.results.find(s => s.key === 'delivery_off_days');
+                    if (offSetting?.value) {
+                        setOffDays({
+                            weeklyOff: Array.isArray(offSetting.value.weeklyOff) ? offSetting.value.weeklyOff.map(Number) : [],
+                            dates: Array.isArray(offSetting.value.dates) ? offSetting.value.dates : [],
+                        });
                     }
                 }
             } catch (error) {
@@ -62,9 +116,19 @@ export default function DeliveryConstraintsScreen() {
                 }
             });
 
-            if (response.data.success) {
+            // Past holidays are dropped on save; they no longer affect anything
+            const today = todayKeyIST();
+            const offResponse = await api.post('/masteradmin/settings/update', {
+                key: 'delivery_off_days',
+                value: {
+                    weeklyOff: offDays.weeklyOff,
+                    dates: offDays.dates.filter((d) => d.date >= today),
+                },
+            });
+
+            if (response.data.success && offResponse.data.success) {
                 toast.success('Delivery Settings Updated', {
-                    description: 'New fees and tax rates are now active.',
+                    description: 'Delivery fees, tax and off days are now active.',
                     icon: <CheckCircle2 size={16} className="text-emerald-500" />
                 });
             }
@@ -220,6 +284,99 @@ export default function DeliveryConstraintsScreen() {
                                     </div>
                                 </div>
 
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. No-delivery days */}
+                    <div className="bg-white border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+                            <div className="w-8 h-8 bg-rose-50 text-rose-600 flex items-center justify-center rounded-sm">
+                                <CalendarOff size={16} />
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Off Days (No Delivery)</h3>
+                                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                    Customers can't pick these days at checkout. Click "Save Changes" at the top to apply.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weekly off days (every week)</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {WEEKDAYS.map((label, day) => {
+                                        const active = offDays.weeklyOff.includes(day);
+                                        return (
+                                            <button
+                                                key={label}
+                                                type="button"
+                                                onClick={() => toggleWeeklyOff(day)}
+                                                className={cn(
+                                                    'px-4 py-2 rounded-sm border text-[11px] font-black uppercase tracking-widest transition-all',
+                                                    active
+                                                        ? 'bg-rose-600 border-rose-600 text-white'
+                                                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-400'
+                                                )}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <p className="text-[10px] font-bold text-slate-400">Red = closed every week.</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Holidays / specific dates</label>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <input
+                                        type="date"
+                                        min={todayKeyIST()}
+                                        value={newOffDate}
+                                        onChange={(e) => setNewOffDate(e.target.value)}
+                                        className="bg-slate-50/50 border border-slate-200 rounded-sm px-3 py-2.5 text-sm font-bold outline-none focus:border-slate-900"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Reason, e.g. Diwali"
+                                        maxLength={40}
+                                        value={newOffReason}
+                                        onChange={(e) => setNewOffReason(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') addOffDate(); }}
+                                        className="flex-1 bg-slate-50/50 border border-slate-200 rounded-sm px-3 py-2.5 text-sm font-bold outline-none focus:border-slate-900"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addOffDate}
+                                        className="px-4 py-2.5 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-rose-600 transition-all"
+                                    >
+                                        <Plus size={12} /> Add
+                                    </button>
+                                </div>
+
+                                {offDays.dates.filter((d) => d.date >= todayKeyIST()).length === 0 ? (
+                                    <p className="text-[11px] font-bold text-slate-400 py-2">No holidays added.</p>
+                                ) : (
+                                    <ul className="divide-y divide-slate-100 border border-slate-100 rounded-sm">
+                                        {offDays.dates.filter((d) => d.date >= todayKeyIST()).map((d) => (
+                                            <li key={d.date} className="flex items-center justify-between px-4 py-2.5">
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-900">{formatDayKey(d.date)}</p>
+                                                    <p className="text-[11px] font-bold text-rose-500">{d.reason}</p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeOffDate(d.date)}
+                                                    className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                                                    title="Remove"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         </div>
                     </div>

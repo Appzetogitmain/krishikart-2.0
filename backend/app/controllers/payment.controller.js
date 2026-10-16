@@ -10,7 +10,8 @@ import {
     resolveCheckoutCoordinates,
 } from "../utils/checkoutOrderSplit.js";
 import { assignOrderToFranchise } from "../utils/assignment.js";
-import { resolveDeliverySchedule } from "../utils/deliverySchedule.js";
+import { resolveDeliverySchedule, getDeliveryOffDays } from "../utils/deliverySchedule.js";
+import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { acquireUserLock, releaseUserLock } from "../utils/userLock.js";
 import { emitToAdmin } from "../lib/socket.js";
 import { createUserNotification } from "../utils/userNotification.js";
@@ -43,6 +44,10 @@ async function computeOnlineCheckout(userId, orderData) {
     if (!user) return fail(404, "User not found");
     if (user.usedCredit > 0 && user.creditOverdueDate && new Date() > new Date(user.creditOverdueDate)) {
         return fail(403, "Payment Overdue: Please clear your KK Credit balance to continue shopping.");
+    }
+    // Checked again at verification; if the admin blocks credit mid-payment, that step refunds
+    if (paymentMethod === "Credit + Online" && user.creditBlocked) {
+        return fail(403, CREDIT_BLOCKED_MESSAGE);
     }
 
     const resolvedLocation = await resolveCheckoutCoordinates(shippingAddress, shippingLocation);
@@ -111,6 +116,16 @@ export const createRazorpayOrder = async (req, res) => {
         let notes = { type: "order_checkout", userId: String(userId) };
 
         if (req.body.orderData) {
+            // Check the delivery day before taking money: an order for a closed day (holiday,
+            // weekly off) must be stopped here, not after the customer has paid.
+            const schedule = resolveDeliverySchedule(
+                req.body.orderData.scheduledDate,
+                req.body.orderData.deliveryShift,
+                new Date(),
+                await getDeliveryOffDays(),
+            );
+            if (!schedule.ok) return handleResponse(res, schedule.status, schedule.message);
+
             // Amount decided by the server from the cart, never by the browser
             const checkout = await computeOnlineCheckout(userId, req.body.orderData);
             if (!checkout.ok) return handleResponse(res, checkout.status, checkout.message);

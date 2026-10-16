@@ -27,7 +27,8 @@ import {
 } from "../utils/checkoutOrderSplit.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
-import { resolveDeliverySchedule } from "../utils/deliverySchedule.js";
+import { resolveDeliverySchedule, getDeliveryOffDays } from "../utils/deliverySchedule.js";
+import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { acquireUserLock, releaseUserLock } from "../utils/userLock.js";
 import { takeStock, takeStockUpTo, addStock } from "../utils/stock.js";
@@ -160,7 +161,7 @@ const placeOrder = async (req, res) => {
     }
 
     // Delivery date / slot validation (evaluated in IST)
-    const schedule = resolveDeliverySchedule(scheduledDate, deliveryShift);
+    const schedule = resolveDeliverySchedule(scheduledDate, deliveryShift, new Date(), await getDeliveryOffDays());
     if (!schedule.ok) {
       return handleResponse(res, schedule.status, schedule.message);
     }
@@ -241,10 +242,14 @@ const placeOrder = async (req, res) => {
       if (!updated) return handleResponse(res, 400, "Insufficient wallet balance");
       charged = grandTotal;
     } else if (paymentMethod === "Credit") {
+      if (user.creditBlocked) {
+        return handleResponse(res, 403, CREDIT_BLOCKED_MESSAGE);
+      }
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 7);
       const updated = await User.findOneAndUpdate(
-        { _id: userId, $expr: { $gte: [{ $subtract: [{ $ifNull: ["$creditLimit", 0] }, { $ifNull: ["$usedCredit", 0] }] }, grandTotal] } },
+        // creditBlocked in the filter too, in case the admin blocks during this checkout
+        { _id: userId, creditBlocked: { $ne: true }, $expr: { $gte: [{ $subtract: [{ $ifNull: ["$creditLimit", 0] }, { $ifNull: ["$usedCredit", 0] }] }, grandTotal] } },
         [
           {
             $set: {

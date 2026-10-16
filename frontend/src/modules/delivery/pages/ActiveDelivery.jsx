@@ -14,12 +14,14 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../utils/constants';
 import { useDeliveryOrders } from '../contexts/DeliveryOrderContext';
 import DocumentViewer from '../../vendor/components/documents/DocumentViewer';
+import { useConfirm } from '../hooks/useConfirm';
 
 const ActiveDelivery = () => {
     const navigate = useNavigate();
     const { dispatchedOrders, loading, updateStatus, activeDeliveryId, setActiveDeliveryId } = useDeliveryOrders();
     const [isUpdating, setIsUpdating] = useState(false);
     const submittingRef = useRef(false);
+    const [confirm, confirmDialog] = useConfirm();
     const [isDocOpen, setIsDocOpen] = useState(false);
 
     const order = useMemo(() => {
@@ -45,6 +47,14 @@ const ActiveDelivery = () => {
     const handleMarkDelivered = async () => {
         // A ref, not state: a quick second tap runs before the re-render that disables the button
         if (!order || submittingRef.current) return;
+        const confirmed = await confirm({
+            title: 'Mark this order as delivered?',
+            message: isCodOrder
+                ? `Only continue if you have handed over the order and collected Rs ${Number(order?.totalAmount || 0).toFixed(2)} cash.`
+                : 'Only continue if you have handed over the order to the customer.',
+            confirmLabel: 'Yes, delivered',
+        });
+        if (!confirmed || submittingRef.current) return;
         submittingRef.current = true;
         setIsUpdating(true);
         const ok = await updateStatus(order.id, 'Delivered');
@@ -179,6 +189,28 @@ const ActiveDelivery = () => {
                                 )}
                             </div>
                         </div>
+                        {/* Map preview of the drop point (the customer's pin, else the written address) */}
+                        {(order?.customerLocation || order?.shippingAddress) && (
+                            <button
+                                type="button"
+                                onClick={handleNavigate}
+                                className="mt-4 block w-full h-40 rounded-xl overflow-hidden border border-border relative"
+                                aria-label="Open directions in Google Maps"
+                            >
+                                <iframe
+                                    title="Customer location"
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    className="w-full h-full pointer-events-none"
+                                    src={`https://maps.google.com/maps?q=${order?.customerLocation
+                                        ? `${order.customerLocation.lat},${order.customerLocation.lng}`
+                                        : encodeURIComponent(order.shippingAddress)}&z=16&output=embed`}
+                                />
+                                <span className="absolute bottom-2 right-2 bg-white/95 text-[10px] font-bold text-primary px-2 py-1 rounded-lg shadow">
+                                    Tap for directions
+                                </span>
+                            </button>
+                        )}
                         <div className="mt-4 flex gap-2">
                             <button
                                 onClick={handleNavigate}
@@ -230,6 +262,8 @@ const ActiveDelivery = () => {
                     )}
                 </div>
             </div>
+
+            {confirmDialog}
 
             {/* Document Viewer Modal */}
             <DocumentViewer

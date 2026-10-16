@@ -355,7 +355,12 @@ export const AUDIT_RULES = [
     {
         m: "PUT", p: "/masteradmin/customers/:id/credit", module: "Customer Credit", action: "customer.credit", kind: "update",
         target: { type: "Customer", id: (ctx) => P(ctx, "id"), snap: S.customerSnap },
-        title: ({ changes }) => (onlyChanged(changes, "Credit limit") ? "Customer credit limit has been changed" : "Customer credit has been changed"),
+        title: ({ changes }) => {
+            const status = (changes || []).find((c) => c.field === "Credit status");
+            if (status) return String(status.to).startsWith("Blocked") ? "Customer credit has been blocked" : "Customer credit has been unblocked";
+            return onlyChanged(changes, "Credit limit") ? "Customer credit limit has been changed" : "Customer credit has been changed";
+        },
+        details: (ctx) => [{ label: "Reason", value: short(B(ctx, "reason") || B(ctx, "creditBlockReason")) }],
         severity: "critical",
     },
     {

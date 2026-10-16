@@ -120,9 +120,61 @@ export default function OrdersScreen() {
             itemsSummary: (order.items || []).map(i => `${i.name} x ${i.quantity} ${i.unit || ''}`.trim()).join('; '),
         }));
 
+        // Item totals for the vendor: the same item and unit on the same delivery day is added up
+        // across orders (e.g. strawberries 4 + 3 + 2 + 100 gm = 109 gm). Cancelled orders are left out.
+        const totals = new Map();
+        for (const order of rows) {
+            if (String(order.orderStatus || '').toLowerCase() === 'cancelled') continue;
+            const deliveryDate = order.scheduledDate ? new Date(order.scheduledDate).toLocaleDateString('en-IN') : 'Not set';
+            const slot = order.deliveryShift || 'No slot';
+            const franchise = order.franchiseId?.franchiseName || 'Unassigned';
+            for (const item of order.items || []) {
+                const unit = (item.unit || '').trim();
+                const name = item.name || 'Item';
+                const productKey = item.productId?._id || item.productId || name; // id or populated product
+                const key = `${deliveryDate}|${productKey}|${unit.toLowerCase()}`;
+                const qty = Number(item.quantity) || 0;
+                const row = totals.get(key) || {
+                    deliveryDate, item: name, unit, totalQuantity: 0, orders: new Set(), bySlot: new Map(), byFranchise: new Map(),
+                };
+                row.totalQuantity += qty;
+                row.orders.add(String(order._id));
+                row.bySlot.set(slot, (row.bySlot.get(slot) || 0) + qty);
+                row.byFranchise.set(franchise, (row.byFranchise.get(franchise) || 0) + qty);
+                totals.set(key, row);
+            }
+        }
+        const round = (n) => Math.round(n * 1000) / 1000;
+        const split = (m, unit) => [...m.entries()].map(([k, v]) => `${k}: ${round(v)} ${unit}`.trim()).join('; ');
+        const toDay = (s) => s.split('/').reverse().join(''); // dd/mm/yyyy -> sortable
+        const itemTotals = [...totals.values()]
+            .sort((a, b) => toDay(a.deliveryDate).localeCompare(toDay(b.deliveryDate)) || a.item.localeCompare(b.item))
+            .map(r => ({
+                deliveryDate: r.deliveryDate,
+                item: r.item,
+                unit: r.unit,
+                totalQuantity: round(r.totalQuantity),
+                orderCount: r.orders.size,
+                bySlot: split(r.bySlot, r.unit),
+                byFranchise: split(r.byFranchise, r.unit),
+            }));
+        const totalsSection = {
+            title: 'ITEM TOTALS (for vendor) - same item added up per delivery date; cancelled orders not counted',
+            columns: [
+                { header: 'Delivery Date', key: 'deliveryDate' },
+                { header: 'Item', key: 'item' },
+                { header: 'Unit', key: 'unit' },
+                { header: 'Total Quantity', key: 'totalQuantity' },
+                { header: 'No. of Orders', key: 'orderCount' },
+                { header: 'By Slot', key: 'bySlot' },
+                { header: 'By Franchise', key: 'byFranchise' },
+            ],
+            data: itemTotals,
+        };
+
         const label = { today: 'Today', month: 'This_Month', year: 'This_Year', current: 'Filtered' }[period];
-        exportToCSV(`Orders_${label}`, columns, data);
-        toast.success(`Downloaded ${data.length} orders`);
+        exportToCSV(`Orders_${label}`, columns, data, [totalsSection]);
+        toast.success(`Downloaded ${data.length} orders with ${itemTotals.length} item totals`);
     };
 
     const normalizeOrders = (results) => {

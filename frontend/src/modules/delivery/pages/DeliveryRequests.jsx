@@ -5,18 +5,35 @@ import DeliveryCard from '../components/cards/DeliveryCard';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../utils/constants';
 import { useDeliveryOrders } from '../contexts/DeliveryOrderContext';
+import { useConfirm } from '../hooks/useConfirm';
 
 const DeliveryRequests = () => {
     const { availableRequests: requests, loading: refreshing, fetchDispatchedOrders: handleRefresh, rejectTask, setActiveDeliveryId } = useDeliveryOrders();
     const navigate = useNavigate();
+    const [confirm, confirmDialog] = useConfirm();
 
-    const handleAccept = (id) => {
+    const shortRef = (id) => `#${String(id).slice(-6).toUpperCase()}`;
+
+    const handleAccept = async (id) => {
+        const confirmed = await confirm({
+            title: `Accept task ${shortRef(id)}?`,
+            message: 'This becomes your active delivery.',
+            confirmLabel: 'Yes, accept',
+        });
+        if (!confirmed) return;
         // In this flow, "Accept" just navigates to the active delivery.
         setActiveDeliveryId(id);
         navigate(ROUTES.ACTIVE);
     };
 
     const handleReject = async (id) => {
+        const confirmed = await confirm({
+            title: `Reject task ${shortRef(id)}?`,
+            message: 'The order goes back to the franchise to assign someone else.',
+            confirmLabel: 'Yes, reject',
+            tone: 'danger',
+        });
+        if (!confirmed) return;
         await rejectTask(id);
     };
 
@@ -79,6 +96,7 @@ const DeliveryRequests = () => {
                     )}
                 </AnimatePresence>
             </div>
+            {confirmDialog}
         </div>
     );
 };

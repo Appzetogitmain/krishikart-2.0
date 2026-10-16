@@ -3,6 +3,20 @@ import { getCurrentLocation, getGeolocationPermissionState, reverseGeocode, reve
 
 const LocationContext = createContext();
 
+// Moving further than this from the saved shopping location switches to the new spot
+const GPS_MOVE_THRESHOLD_KM = 1;
+
+/** Straight-line distance in km between two { lat, lng } points (haversine). */
+function distanceKm(a, b) {
+    const lat1 = Number(a?.lat), lng1 = Number(a?.lng), lat2 = Number(b?.lat), lng2 = Number(b?.lng);
+    if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) return Infinity;
+    const rad = (d) => (d * Math.PI) / 180;
+    const dLat = rad(lat2 - lat1);
+    const dLng = rad(lng2 - lng1);
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
+
 const isPermissionDeniedError = (message = '') => {
     const normalizedMessage = String(message).toLowerCase();
     return normalizedMessage.includes('denied') || normalizedMessage.includes('permission');
@@ -30,6 +44,23 @@ export function LocationProvider({ children }) {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    // True once the start-up check (saved location, then live GPS) has finished, so screens
+    // that need a location don't act on the empty state while GPS is still being looked up
+    const [isLocationReady, setIsLocationReady] = useState(false);
+
+    // Background GPS re-check against the saved location. Only a real move (more than
+    // GPS_MOVE_THRESHOLD_KM) replaces it, so normal GPS drift doesn't reload the catalogue.
+    const refreshFromGps = async (saved) => {
+        try {
+            if ((await getGeolocationPermissionState()) === 'denied') return;
+            const loc = await getCurrentLocation();
+            if (distanceKm(saved, loc) > GPS_MOVE_THRESHOLD_KM) {
+                await setPinnedFranchiseLocation({ lat: loc.lat, lng: loc.lng });
+            }
+        } catch {
+            // GPS unavailable: keep the saved location
+        }
+    };
 
     // On mount: always try live GPS first, fall back to localStorage only if GPS fails/denied
     useEffect(() => {
@@ -54,10 +85,13 @@ export function LocationProvider({ children }) {
             const savedFrPinned = localStorage.getItem('kk_franchise_location_pinned');
 
             if (savedFrLoc && savedFrAddr) {
-                setFranchiseLocation(JSON.parse(savedFrLoc));
+                const saved = JSON.parse(savedFrLoc);
+                setFranchiseLocation(saved);
                 setFranchiseAddress(savedFrAddr);
                 if (savedFrPinned === 'true') setHasFranchisePinned(true);
-                // If we have saved location, don't auto-fetch GPS on refresh
+                // Show the saved location straight away, then re-check GPS in the background on
+                // every open so a customer who has moved sees their new nearest franchise.
+                refreshFromGps(saved);
                 return;
             }
 
@@ -77,7 +111,7 @@ export function LocationProvider({ children }) {
             }
         };
 
-        init();
+        init().finally(() => setIsLocationReady(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -232,7 +266,9 @@ export function LocationProvider({ children }) {
 
         loading,
         error,
+        isLocationReady,
     }), [
+        isLocationReady,
         location,
         address,
         franchiseLocation,
