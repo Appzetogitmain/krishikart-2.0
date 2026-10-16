@@ -481,7 +481,20 @@ export const AUDIT_RULES = [
     },
     {
         m: "POST", p: "/procurement/vendor/:requestId/quote", module: "Stock Requests", action: "procurement.quote", kind: "update",
-        target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap }, title: "Vendor sent a price quote", severity: "important",
+        target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap },
+        title: ({ before }) => (before?.values?.Status === "Negotiating" ? "Vendor sent a counter-offer" : "Vendor sent a price quote"),
+        severity: "important",
+    },
+    {
+        m: "POST", p: "/procurement/vendor/:requestId/offer/accept", module: "Stock Requests", action: "procurement.offer_accept", kind: "update",
+        target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap },
+        title: "Vendor accepted the admin's rate", severity: "important",
+    },
+    {
+        m: "POST", p: "/procurement/vendor/:requestId/offer/decline", module: "Stock Requests", action: "procurement.offer_decline", kind: "update",
+        target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap },
+        title: "Vendor declined the admin's rate", severity: "important",
+        details: (ctx) => [{ label: "Note", value: short(B(ctx, "note")) }],
     },
     {
         m: "PUT", p: "/procurement/vendor/:requestId/status", module: "Stock Requests", action: "procurement.vendor_status", kind: "update",
@@ -490,7 +503,10 @@ export const AUDIT_RULES = [
     {
         m: "PUT", p: "/procurement/admin/:requestId/status", module: "Stock Requests", action: "procurement.admin_status", kind: "update",
         target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap },
-        title: ({ changes }) => (changed(changes, "Vendor") && !changed(changes, "Status") ? "Vendor assigned to stock request" : statusTitle("Stock request")({ changes })),
+        title: ({ changes }) => {
+            if (valueOf(changes, "Status")?.to === "Negotiating") return "Admin offered the vendor a different rate";
+            return changed(changes, "Vendor") && !changed(changes, "Status") ? "Vendor assigned to stock request" : statusTitle("Stock request")({ changes });
+        },
         severity: "important",
     },
     {

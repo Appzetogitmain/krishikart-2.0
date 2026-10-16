@@ -7,6 +7,8 @@ import {
     getVendorAssignments,
     getVendorProcurementById,
     vendorSubmitQuotation,
+    vendorAcceptOffer,
+    vendorDeclineOffer,
     getVendorActiveDispatch,
     vendorUpdateStatus,
     getVendorReports,
@@ -53,6 +55,8 @@ router.get("/vendor/receivables-report", protectVendor, getVendorReceivablesRepo
 router.get("/vendor/rejected-stock", protectVendor, getRejectedStockReport);
 router.get("/vendor/:requestId", protectVendor, getVendorProcurementById);
 router.post("/vendor/:requestId/quote", protectVendor, vendorSubmitQuotation);
+router.post("/vendor/:requestId/offer/accept", protectVendor, vendorAcceptOffer);
+router.post("/vendor/:requestId/offer/decline", protectVendor, vendorDeclineOffer);
 router.put("/vendor/:requestId/status", protectVendor, vendorUpdateStatus);
 
 // Admin Routes (Assign/View)

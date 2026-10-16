@@ -99,7 +99,7 @@ export default function OrdersScreen() {
 
     const filteredOrders = allOrders.filter(order => {
         const statusMap = {
-            'New': ['new', 'assigned', 'bidding', 'accepted', 'requested', 'quoted'],
+            'New': ['new', 'assigned', 'bidding', 'accepted', 'requested', 'quoted', 'negotiating'],
             'Preparing': ['preparing', 'approved'],
             'Ready': ['ready', 'ready_for_pickup'],
             'Completed': ['completed', 'delivered', 'shipped', 'picked_up']
@@ -168,6 +168,7 @@ export default function OrdersScreen() {
         'delivered': "bg-slate-50 text-slate-400 border-slate-100",
         'requested': "bg-indigo-50 text-indigo-600 border-indigo-100",
         'quoted': "bg-amber-50 text-amber-600 border-amber-100",
+        'negotiating': "bg-orange-100 text-orange-700 border-orange-200",
         'approved': "bg-emerald-50 text-emerald-600 border-emerald-100"
     };
 
@@ -252,7 +253,7 @@ export default function OrdersScreen() {
                                         "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                         statusColors[order.status] || "bg-slate-50 text-slate-400 border-slate-100"
                                     )}>
-                                        {order.status}
+                                        {order.status === 'negotiating' ? 'New rate offered' : order.status}
                                     </div>
                                 </div>
 

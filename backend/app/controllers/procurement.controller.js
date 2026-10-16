@@ -14,6 +14,77 @@ import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
 import { takeStockUpTo, addStock } from "../utils/stock.js";
 
+/* ---------- Rate bargaining between admin and vendor ---------- */
+
+const refOf = (id) => `#${String(id).slice(-6).toUpperCase()}`;
+const money = (n) => `₹${(Math.round(Number(n || 0) * 100) / 100).toLocaleString("en-IN")}`;
+
+/** The request's current rates and quantities as one offer line-up. */
+const offerItemsOf = (request) =>
+    request.items.map((i) => ({
+        productId: String(i.productId),
+        name: i.name,
+        unit: i.unit,
+        quantity: Number(i.quantity) || 0,
+        price: Number(i.quotedPrice) || 0,
+    }));
+
+const offerTotal = (items) => Math.round(items.reduce((s, i) => s + i.price * i.quantity, 0) * 100) / 100;
+
+const recordOffer = (request, { by, byName = "", action, note = "" }) => {
+    const items = offerItemsOf(request);
+    request.offers = request.offers || [];
+    request.offers.push({ by, byName, action, items, total: offerTotal(items), note: String(note || "").slice(0, 300) });
+    return offerTotal(items);
+};
+
+/** The vendor's most recent rates (their quote or counter-offer). */
+const lastVendorOffer = (request) =>
+    [...(request.offers || [])].reverse().find((o) => o.by === "vendor" && (o.action === "quote" || o.action === "counter"));
+
+const findEdit = (editedItems, reqItem) =>
+    (editedItems || []).find((i) =>
+        (i._id && String(i._id) === String(reqItem._id)) ||
+        (i.productId != null && String(i.productId?._id || i.productId) === String(reqItem.productId)));
+
+/** True when the admin changed any rate or quantity from what the vendor offered. */
+const adminChangedOffer = (request, editedItems) =>
+    request.items.some((reqItem) => {
+        const e = findEdit(editedItems, reqItem);
+        if (!e) return false;
+        const priceChanged = e.quotedPrice !== undefined && Number(e.quotedPrice) !== Number(reqItem.quotedPrice || 0);
+        const qtyChanged = e.quantity !== undefined && Number(e.quantity) !== Number(reqItem.quantity || 0);
+        return priceChanged || qtyChanged;
+    });
+
+const notifyVendor = (vendorId, { event = "procurement_update", requestId, status, title, body }) => {
+    if (!vendorId) return;
+    emitToVendor(vendorId, event, { requestId, status, title, message: body });
+    sendNotificationToUser(String(vendorId), {
+        title,
+        body,
+        data: { type: "assignment", requestId: String(requestId), link: `/vendor/orders/${requestId}` },
+    }, "vendor");
+};
+
+const notifyAdmin = async (request, { title, message, amount }) => {
+    emitToAdmin("procurement_quote_received", { requestId: request._id, message });
+    await createAdminNotification({
+        type: "procurement_quote_received",
+        title,
+        message,
+        link: "/masteradmin/quotations",
+        meta: { requestId: request._id.toString(), orderId: request.orderId?.toString?.() || "", amount },
+    });
+};
+
+const addOrderNote = async (request, updatedBy, message) => {
+    if (!request.orderId) return;
+    await Order.findByIdAndUpdate(request.orderId, {
+        $push: { statusHistory: { status: "Procuring", updatedAt: new Date(), updatedBy, message } },
+    });
+};
+
 // Get vendor assignments (Vendor)
 export const getVendorAssignments = async (req, res) => {
     try {
@@ -108,60 +179,48 @@ export const vendorSubmitQuotation = async (req, res) => {
         if (assignedVendorId !== currentVendorId) {
             return handleResponse(res, 403, "Not authorized to submit quotation for this request");
         }
+
+        // Rates can be sent or changed only until both sides agree
+        const isCounter = request.status === "negotiating";
+        if (!["assigned", "pending_assignment", "quoted", "negotiating"].includes(request.status)) {
+            return handleResponse(res, 400, "The rate for this request is already agreed, so it can't be changed now.");
+        }
+
         let totalQuoted = 0;
         if (items && Array.isArray(items)) {
-            // Assume items in body match items in request by productId or _id
-            request.items.forEach(reqItem => {
+            for (const reqItem of request.items) {
                 const submittedItem = items.find(i =>
-                    (i._id && i._id === reqItem._id.toString()) ||
-                    (i.productId === reqItem.productId)
+                    (i._id && String(i._id) === reqItem._id.toString()) ||
+                    (i.productId != null && String(i.productId?._id || i.productId) === String(reqItem.productId))
                 );
                 if (submittedItem) {
-                    const price = Number(submittedItem.quotedPrice) || 0;
+                    const price = Number(submittedItem.quotedPrice);
+                    if (!Number.isFinite(price) || price <= 0) {
+                        return handleResponse(res, 400, `Please enter a rate for ${reqItem.name || "every item"}`);
+                    }
                     reqItem.quotedPrice = price;
                     reqItem.originalQuotedPrice = price;
                 }
                 totalQuoted += (reqItem.quotedPrice || 0) * reqItem.quantity;
-            });
+            }
         }
 
         request.totalQuotedAmount = totalQuoted;
         request.vendorQuoteTotal = totalQuoted;
         request.status = 'quoted';
+        request.awaitingFrom = 'admin';
+        recordOffer(request, { by: "vendor", byName: req.vendor.fullName, action: isCounter ? "counter" : "quote", note: req.body?.note });
         await request.save();
 
-        // Socket Notifications
-        emitToAdmin('procurement_quote_received', {
-            requestId: request._id,
-            message: `A new quote of ₹${totalQuoted} from vendor for procurement #${request._id.toString().slice(-6)}`
-        });
-        await createAdminNotification({
-            type: 'procurement_quote_received',
-            title: 'Vendor Quote Received',
-            message: `A vendor submitted a quote of ₹${totalQuoted} for procurement #${request._id.toString().slice(-6)}.`,
-            link: '/masteradmin/quotations',
-            meta: {
-                requestId: request._id.toString(),
-                orderId: request.orderId?.toString?.() || '',
-                amount: totalQuoted
-            }
-        });
+        await notifyAdmin(request, isCounter
+            ? { title: "Vendor Sent a Counter-offer", message: `${req.vendor.fullName || "The vendor"} did not accept your rate and offered ${money(totalQuoted)} for stock request ${refOf(request._id)}.`, amount: totalQuoted }
+            : { title: "Vendor Quote Received", message: `A vendor submitted a quote of ${money(totalQuoted)} for stock request ${refOf(request._id)}.`, amount: totalQuoted });
 
-        // Update Order if exists
-        if (request.orderId) {
-            await Order.findByIdAndUpdate(request.orderId, {
-                $push: {
-                    statusHistory: {
-                        status: 'Procuring',
-                        updatedAt: new Date(),
-                        updatedBy: 'vendor',
-                        message: 'Vendor has submitted a quotation for out-of-stock items.'
-                    }
-                }
-            });
-        }
+        await addOrderNote(request, "vendor", isCounter
+            ? "Vendor sent a counter-offer for the out-of-stock items."
+            : "Vendor has submitted a quotation for out-of-stock items.");
 
-        return handleResponse(res, 200, "Quotation submitted successfully", request);
+        return handleResponse(res, 200, isCounter ? "Your rate has been sent to the admin" : "Quotation submitted successfully", request);
     } catch (error) {
         console.error("Vendor submit quotation error:", error);
         return handleResponse(res, 500, "Server error");
@@ -189,6 +248,17 @@ export const vendorUpdateStatus = async (req, res) => {
 
         if (assignedVendorId !== currentVendorId) {
             return handleResponse(res, 403, "Not authorized to update this request");
+        }
+
+        // Work can start only after the rate is agreed (approved), and then only step by step
+        const allowedFrom = {
+            preparing: ["approved", "preparing"],
+            ready_for_pickup: ["approved", "preparing", "ready_for_pickup"],
+        };
+        if (allowedFrom[status] && !allowedFrom[status].includes(request.status)) {
+            return handleResponse(res, 400, ["quoted", "negotiating", "assigned"].includes(request.status)
+                ? "The rate is not agreed yet. Please wait for approval or reply to the admin's offer first."
+                : "This step is not possible for the request's current status.");
         }
 
         // Goods can only be handed over once they have been packed and marked ready
@@ -465,6 +535,21 @@ export const adminUpdateProcurementRequest = async (req, res) => {
         // Remember the vendor before this update so we can tell a new assignment from an update
         const previousVendorId = request.assignedVendorId ? String(request.assignedVendorId) : null;
 
+        // Approving with a different rate or quantity is not an approval: it goes to the vendor
+        // as a new offer, and work starts only after the vendor accepts it.
+        let effectiveStatus = status;
+        let sentOffer = false;
+        const vendorTotalBefore = request.totalQuotedAmount || 0;
+        if (status === "approved") {
+            if (request.status === "negotiating") {
+                return handleResponse(res, 400, "Waiting for the vendor to reply to your last offer.");
+            }
+            if (Array.isArray(editedItems) && adminChangedOffer(request, editedItems)) {
+                effectiveStatus = "negotiating";
+                sentOffer = true;
+            }
+        }
+
         // Handle Item Edits by Admin (Price/Qty)
         if (editedItems && Array.isArray(editedItems)) {
             request.items.forEach(reqItem => {
@@ -525,15 +610,33 @@ export const adminUpdateProcurementRequest = async (req, res) => {
                 console.log(`Request ${requestId} saved. Assigned Vendor: ${request.assignedVendorId}`);
             }
         } else {
-            if (status) request.status = status;
+            if (effectiveStatus) request.status = effectiveStatus;
             if (vendorId) request.assignedVendorId = vendorId;
             if (adminId) request.adminId = adminId;
+            if (status === "approved") {
+                request.awaitingFrom = sentOffer ? "vendor" : null;
+                recordOffer(request, {
+                    by: "admin",
+                    byName: req.masteradmin?.fullName || "Admin",
+                    action: sentOffer ? "counter" : "accept",
+                    note: req.body?.note,
+                });
+            } else if (status === "rejected") {
+                request.awaitingFrom = null;
+            }
             await request.save();
             console.log(`Request ${requestId} saved. Assigned Vendor: ${request.assignedVendorId}`);
         }
 
         // Notify Vendor
-        if (requestToAssign.assignedVendorId) {
+        if (sentOffer && requestToAssign.assignedVendorId) {
+            notifyVendor(requestToAssign.assignedVendorId, {
+                requestId: requestToAssign._id,
+                status: "negotiating",
+                title: "New Rate Offered",
+                body: `Admin offered ${money(requestToAssign.totalQuotedAmount)} instead of your ${money(vendorTotalBefore)} for stock request ${refOf(requestToAssign._id)}. Please accept it, send your rate, or decline.`,
+            });
+        } else if (requestToAssign.assignedVendorId) {
             // New when the vendor was just assigned (or changed), including split-off requests
             const isNew = requestToAssign !== request || previousVendorId !== String(requestToAssign.assignedVendorId);
             const eventName = isNew ? "new_assignment" : "procurement_update";
@@ -571,9 +674,11 @@ export const adminUpdateProcurementRequest = async (req, res) => {
                         status: newOrderStatus,
                         updatedAt: new Date(),
                         updatedBy: 'admin',
-                        message: isRejected 
+                        message: isRejected
                             ? 'Procurement quotation rejected by Admin. Re-procurement required.'
-                            : (status === 'assigned' ? 'Vendor assigned for out-of-stock items.' : `Procurement order ${status}.`)
+                            : sentOffer
+                                ? 'Admin offered the vendor a different rate; waiting for the vendor to reply.'
+                                : (status === 'assigned' ? 'Vendor assigned for out-of-stock items.' : `Procurement order ${status}.`)
                     }
                 }
             }, { new: true });
@@ -1459,3 +1564,75 @@ export const getRejectedStockReport = async (req, res) => {
         return handleResponse(res, 500, "Server error: " + error.message);
     }
 };
+
+/**
+ * Vendor's reply to a rate the admin offered.
+ * POST /procurement/vendor/:requestId/offer/accept   → rate agreed, request approved
+ * POST /procurement/vendor/:requestId/offer/decline  → vendor keeps their last rate; back to admin
+ * (To offer a different rate instead, the vendor sends a new quote: that is a counter-offer.)
+ */
+const respondToOffer = (decision) => async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(requestId)) return handleResponse(res, 400, "Invalid request ID format");
+        const request = await ProcurementRequest.findById(requestId);
+        if (!request) return handleResponse(res, 404, "Request not found");
+        if (String(request.assignedVendorId || "") !== String(req.vendor._id)) {
+            return handleResponse(res, 403, "Not authorized to update this request");
+        }
+        if (request.status !== "negotiating") {
+            return handleResponse(res, 400, "There is no rate offer waiting for your reply.");
+        }
+
+        const note = String(req.body?.note || "").slice(0, 300);
+        const vendorName = req.vendor.fullName || "The vendor";
+        let total;
+
+        if (decision === "accept") {
+            request.status = "approved";
+            request.awaitingFrom = null;
+            total = recordOffer(request, { by: "vendor", byName: vendorName, action: "accept", note });
+            request.totalQuotedAmount = total;
+            await request.save();
+            await notifyAdmin(request, {
+                title: "Vendor Accepted Your Rate",
+                message: `${vendorName} accepted ${money(total)} for stock request ${refOf(request._id)}. They can start packing now.`,
+                amount: total,
+            });
+            await addOrderNote(request, "vendor", "Vendor accepted the admin's rate; procurement approved.");
+            return handleResponse(res, 200, "Rate accepted. You can start packing.", request);
+        }
+
+        // Decline: put back the vendor's last offered rates and quantities and hand it to the admin
+        const last = lastVendorOffer(request);
+        if (last) {
+            for (const item of request.items) {
+                const mine = last.items.find((i) => String(i.productId) === String(item.productId));
+                if (mine) {
+                    item.quotedPrice = mine.price;
+                    item.originalQuotedPrice = mine.price;
+                    item.quantity = mine.quantity;
+                }
+            }
+        }
+        request.status = "quoted";
+        request.awaitingFrom = "admin";
+        total = recordOffer(request, { by: "vendor", byName: vendorName, action: "decline", note });
+        request.totalQuotedAmount = total;
+        request.vendorQuoteTotal = total;
+        await request.save();
+        await notifyAdmin(request, {
+            title: "Vendor Declined Your Rate",
+            message: `${vendorName} did not accept your rate for stock request ${refOf(request._id)}; their rate stays ${money(total)}.${note ? ` Note: ${note}` : ""}`,
+            amount: total,
+        });
+        await addOrderNote(request, "vendor", "Vendor declined the admin's rate and kept their own.");
+        return handleResponse(res, 200, "You declined the offer. The admin will see your rate.", request);
+    } catch (error) {
+        console.error(`Vendor ${decision} offer error:`, error);
+        return handleResponse(res, 500, "Server error");
+    }
+};
+
+export const vendorAcceptOffer = respondToOffer("accept");
+export const vendorDeclineOffer = respondToOffer("decline");

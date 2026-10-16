@@ -54,7 +54,8 @@ const procurementRequestSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["pending_assignment", "assigned", "quoted", "approved", "preparing", "ready_for_pickup", "picked_up", "completed", "rejected"],
+        // "negotiating" = admin offered a different rate; waiting for the vendor to accept, counter or decline
+        enum: ["pending_assignment", "assigned", "quoted", "negotiating", "approved", "preparing", "ready_for_pickup", "picked_up", "completed", "rejected"],
         default: "pending_assignment",
     },
     assignedVendorId: {
@@ -66,6 +67,32 @@ const procurementRequestSchema = new mongoose.Schema({
         ref: "User", // Assuming MasterAdmin is a User
         default: null,
     },
+    // Rate bargaining between admin and vendor: every offer in order (quote, counter, accept, decline)
+    offers: {
+        type: [
+            {
+                by: { type: String, enum: ["vendor", "admin"], required: true },
+                byName: { type: String, default: "" },
+                action: { type: String, enum: ["quote", "counter", "accept", "decline"], required: true },
+                items: [
+                    {
+                        productId: String,
+                        name: String,
+                        unit: String,
+                        quantity: Number,
+                        price: Number,
+                        _id: false,
+                    },
+                ],
+                total: { type: Number, default: 0 },
+                note: { type: String, default: "" },
+                at: { type: Date, default: Date.now },
+            },
+        ],
+        default: [],
+    },
+    // Whose reply the bargaining is waiting for (null when nothing is pending)
+    awaitingFrom: { type: String, enum: ["vendor", "admin", null], default: null },
     actualWeight: {
         type: Number,
         default: 0

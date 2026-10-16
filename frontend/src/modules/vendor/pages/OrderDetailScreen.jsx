@@ -30,6 +30,9 @@ import { useOrders } from '@/modules/user/contexts/OrderContext';
 // import { useProcurement } from '@/modules/franchise/contexts/ProcurementContext';
 import DocumentViewer from '../components/documents/DocumentViewer';
 import VendorBackBar from '../components/navigation/VendorBackBar';
+import OfferHistory from '@/components/procurement/OfferHistory';
+
+const inr = (n) => `₹${(Math.round(Number(n || 0) * 100) / 100).toLocaleString('en-IN')}`;
 
 export default function OrderDetailScreen() {
     const { id } = useParams();
@@ -48,6 +51,10 @@ export default function OrderDetailScreen() {
     const submitQuotation = async () => { };
     const updateRequestStatus = async () => { };
     const [quotedItems, setQuotedItems] = useState([]);
+    // Replying to an admin's rate offer: counter mode lets the vendor type their own rates
+    const [counterMode, setCounterMode] = useState(false);
+    const [replyNote, setReplyNote] = useState('');
+    const [reloadKey, setReloadKey] = useState(0);
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -100,10 +107,10 @@ export default function OrderDetailScreen() {
                 })));
             }
             setIsLoading(false);
-        } else {
-            fetchOrder();
         }
-    }, [id, location.state]);
+        // Always load the latest copy too (rate offers and their history live on the server)
+        fetchOrder();
+    }, [id, location.state, reloadKey]);
 
     // Socket listener for rejections
     useEffect(() => {
@@ -162,14 +169,40 @@ export default function OrderDetailScreen() {
     const handleQuotationSubmit = async () => {
         setIsActionLoading(true);
         try {
-            const response = await api.post(`/procurement/vendor/${id}/quote`, { items: quotedItems });
+            const isCounter = status === 'negotiating';
+            const response = await api.post(`/procurement/vendor/${id}/quote`, { items: quotedItems, note: replyNote });
             if (response.data.success) {
+                if (isCounter) {
+                    toast.success('Your rate has been sent to the admin');
+                    setCounterMode(false);
+                    setReplyNote('');
+                    setReloadKey((k) => k + 1);
+                    return;
+                }
                 setStatus('quoted');
                 navigate('/vendor/orders');
             }
         } catch (error) {
             console.error("Failed to submit quotation", error);
             toast.error(error.response?.data?.message || "Could not submit the quotation");
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    // Accept or decline the admin's rate offer
+    const replyToOffer = async (decision) => {
+        setIsActionLoading(true);
+        try {
+            const response = await api.post(`/procurement/vendor/${id}/offer/${decision}`, { note: replyNote });
+            if (response.data.success) {
+                toast.success(response.data.message || (decision === 'accept' ? 'Rate accepted' : 'Offer declined'));
+                setReplyNote('');
+                setCounterMode(false);
+                setReloadKey((k) => k + 1);
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not send your reply');
         } finally {
             setIsActionLoading(false);
         }
@@ -220,9 +253,16 @@ export default function OrderDetailScreen() {
     const getActiveStepId = (s) => {
         const lowerS = s?.toLowerCase();
         if (lowerS === 'new') return 'approved';
-        if (lowerS === 'bidding') return 'quoted';
+        if (lowerS === 'bidding' || lowerS === 'negotiating') return 'quoted';
         return lowerS;
     };
+
+    // Rate offer from the admin (when status is "negotiating")
+    const offers = order.offers || [];
+    const isNegotiating = status === 'negotiating';
+    const adminOffer = [...offers].reverse().find((o) => o.by === 'admin' && o.action === 'counter');
+    const myLastOffer = [...offers].reverse().find((o) => o.by === 'vendor' && (o.action === 'quote' || o.action === 'counter'));
+    const canEditRates = status === 'requested' || status === 'assigned' || status === 'quoted' || (isNegotiating && counterMode);
 
     const currentStepIndex = steps.findIndex(s => s.id === getActiveStepId(order.status === 'completed' ? 'completed' : order.status));
 
@@ -246,18 +286,71 @@ export default function OrderDetailScreen() {
                                         status === 'accepted' || status === 'ready' || status === 'ready_for_pickup' || status === 'picked_up' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                                             "bg-slate-50 text-slate-400 border-slate-100"
                             )}>
-                                {status?.replace(/_/g, ' ')}
+                                {isNegotiating ? 'New rate offered' : status?.replace(/_/g, ' ')}
                             </div>
                         </div>
                     </div>
                 </div>
             </header>
 
+            {/* Admin offered a different rate: accept, send own rate, or decline */}
+            {isNegotiating && adminOffer && (
+                <div className="bg-orange-50 border-2 border-orange-200 rounded-[28px] p-5 sm:p-6 space-y-4">
+                    <div>
+                        <h4 className="text-base font-black text-slate-900">Admin offered a different rate</h4>
+                        <p className="text-[12px] text-slate-600 mt-0.5">
+                            Work starts only after you agree. You can accept this rate, send your own rate, or decline and keep your rate.
+                        </p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-orange-100 divide-y divide-slate-100">
+                        {adminOffer.items.map((it) => {
+                            const mine = myLastOffer?.items?.find((m) => m.productId === it.productId);
+                            const priceDiff = mine ? Number(it.price) - Number(mine.price) : 0;
+                            return (
+                                <div key={it.productId} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">{it.name}</p>
+                                        <p className="text-[11px] text-slate-500">
+                                            {mine && Number(mine.quantity) !== Number(it.quantity)
+                                                ? <>Quantity <s>{mine.quantity}</s> → <b className="text-slate-800">{it.quantity} {it.unit}</b></>
+                                                : <>{it.quantity} {it.unit}</>}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[12px] text-slate-500 tabular-nums">Your rate {inr(mine?.price)}/{it.unit}</p>
+                                        <p className={cn('text-sm font-black tabular-nums', priceDiff < 0 ? 'text-rose-600' : priceDiff > 0 ? 'text-emerald-700' : 'text-slate-900')}>
+                                            Offer {inr(it.price)}/{it.unit}
+                                            {priceDiff !== 0 && <span className="ml-1 text-[11px] font-bold">({priceDiff > 0 ? '+' : '−'}{inr(Math.abs(priceDiff))})</span>}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="text-[12px] text-slate-600">Your total {inr(myLastOffer?.total)}</span>
+                        <span className="text-lg font-black text-slate-900 tabular-nums">Offered total {inr(adminOffer.total)}</span>
+                    </div>
+                    {adminOffer.note && <p className="text-[12px] text-slate-700 bg-white rounded-xl px-3 py-2 border border-orange-100">Admin's note: “{adminOffer.note}”</p>}
+                    <textarea
+                        value={replyNote}
+                        onChange={(e) => setReplyNote(e.target.value)}
+                        rows={2}
+                        maxLength={300}
+                        placeholder="Add a note for the admin (optional)"
+                        className="w-full rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400"
+                    />
+                    {counterMode && (
+                        <p className="text-[12px] font-semibold text-orange-800">Type your rates in the item list below, then tap “Send my rate”.</p>
+                    )}
+                </div>
+            )}
+
 
 
             {/* Price Bidding UI */}
             <AnimatePresence>
-                {(status === 'requested' || status === 'quoted' || status === 'assigned') && (
+                {(status === 'requested' || status === 'quoted' || status === 'assigned' || (isNegotiating && counterMode)) && (
                     <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -381,7 +474,7 @@ export default function OrderDetailScreen() {
                                             </div>
                                         </div>
                                     </div>
-                                    {status === 'requested' || status === 'assigned' || status === 'quoted' ? (
+                                    {canEditRates ? (
                                         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus-within:border-primary transition-all shadow-sm">
                                             <span className="text-[11px] font-black text-slate-400">₹</span>
                                             <input
@@ -461,6 +554,12 @@ export default function OrderDetailScreen() {
                 </div>
             </div>
 
+            <OfferHistory offers={offers} viewer="vendor" />
+
+            {(status === 'quoted') && offers.length > 0 && (
+                <p className="text-[12px] text-slate-500 text-center">Waiting for the admin to reply to your rate.</p>
+            )}
+
             {/* Sticky Action Footer */}
             <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-2xl border-t border-slate-100 lg:left-64 flex gap-4 z-[100] shadow-[0_-20px_50px_-20px_rgba(0,0,0,0.1)]">
                 <AnimatePresence mode="wait">
@@ -488,6 +587,51 @@ export default function OrderDetailScreen() {
                     )}
 
                     {/* status === 'quoted' indicator removed because we now show the update button instead */}
+
+                    {isNegotiating && !counterMode && (
+                        <motion.div key="action-offer" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 grid grid-cols-3 gap-2 sm:gap-3">
+                            <button
+                                onClick={() => replyToOffer('decline')}
+                                disabled={isActionLoading}
+                                className="py-4 rounded-[20px] border-2 border-slate-200 text-slate-600 font-black text-xs sm:text-sm active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                Decline
+                            </button>
+                            <button
+                                onClick={() => setCounterMode(true)}
+                                disabled={isActionLoading}
+                                className="py-4 rounded-[20px] border-2 border-orange-300 bg-orange-50 text-orange-800 font-black text-xs sm:text-sm active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                Send my rate
+                            </button>
+                            <button
+                                onClick={() => replyToOffer('accept')}
+                                disabled={isActionLoading}
+                                className="py-4 rounded-[20px] bg-emerald-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-xl shadow-emerald-100 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {isActionLoading ? <Loader2 className="animate-spin" size={18} /> : <>Accept {inr(adminOffer?.total)}</>}
+                            </button>
+                        </motion.div>
+                    )}
+
+                    {isNegotiating && counterMode && (
+                        <motion.div key="action-counter" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex gap-3">
+                            <button
+                                onClick={() => { setCounterMode(false); setReloadKey((k) => k + 1); }}
+                                disabled={isActionLoading}
+                                className="flex-1 py-4 rounded-[20px] border-2 border-slate-200 text-slate-600 font-black text-sm active:scale-95 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleQuotationSubmit}
+                                disabled={isActionLoading || quotedItems.some(item => !item.quotedPrice)}
+                                className="flex-[2] bg-slate-900 text-white py-4 rounded-[20px] font-black text-sm flex items-center justify-center gap-2 shadow-2xl shadow-slate-200 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {isActionLoading ? <Loader2 className="animate-spin" size={18} /> : <>Send my rate · {inr(bidPrice)}</>}
+                            </button>
+                        </motion.div>
+                    )}
 
                     {status === 'approved' && (
                         <motion.div

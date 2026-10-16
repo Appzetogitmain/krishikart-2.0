@@ -28,6 +28,14 @@ const VendorStatusAlert = () => {
                     icon: <ClipboardCheck className="w-10 h-10 animate-pulse" />,
                     title: 'Quote Approved!'
                 };
+            case 'negotiating':
+                return {
+                    color: 'text-orange-600',
+                    bgColor: 'bg-orange-50',
+                    accentColor: 'bg-orange-500',
+                    icon: <ClipboardCheck className="w-10 h-10" />,
+                    title: 'New Rate Offered'
+                };
             case 'ready_for_pickup':
                 return {
                     color: 'text-amber-600',
@@ -138,7 +146,9 @@ const VendorStatusAlert = () => {
                                 type="button"
                                 onClick={() => {
                                     setIsStatusAlertOpen(false);
-                                    if (status === 'approved' || status === 'preparing') {
+                                    if (status === 'negotiating' && requestId) {
+                                        navigate(`/vendor/orders/${requestId}`);
+                                    } else if (status === 'approved' || status === 'preparing') {
                                         navigate(`/vendor/dispatch`);
                                     } else {
                                         navigate(`/vendor/orders`);

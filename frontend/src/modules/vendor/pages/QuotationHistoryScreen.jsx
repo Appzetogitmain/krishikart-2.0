@@ -42,7 +42,7 @@ export default function QuotationHistoryScreen() {
                 if (response.data.success) {
                     // Filter for requests that have at least been quoted
                     const quotedOnly = response.data.results.filter(req => 
-                        ['quoted', 'approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed', 'rejected'].includes(req.status)
+                        ['quoted', 'negotiating', 'approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed', 'rejected'].includes(req.status)
                     );
                     setProcurementRequests(quotedOnly);
                 }
@@ -57,7 +57,7 @@ export default function QuotationHistoryScreen() {
 
     const filteredOrders = procurementRequests.filter(order => {
         const matchesTab = activeTab === 'All' || 
-            (activeTab === 'Quoted' && order.status === 'quoted') ||
+            (activeTab === 'Quoted' && (order.status === 'quoted' || order.status === 'negotiating')) ||
             (activeTab === 'Approved' && ['approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed'].includes(order.status)) ||
             (activeTab === 'Rejected' && order.status === 'rejected');
 
@@ -139,6 +139,7 @@ export default function QuotationHistoryScreen() {
 
     const statusColors = {
         'quoted': "bg-amber-50 text-amber-600 border-amber-100",
+        'negotiating': "bg-orange-100 text-orange-700 border-orange-200",
         'approved': "bg-emerald-50 text-emerald-600 border-emerald-100",
         'preparing': "bg-emerald-50 text-emerald-600 border-emerald-100",
         'ready_for_pickup': "bg-emerald-50 text-emerald-600 border-emerald-100",
@@ -234,7 +235,7 @@ export default function QuotationHistoryScreen() {
                                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
                                             statusColors[order.status] || "bg-slate-50 text-slate-400 border-slate-100"
                                         )}>
-                                            {isApproved ? 'Approved' : order.status}
+                                            {isApproved ? 'Approved' : order.status === 'negotiating' ? 'New rate offered' : order.status}
                                         </div>
                                     </div>
 
