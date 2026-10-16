@@ -28,6 +28,15 @@ import {
 } from "../utils/gstFranchiseKyc.js";
 import { geocodeAddress } from "../utils/geo.js";
 import { loadZones, cityKeyOf } from "../utils/pricing.js";
+import {
+  vendorInScope,
+  franchiseInScope,
+  customerIdsInScope,
+  deliveryIdsInScope,
+  toObjectIds,
+  orderScopeMatch,
+  franchiseScopeMatch,
+} from "../utils/adminScope.js";
 import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import FAQ from "../models/faq.js";
 import { syncInventoryToAssignedProducts } from "../utils/vendorInventorySync.js";
@@ -205,6 +214,10 @@ export const createVendorByAdmin = async (req, res) => {
         400,
         "fullName, email, mobile, and farmLocation are required",
       );
+    }
+    // City admins can add vendors only in their own cities
+    if (req.cityScope && !vendorInScope(req.cityScope, { farmLocation })) {
+      return handleResponse(res, 403, "You can only add vendors in your own city.");
     }
 
     if (!/^[6-9]\d{9}$/.test(String(mobile))) {
@@ -777,6 +790,10 @@ export const createFranchiseByAdmin = async (req, res) => {
         "franchiseName, ownerName, mobile, city and state are required",
       );
     }
+    // City admins can add franchises only in their own cities
+    if (req.cityScope && !franchiseInScope(req.cityScope, { city })) {
+      return handleResponse(res, 403, "You can only add franchises in your own city.");
+    }
 
     if (!/^[6-9]\d{9}$/.test(String(mobile))) {
       return handleResponse(res, 400, "Invalid mobile number");
@@ -1133,6 +1150,8 @@ export const getAllCustomers = async (req, res) => {
       const search = String(req.query.search || "").trim();
 
       const filter = {};
+      // City admins: only customers who ordered in (or saved an address in) their cities
+      if (req.cityScope) filter._id = { $in: toObjectIds(await customerIdsInScope(req.cityScope)) };
       if (search) {
         const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const rx = new RegExp(escaped, "i");
@@ -1158,7 +1177,9 @@ export const getAllCustomers = async (req, res) => {
       });
     }
 
-    const customers = await User.find()
+    const customers = await User.find(
+      req.cityScope ? { _id: { $in: toObjectIds(await customerIdsInScope(req.cityScope)) } } : {},
+    )
       .select("-password -otp -otpExpiresAt")
       .sort({ updatedAt: -1 });
 
@@ -2168,6 +2189,9 @@ export const getAllReturnRequests = async (req, res) => {
 
 export const getAdminDashboardStats = async (req, res) => {
   try {
+    // City admins see only their cities (franchise-linked orders); head office sees everything
+    const scope = req.cityScope || null;
+    const om = franchiseScopeMatch(scope);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -2185,20 +2209,25 @@ export const getAdminDashboardStats = async (req, res) => {
       revenueToday,
       revenueYesterday,
     ] = await Promise.all([
-      Order.countDocuments({ createdAt: { $gte: today } }),
-      Order.countDocuments({ createdAt: { $gte: yesterday, $lt: today } }),
-      Vendor.countDocuments({ status: "active" }),
-      Franchise.countDocuments({ status: "active" }),
+      Order.countDocuments({ ...om, createdAt: { $gte: today } }),
+      Order.countDocuments({ ...om, createdAt: { $gte: yesterday, $lt: today } }),
+      scope
+        ? Vendor.find({ status: "active" }).select("farmLocation").lean().then((vs) => vs.filter((v) => vendorInScope(scope, v)).length)
+        : Vendor.countDocuments({ status: "active" }),
+      Franchise.countDocuments({ status: "active", ...franchiseScopeMatch(scope, "_id") }),
       Order.countDocuments({
+        ...om,
         orderStatus: { $in: ["Placed", "Procuring", "Packed", "Dispatched"] },
       }),
       Order.countDocuments({
+        ...om,
         isPreOrder: true,
         orderStatus: { $nin: ["Delivered", "Cancelled"] },
       }),
       Order.aggregate([
         {
           $match: {
+            ...om,
             createdAt: { $gte: today },
             orderStatus: { $ne: "Cancelled" },
           },
@@ -2208,6 +2237,7 @@ export const getAdminDashboardStats = async (req, res) => {
       Order.aggregate([
         {
           $match: {
+            ...om,
             createdAt: { $gte: yesterday, $lt: today },
             orderStatus: { $ne: "Cancelled" },
           },
@@ -2279,8 +2309,9 @@ export const getAdminDashboardStats = async (req, res) => {
         nextDay.setDate(nextDay.getDate() + 1);
 
         const [orders, fulfilled] = await Promise.all([
-          Order.countDocuments({ createdAt: { $gte: date, $lt: nextDay } }),
+          Order.countDocuments({ ...om, createdAt: { $gte: date, $lt: nextDay } }),
           Order.countDocuments({
+        ...om,
             createdAt: { $gte: date, $lt: nextDay },
             orderStatus: { $in: ["Delivered", "Received"] },
           }),
@@ -2303,6 +2334,7 @@ export const getAdminDashboardStats = async (req, res) => {
         const rev = await Order.aggregate([
           {
             $match: {
+            ...om,
               createdAt: { $gte: date, $lt: nextDay },
               orderStatus: { $ne: "Cancelled" },
             },
@@ -2318,7 +2350,8 @@ export const getAdminDashboardStats = async (req, res) => {
     );
 
     // 4. Recent Settlements (Using COD Remittances)
-    const recentRemittances = await DeliveryCodRemittance.find()
+    // Cash deposits are head-office money: not shown to city admins
+    const recentRemittances = scope ? [] : await DeliveryCodRemittance.find()
       .populate("deliveryPartnerId", "fullName")
       .sort({ createdAt: -1 })
       .limit(100);
@@ -2656,12 +2689,12 @@ export const globalSearch = async (req, res) => {
         ],
       })
         .limit(5)
-        .select("_id orderStatus totalAmount createdAt"),
+        .select("_id orderStatus totalAmount createdAt franchiseId shippingLocation.city"),
       Vendor.find({
         $or: [{ fullName: regex }, { email: regex }, { mobile: regex }],
       })
         .limit(5)
-        .select("fullName email mobile profilePicture"),
+        .select("fullName email mobile profilePicture farmLocation"),
       Franchise.find({
         $or: [
           { franchiseName: regex },

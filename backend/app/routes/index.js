@@ -15,12 +15,15 @@ import reportRoutes from "../../app/routes/reports.js";
 import auditLogRoutes from "../../app/routes/auditLogs.js";
 import cityRatesRoutes from "../../app/routes/cityRates.js";
 import auditTrail from "../utils/auditTrail.js";
+import cityScopeGuard from "../utils/cityScopeGuard.js";
 
 const setupRoutes = (app) => {
     const apiRouter = express.Router();
 
     // Records who changed what (staff and partners only); must run before the routes
     apiRouter.use(auditTrail);
+    // City admins (team members with city codes) only see and change their own cities
+    apiRouter.use(cityScopeGuard);
 
     apiRouter.use("/masteradmin/audit-logs", auditLogRoutes);
     apiRouter.use("/masteradmin/city-rates", cityRatesRoutes);

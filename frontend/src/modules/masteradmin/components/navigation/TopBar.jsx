@@ -42,7 +42,7 @@ const formatNotificationTime = (createdAt) => {
 
 export default function TopBar() {
   const navigate = useNavigate();
-  const { admin, logout } = useMasterAdminAuth();
+  const { admin, logout, isCityAdmin, cityCodes } = useMasterAdminAuth();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -438,7 +438,7 @@ export default function TopBar() {
                 {admin?.fullName || "Administrator"}
               </p>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                {admin?.role?.replace("_", " ") || "Admin"}
+                {isCityAdmin ? `City admin · ${cityCodes.join(", ")}` : admin?.role?.replace("_", " ") || "Admin"}
               </p>
             </div>
             <div className="w-8 h-8 rounded-sm bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 hover:border-slate-900 transition-colors overflow-hidden">

@@ -7,6 +7,9 @@ import { toast } from 'sonner';
 
 const MasterAdminAuthContext = createContext();
 
+/** Pages kept with the head office (money, global catalogue and settings, team, activity log). */
+const HEAD_OFFICE_ONLY = ['franchise-payouts', 'cod-remittance', 'settings', 'products', 'categories', 'campaigns', 'coupons', 'loyalty', 'audit-logs', 'commission', 'delivery-constraints', 'superadmin'];
+
 export function MasterAdminAuthProvider({ children }) {
     const [admin, setAdmin] = useState(() => {
         const savedData = localStorage.getItem('masterAdminData');
@@ -122,6 +125,9 @@ export function MasterAdminAuthProvider({ children }) {
         }
     }, [admin, playNotificationSound]);
 
+    // Team members with city codes work only on those cities
+    const isCityAdmin = admin?.role?.toLowerCase() === 'subadmin' && (admin?.priceZoneCodes || []).length > 0;
+
     const hasPermission = (permissionKey) => {
         if (!admin) return false;
 
@@ -134,6 +140,8 @@ export function MasterAdminAuthProvider({ children }) {
 
         // Role-based permission check
         if (role === 'subadmin') {
+            // City admins (with city codes) never get head-office pages, whatever is ticked
+            if (isCityAdmin && HEAD_OFFICE_ONLY.includes(permissionKey)) return false;
             const perms = admin.permissions || [];
             return perms.includes(permissionKey);
         }
@@ -144,6 +152,8 @@ export function MasterAdminAuthProvider({ children }) {
     return (
         <MasterAdminAuthContext.Provider value={{
             admin,
+            isCityAdmin,
+            cityCodes: admin?.priceZoneCodes || [],
             loginSuccess,
             logout,
             isAuthenticated: !!admin,

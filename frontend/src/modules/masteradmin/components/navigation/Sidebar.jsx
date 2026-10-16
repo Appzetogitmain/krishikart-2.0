@@ -48,7 +48,7 @@ import { useMasterAdminAuth } from "../../contexts/MasterAdminAuthContext";
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const navigate = useNavigate();
-  const { logout, hasPermission, isSuperAdmin } = useMasterAdminAuth();
+  const { logout, hasPermission, isSuperAdmin, isCityAdmin } = useMasterAdminAuth();
   const location = useLocation();
   const [expandedMenu, setExpandedMenu] = useState(null);
 
@@ -116,6 +116,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           label: "Credit Management",
           path: "/masteradmin/credit",
           permissionKey: "credit",
+          headOfficeOnly: true, // customer credit is money: main admin / head office only
         },
         {
           icon: Landmark,
@@ -341,6 +342,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
       ...group,
       items: group.items.filter((item) => {
         if (item.permissionKey === "superadmin") return isSuperAdmin;
+        if (item.headOfficeOnly && isCityAdmin) return false;
         return hasPermission(item.permissionKey);
       }),
     }))

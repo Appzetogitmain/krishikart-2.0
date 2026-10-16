@@ -557,10 +557,10 @@ export default function TeamManagementScreen() {
                                 {/* City codes for City Rates */}
                                 <section className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.15em]">City codes for rates</h3>
+                                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.15em]">City (for city admins)</h3>
                                         <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{(formData.priceZoneCodes || []).length} Selected</span>
                                     </div>
-                                    <p className="text-[11px] text-slate-500">This person can set rates only for the cities picked here (needs the City Rates permission above).</p>
+                                    <p className="text-[11px] text-slate-500">Pick a city to make this person a <b>city admin</b>: they will see and manage only that city (orders, stores, stock, vendors, delivery partners, customers, rates). Money, products, coupons and settings stay with the main admin. Leave empty for head-office staff who work on all cities.</p>
                                     {cityCodes.length === 0 ? (
                                         <p className="text-[11px] text-amber-700 bg-amber-50 rounded-sm px-3 py-2">No city codes yet. Create them on the City Rates page.</p>
                                     ) : (

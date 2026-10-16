@@ -12,6 +12,7 @@ import ProcurementRequest from "../models/procurementRequest.js";
 import DeliveryCodRemittance from "../models/deliveryCodRemittance.js";
 import FranchiseAdminPayout from "../models/franchiseAdminPayout.js";
 import handleResponse from "../utils/helper.js";
+import { franchiseScopeMatch, customerIdsInScope, toObjectIds } from "../utils/adminScope.js";
 import { getISTDayKey, istDayKeyToDate } from "../utils/deliverySchedule.js";
 
 /**
@@ -206,16 +207,20 @@ const STATUS_LABEL = {
 
 /* ===================================================================== */
 
-async function buildAdminReport(range) {
-    const f = await orderFigures({}, range);
+async function buildAdminReport(range, scope = null) {
+    // City admins: only their cities' franchises; head office: everything
+    const f = await orderFigures(franchiseScopeMatch(scope), range);
     const t = f.totals[0] || {};
     const franchiseNames = await nameMap(Franchise, f.byFranchise.map((r) => r._id), "franchiseName");
 
     const [newCustomers, procurement, payouts, codOrders] = await Promise.all([
-        User.countDocuments({ createdAt: inRange(range) }),
-        ProcurementRequest.find({ createdAt: inRange(range) }).lean(),
-        FranchiseAdminPayout.find({ paidAt: inRange(range) }).lean(),
-        Order.find({ paymentMethod: "COD", "codTracking.isCollected": true, "codTracking.collectedAt": inRange(range) })
+        scope
+            ? User.countDocuments({ createdAt: inRange(range), _id: { $in: toObjectIds(await customerIdsInScope(scope)) } })
+            : User.countDocuments({ createdAt: inRange(range) }),
+        ProcurementRequest.find({ createdAt: inRange(range), ...franchiseScopeMatch(scope) }).lean(),
+        // Franchise payouts are head-office money
+        scope ? [] : FranchiseAdminPayout.find({ paidAt: inRange(range) }).lean(),
+        Order.find({ paymentMethod: "COD", "codTracking.isCollected": true, "codTracking.collectedAt": inRange(range), ...franchiseScopeMatch(scope) })
             .select("codTracking totalAmount").lean(),
     ]);
 
@@ -644,7 +649,7 @@ async function buildDeliveryReport(range, deliveryId) {
 async function buildReport(role, req) {
     const range = parseRange(req.query);
     let report;
-    if (role === "admin") report = await buildAdminReport(range);
+    if (role === "admin") report = await buildAdminReport(range, req.cityScope || null);
     else if (role === "franchise") report = await buildFranchiseReport(range, req.franchise._id);
     else if (role === "vendor") report = await buildVendorReport(range, req.vendor._id);
     else report = await buildDeliveryReport(range, req.delivery._id);
