@@ -50,7 +50,7 @@ export default function OrdersScreen() {
         })); */
 
     const [procurementRequests, setProcurementRequests] = useState([]);
-    const { newAssignmentData } = useVendorAuth();
+    const { newAssignmentData, statusAlertData } = useVendorAuth();
 
     const fetchAssignments = async () => {
         try {
@@ -67,11 +67,23 @@ export default function OrdersScreen() {
         fetchAssignments();
     }, []);
 
+    // Refresh when something changes: a new request, a rate offer or status update from the admin,
+    // or the vendor coming back to this window
     useEffect(() => {
-        if (newAssignmentData) {
+        if (newAssignmentData || statusAlertData) {
             fetchAssignments();
         }
-    }, [newAssignmentData]);
+    }, [newAssignmentData, statusAlertData]);
+
+    useEffect(() => {
+        const onFocus = () => fetchAssignments();
+        window.addEventListener('focus', onFocus);
+        const timer = setInterval(fetchAssignments, 60000);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+            clearInterval(timer);
+        };
+    }, []);
 
     const mappedProcurementRequests = procurementRequests.map(req => ({
         id: req._id,
@@ -209,6 +221,32 @@ export default function OrdersScreen() {
                     </button>
                 </div>
             </header>
+
+            {/* Rate offers from the admin stay here until the vendor accepts, counters or declines */}
+            {allOrders.some((o) => o.status === 'negotiating') && (
+                <div className="rounded-[24px] border-2 border-orange-200 bg-orange-50 p-4 sm:p-5 space-y-3">
+                    <div>
+                        <h2 className="text-sm font-black text-slate-900">Waiting for your reply</h2>
+                        <p className="text-[12px] text-slate-600">The admin offered a different rate. Accept it, send your rate, or decline.</p>
+                    </div>
+                    <div className="space-y-2">
+                        {allOrders.filter((o) => o.status === 'negotiating').map((o) => (
+                            <button
+                                key={o.id}
+                                type="button"
+                                onClick={() => navigate(`/vendor/orders/${o.id}`)}
+                                className="w-full flex items-center justify-between gap-3 rounded-2xl bg-white border border-orange-100 px-4 py-3 text-left hover:border-orange-300 transition-all"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-[12px] font-black text-slate-900 uppercase tracking-widest">#{String(o.id).slice(-6).toUpperCase()}</p>
+                                    <p className="text-[12px] text-slate-500 truncate">{o.franchiseName} · {o.items.map((i) => i.name).join(', ')}</p>
+                                </div>
+                                <span className="shrink-0 px-3 py-1.5 rounded-xl bg-orange-600 text-white text-[11px] font-black">Reply</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <FilterBar
                 categories={tabs}

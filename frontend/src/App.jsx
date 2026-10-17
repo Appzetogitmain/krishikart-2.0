@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react'
+import VersionWatcher from './components/VersionWatcher'
 import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import AppLayout from './modules/user/layouts/AppLayout'
@@ -145,6 +146,7 @@ function App() {
     >
       <HashRouter>
         <Toaster position="top-center" richColors />
+        <VersionWatcher />
         <Suspense fallback={
           <div className="user-app-theme h-screen w-full flex items-center justify-center bg-slate-50">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />

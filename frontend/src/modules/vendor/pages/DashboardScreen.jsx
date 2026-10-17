@@ -374,7 +374,7 @@ export default function DashboardScreen() {
                                         {req.ref}
                                     </div>
                                     <div>
-                                        <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{req.status.replace('_', ' ')}</p>
+                                        <p className={`text-xs font-black uppercase tracking-tight ${req.status === 'negotiating' ? 'text-orange-600' : 'text-slate-900'}`}>{req.status === 'negotiating' ? 'New rate offered · reply' : req.status.replace(/_/g, ' ')}</p>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(req.createdAt).toLocaleDateString()}</p>
                                     </div>
                                 </div>
