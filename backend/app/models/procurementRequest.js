@@ -93,6 +93,24 @@ const procurementRequestSchema = new mongoose.Schema({
     },
     // Whose reply the bargaining is waiting for (null when nothing is pending)
     awaitingFrom: { type: String, enum: ["vendor", "admin", null], default: null },
+    // What happened to the stock when the franchise confirmed receipt (shown on the franchise's Stock page)
+    receiptSummary: {
+        at: Date,
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order", default: null },
+        message: String,
+        lines: [
+            {
+                name: String,
+                unit: String,
+                received: Number,
+                damaged: Number,
+                rejected: Boolean,
+                added: Number, // good stock added to the franchise's inventory
+                usedForOrder: Number, // taken straight away to pack the customer order waiting for it
+                _id: false,
+            },
+        ],
+    },
     actualWeight: {
         type: Number,
         default: 0

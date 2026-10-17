@@ -150,7 +150,11 @@ const ReceivingScreen = () => {
             });
 
             if (response.data.success) {
-                toast.success("Stock received and added to your inventory");
+                // Say exactly what happened to the stock (added, and whether a waiting customer order used it)
+                toast.success("Stock received and added to your inventory", {
+                    description: response.data.message && !/updated successfully/i.test(response.data.message) ? response.data.message : undefined,
+                    duration: 12000,
+                });
 
                 // Refresh live inventory and orders from server
                 refreshInventory();

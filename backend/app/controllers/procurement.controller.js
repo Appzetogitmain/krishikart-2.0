@@ -994,6 +994,11 @@ export const franchiseConfirmReceipt = async (req, res) => {
             });
         }
 
+        // What was added to stock, and what the waiting customer order took straight away (for the receipt summary)
+        const addedByProduct = {};
+        const usedByProduct = {};
+        let packedOrderRef = null;
+
         // Update Franchise Inventory: add only GOOD stock (received minus damaged; rejected items
         // never enter inventory). Each product is changed atomically.
         try {
@@ -1004,7 +1009,10 @@ export const franchiseConfirmReceipt = async (req, res) => {
                 const received = Number(reqItem.receivedQuantity) || 0;
                 const damaged = Number(reqItem.damagedQuantity) || 0;
                 const quantityToAdd = Math.max(0, received - damaged);
-                if (quantityToAdd > 0) await addStock(request.franchiseId, prodId, quantityToAdd);
+                if (quantityToAdd > 0) {
+                    await addStock(request.franchiseId, prodId, quantityToAdd);
+                    addedByProduct[String(prodId)] = quantityToAdd;
+                }
             }
         } catch (invErr) {
             console.error("Critical: Stock sync failed during receipt confirmation:", invErr);
@@ -1102,7 +1110,9 @@ export const franchiseConfirmReceipt = async (req, res) => {
                             for (const item of order.items) {
                                 const pid = item.productId?._id || item.productId;
                                 item.packedQuantity = await takeStockUpTo(franchiseId, pid, Number(item.quantity || 0));
+                                usedByProduct[String(pid)] = item.packedQuantity;
                             }
+                            packedOrderRef = order._id;
                         }
                     } else {
                         // Still shortages remaining (rejected items or short dispatch)
@@ -1125,7 +1135,34 @@ export const franchiseConfirmReceipt = async (req, res) => {
             }
         }
 
-        return handleResponse(res, 200, "Goods received and stock updated successfully", request);
+        // Plain-language summary: added to stock, and how much of it the waiting customer order used
+        let message = "Goods received and stock updated successfully";
+        try {
+            const lines = request.items.map((i) => {
+                const key = String(i.productId);
+                return {
+                    name: i.name,
+                    unit: i.unit,
+                    received: Number(i.receivedQuantity) || 0,
+                    damaged: Number(i.damagedQuantity) || 0,
+                    rejected: i.rejected === true,
+                    added: addedByProduct[key] || 0,
+                    usedForOrder: usedByProduct[key] || 0,
+                };
+            });
+            const parts = lines.filter((l) => l.added > 0 || l.usedForOrder > 0).map((l) => {
+                return l.usedForOrder > 0
+                    ? `${l.name}: ${l.added} ${l.unit} added to stock, ${l.usedForOrder} ${l.unit} used right away to pack order #${String(packedOrderRef).slice(-6).toUpperCase()}`
+                    : `${l.name}: ${l.added} ${l.unit} added to stock`;
+            });
+            if (parts.length) message = parts.join(". ") + ".";
+            request.receiptSummary = { at: new Date(), orderId: packedOrderRef, message, lines };
+            await request.save();
+        } catch (summaryErr) {
+            console.error("Receipt summary failed:", summaryErr);
+        }
+
+        return handleResponse(res, 200, message, request);
     } catch (error) {
         console.error("Franchise confirm receipt error:", error);
         return handleResponse(res, 500, "Server error");

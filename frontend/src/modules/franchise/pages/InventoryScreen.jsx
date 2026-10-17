@@ -22,6 +22,7 @@ import { useInventory } from '../contexts/InventoryContext';
 import { cn } from '@/lib/utils';
 
 import { toast } from 'sonner';
+import api from '@/lib/axios';
 
 // Enterprise Components
 import MetricRow from '../components/cards/MetricRow';
@@ -33,13 +34,32 @@ export default function InventoryScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
     const [isResetting, setIsResetting] = useState(false);
+    // Latest deliveries from vendors and what happened to their stock
+    const [receipts, setReceipts] = useState([]);
+
+    const loadReceipts = async () => {
+        try {
+            const res = await api.get('/procurement/franchise/my-requests');
+            const list = (res.data?.results || res.data?.result || [])
+                .filter((r) => r.receiptSummary?.at)
+                .sort((a, b) => new Date(b.receiptSummary.at) - new Date(a.receiptSummary.at))
+                .slice(0, 5);
+            setReceipts(list);
+        } catch {
+            setReceipts([]);
+        }
+    };
+
+    useEffect(() => {
+        loadReceipts();
+    }, []);
 
     // Reloads the real stock from the server (the old "Reset All" testing button that
     // overwrote every product to 100 units has been removed)
     const handleRefresh = async () => {
         setIsResetting(true);
         try {
-            await refreshInventory();
+            await Promise.all([refreshInventory(), loadReceipts()]);
         } finally {
             setIsResetting(false);
         }
@@ -202,6 +222,38 @@ export default function InventoryScreen() {
                     icon={Zap}
                 />
             </div>
+
+            {receipts.length > 0 && (
+                <div className="bg-white border-b border-slate-200 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Recently received from vendors</p>
+                    <ul className="space-y-1.5">
+                        {receipts.map((r) => {
+                            const s = r.receiptSummary;
+                            const lines = (s.lines || []).filter((l) => l.added > 0 || l.received > 0 || l.rejected);
+                            return (
+                                <li key={r._id} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 text-[12px] text-slate-600 bg-slate-50 border border-slate-100 rounded-sm px-3 py-2">
+                                    <div className="space-y-0.5">
+                                        {lines.map((l, i) => (
+                                            <p key={i}>
+                                                <span className="font-bold text-slate-900">{l.name}</span>{': '}
+                                                {l.rejected
+                                                    ? 'rejected, not added to stock'
+                                                    : <><span className="font-bold text-emerald-700">+{l.added} {l.unit} added to stock</span>
+                                                        {l.damaged > 0 && <span className="text-amber-700">, {l.damaged} damaged</span>}
+                                                        {l.usedForOrder > 0 && <span>, <b>{l.usedForOrder} {l.unit}</b> used right away to pack customer order <b>#{String(s.orderId || '').slice(-6).toUpperCase()}</b></span>}</>}
+                                            </p>
+                                        ))}
+                                    </div>
+                                    <span className="text-[11px] font-bold text-slate-400 shrink-0 tabular-nums">
+                                        {new Date(s.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' })}
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                    <p className="text-[11px] text-slate-400 mt-2">Stock that arrives for a waiting customer order is used for that order straight away, so the number on this page can show 0.</p>
+                </div>
+            )}
 
             <div className="p-px bg-slate-200">
                 {/* Search sits on its own row so it is always visible, however many categories there are */}
