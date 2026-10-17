@@ -51,6 +51,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                 { icon: ShoppingBasket, label: 'Procurement', path: '/franchise/procurement' },
                 ...(franchise?.isMotherFranchise ? [{ icon: Send, label: 'Supply to Franchises', path: '/franchise/supply' }] : []),
                 { icon: Undo2, label: 'Returns', path: '/franchise/returns' },
+                { icon: Undo2, label: 'Return to Supplier', path: '/franchise/stock-returns' },
             ]
         },
         {

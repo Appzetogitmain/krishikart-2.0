@@ -485,6 +485,42 @@ export const AUDIT_RULES = [
         },
     },
 
+    // ── Stock returns (franchise -> vendor / mother franchise) ───────────────
+    {
+        m: "POST", p: "/stock-returns/franchise", module: "Stock Returns", action: "return.create", kind: "create",
+        target: { type: "Stock return", id: R, snap: S.stockReturnSnap }, title: "Store asked to return stock", severity: "important",
+        details: (ctx) => [{ label: "Reason", value: human(B(ctx, "reason")) }, { label: "Note", value: short(B(ctx, "note")) }],
+    },
+    {
+        m: "PUT", p: "/stock-returns/admin/:id/approve", module: "Stock Returns", action: "return.approve", kind: "update",
+        target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Stock return approved", severity: "important",
+        details: async (ctx) => [{
+            label: "Goes to",
+            value: B(ctx, "type") === "vendor" ? await nameOf("Vendor", B(ctx, "vendorId"), "fullName") : await nameOf("Franchise", B(ctx, "franchiseId"), "franchiseName"),
+        }],
+    },
+    {
+        m: "PUT", p: "/stock-returns/admin/:id/reject", module: "Stock Returns", action: "return.reject", kind: "update",
+        target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Stock return rejected",
+        details: (ctx) => [{ label: "Reason", value: short(B(ctx, "reason")) }],
+    },
+    {
+        m: "PUT", p: "/stock-returns/franchise/:id/sent", module: "Stock Returns", action: "return.sent", kind: "update",
+        target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Returned stock sent", severity: "important",
+    },
+    {
+        m: "PUT", p: "/stock-returns/franchise/:id/received", module: "Stock Returns", action: "return.received", kind: "update",
+        target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Returned stock received by mother franchise", severity: "important",
+    },
+    {
+        m: "PUT", p: "/stock-returns/vendor/:id/received", module: "Stock Returns", action: "return.received", kind: "update",
+        target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Returned stock received by vendor", severity: "important",
+    },
+    {
+        m: "PUT", p: "/stock-returns/franchise/:id/cancel", module: "Stock Returns", action: "return.cancel", kind: "update",
+        target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Stock return cancelled by store",
+    },
+
     // ── Stock requests (procurement) ───────────────────────────────────────────
     {
         m: "PUT", p: "/masteradmin/franchises/:id/mother", module: "Franchise Management", action: "franchise.mother", kind: "update",

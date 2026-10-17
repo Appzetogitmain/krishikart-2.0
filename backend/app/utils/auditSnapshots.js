@@ -431,3 +431,23 @@ export const zoneRatesSnap = async (code, productIds) => {
     const where = zone ? `${zone.code} (${zone.name})` : String(code).toUpperCase();
     return { label: products.length === 1 ? `${products[0].name} in ${where}` : `${products.length} products in ${where}`, values };
 };
+
+/** A stock return (franchise -> vendor / mother franchise). */
+export const stockReturnSnap = async (id) => {
+    const r = await byId("StockReturn", id, [
+        { path: "fromFranchiseId", select: "franchiseName" },
+        { path: "destination.vendorId", select: "fullName" },
+        { path: "destination.franchiseId", select: "franchiseName" },
+    ]);
+    if (!r) return null;
+    const to = r.destination?.vendorId?.fullName || r.destination?.franchiseId?.franchiseName || "";
+    return {
+        label: `Return from ${r.fromFranchiseId?.franchiseName || "store"}${to ? ` to ${to}` : ""}`,
+        values: {
+            Status: human(r.status),
+            Items: (r.items || []).map((i) => `${i.name} ${num(i.quantity)} ${i.unit || ""}`).join(", "),
+            "Credit note": r.creditNote?.number ? `${r.creditNote.number} (${money(r.creditNote.amount)})` : "",
+        },
+        extra: [{ label: "Reason", value: human(r.reason) }],
+    };
+};

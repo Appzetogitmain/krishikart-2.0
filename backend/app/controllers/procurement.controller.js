@@ -13,6 +13,7 @@ import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
 import { takeStockUpTo, addStock } from "../utils/stock.js";
+import { vendorReturnCredits } from "./stockReturn.controller.js";
 
 /* ---------- Rate bargaining between admin and vendor ---------- */
 
@@ -1383,10 +1384,15 @@ export const getVendorReceivablesReport = async (req, res) => {
             };
         });
 
+        // Goods returned to the vendor (credit notes) are taken off what the vendor is owed
+        const returns = await vendorReturnCredits(req.vendor._id);
         return handleResponse(res, 200, "Vendor receivables report", {
             summary: {
                 count: requests.length,
                 totalAmount,
+                returnsCount: returns.count,
+                returnsCredit: returns.amount,
+                netAmount: Math.round((totalAmount - returns.amount) * 100) / 100,
             },
             rows,
         });

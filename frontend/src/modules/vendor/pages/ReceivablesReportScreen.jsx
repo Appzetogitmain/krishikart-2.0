@@ -153,6 +153,11 @@ export default function ReceivablesReportScreen() {
                         <p className="text-[11px] text-slate-500 mt-2">
                             {count} supply order{count !== 1 ? 's' : ''} (for your account)
                         </p>
+                        {Number(summary?.returnsCredit) > 0 && (
+                            <p className="text-[11px] text-amber-300 mt-1 font-bold">
+                                Less returns (credit notes): ₹{Number(summary.returnsCredit).toLocaleString()} • Net: ₹{Number(summary.netAmount || 0).toLocaleString()}
+                            </p>
+                        )}
                     </div>
                 </div>
             </motion.div>

@@ -101,6 +101,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           permissionKey: "assignment",
         },
         {
+          icon: Undo2,
+          label: "Stock Returns",
+          path: "/masteradmin/stock-returns",
+          permissionKey: "assignment",
+        },
+        {
           icon: Truck,
           label: "Delivery Tracking",
           path: "/masteradmin/delivery",

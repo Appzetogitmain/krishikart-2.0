@@ -7,7 +7,8 @@ import {
     UserCircle,
     HelpCircle,
     FileText,
-    Archive
+    Archive,
+    Undo2
 } from 'lucide-react';
 
 /**
@@ -23,6 +24,7 @@ export const vendorNavItems = [
     { id: 'history', path: '/vendor/dispatch-history', icon: History, label: 'Dispatch History', shortLabel: 'History' },
     { id: 'reports', path: '/vendor/reports', icon: FileText, label: 'Reports', shortLabel: 'Reports' },
     { id: 'rejections', path: '/vendor/rejected-stock', icon: Archive, label: 'Rejected Stock', shortLabel: 'Rejected' },
+    { id: 'returns', path: '/vendor/returns', icon: Undo2, label: 'Returns', shortLabel: 'Returns' },
     {
         id: 'profile',
         path: '/vendor/profile',

@@ -14,6 +14,7 @@ import couponRoutes from "../../app/routes/coupon.js";
 import reportRoutes from "../../app/routes/reports.js";
 import auditLogRoutes from "../../app/routes/auditLogs.js";
 import cityRatesRoutes from "../../app/routes/cityRates.js";
+import stockReturnRoutes from "../../app/routes/stockReturn.routes.js";
 import auditTrail from "../utils/auditTrail.js";
 import cityScopeGuard from "../utils/cityScopeGuard.js";
 
@@ -37,6 +38,7 @@ const setupRoutes = (app) => {
     apiRouter.use("/orders", orderRoutes);
     apiRouter.use("/payment", paymentRoutes);
     apiRouter.use("/procurement", procurementRoutes);
+    apiRouter.use("/stock-returns", stockReturnRoutes);
     apiRouter.use("/geo", geoRoute);
     apiRouter.use("/coupons", couponRoutes);
     apiRouter.use("/reports", reportRoutes);
