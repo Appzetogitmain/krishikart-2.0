@@ -134,7 +134,7 @@ const DeliveryHistory = () => {
                                     </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end gap-1">
-                                    <span className="text-xs font-black text-primary">{item.numberOfPackages || 0} Packages</span>
+                                    <span className="text-xs font-black text-primary">{Number(item.numberOfPackages) > 0 ? `${item.numberOfPackages} ${Number(item.numberOfPackages) === 1 ? 'Package' : 'Packages'}` : 'Packages: not counted'}</span>
                                     <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-sm font-black uppercase tracking-tighter">Delivered</span>
                                 </div>
                             </motion.div>

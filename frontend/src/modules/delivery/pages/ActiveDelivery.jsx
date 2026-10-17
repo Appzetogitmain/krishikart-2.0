@@ -236,9 +236,13 @@ const ActiveDelivery = () => {
                 <div className="bg-white rounded-2xl border border-border overflow-hidden">
                     <div className="px-4 py-3 border-b border-border bg-muted/20 flex justify-between items-center">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Package Details</h4>
-                        <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                            {order?.numberOfPackages || 0} Packages
-                        </span>
+                        {Number(order?.numberOfPackages) > 0 ? (
+                            <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                {order.numberOfPackages} {Number(order.numberOfPackages) === 1 ? 'Package' : 'Packages'}
+                            </span>
+                        ) : (
+                            <span className="text-[10px] font-bold text-muted-foreground">Package count not entered</span>
+                        )}
                     </div>
 
                     {order.bilty && (

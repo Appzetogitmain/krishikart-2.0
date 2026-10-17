@@ -65,7 +65,11 @@ const DeliveryCard = ({ request, onAccept, onReject }) => {
                 <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground pt-4 border-t border-muted/50">
                     <div className="flex items-center gap-1">
                         <Package className="w-3 h-3" />
-                        <span>{request.numberOfPackages} Packages</span>
+                        <span>
+                            {Number(request.numberOfPackages) > 0
+                                ? `${request.numberOfPackages} ${Number(request.numberOfPackages) === 1 ? 'Package' : 'Packages'}`
+                                : 'Packages: not counted'}
+                        </span>
                     </div>
                     {request.isPreOrder && (
                         <div className="flex items-center gap-1.5 ml-auto">
