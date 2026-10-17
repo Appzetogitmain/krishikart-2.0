@@ -180,6 +180,7 @@ export function FranchiseOrdersProvider({ children }) {
             hotelName: o.userId?.legalEntityName || o.userId?.fullName || o.user?.legalEntityName || o.user?.fullName || 'Guest User',
             hotelImage: (o.items && o.items[0]?.image) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&q=80",
             status: (o.orderStatus || '').toLowerCase(),
+            numberOfPackages: Number(o.numberOfPackages) || 0,
             total: o.totalAmount,
             items: (Array.isArray(o.items) ? o.items : []).map(i => ({
                 id: i.productId || i.product,

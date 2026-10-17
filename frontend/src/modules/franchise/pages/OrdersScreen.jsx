@@ -30,6 +30,7 @@ import {
     Check
 } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '@/lib/axios';
 
 // Enterprise Components
 import MetricRow from '../components/cards/MetricRow';
@@ -56,6 +57,9 @@ export default function OrdersScreen() {
     const [processingOrderId, setProcessingOrderId] = useState(null);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+    // 'pack' = mark the order packed with this count; 'count' = the order is already packed (e.g. by the
+    // system after vendor stock arrived) and only the count is missing
+    const [packageModalMode, setPackageModalMode] = useState('pack');
     const [packageCount, setPackageCount] = useState(0);
     const [selectedOrderForDispatch, setSelectedOrderForDispatch] = useState(null);
     const [selectedOrderForPacking, setSelectedOrderForPacking] = useState(null);
@@ -112,6 +116,7 @@ export default function OrdersScreen() {
 
         if (newStatus === 'Packed' && !extraData.numberOfPackages) {
             setSelectedOrderForPacking(orderId);
+            setPackageModalMode('pack');
             setIsPackageModalOpen(true);
             return;
         }
@@ -130,10 +135,25 @@ export default function OrdersScreen() {
 
     const handleConfirmPacking = async () => {
         if (!selectedOrderForPacking) return;
-        await handleAction(selectedOrderForPacking, 'Packed', { numberOfPackages: packageCount });
+        if (packageModalMode === 'count') {
+            setProcessingOrderId(selectedOrderForPacking);
+            try {
+                await api.put(`/orders/franchise/${selectedOrderForPacking}/packages`, { numberOfPackages: packageCount });
+                toast.success('Package count saved. You can assign a delivery partner now.');
+                if (refreshOrders) await refreshOrders();
+            } catch (error) {
+                toast.error(error.response?.data?.message || 'Could not save the package count');
+                setProcessingOrderId(null);
+                return;
+            }
+            setProcessingOrderId(null);
+        } else {
+            await handleAction(selectedOrderForPacking, 'Packed', { numberOfPackages: packageCount });
+        }
         setIsPackageModalOpen(false);
         setSelectedOrderForPacking(null);
         setPackageCount(0);
+        setPackageModalMode('pack');
     };
 
     const handleAssignDelivery = async (partnerId) => {
@@ -345,7 +365,21 @@ export default function OrdersScreen() {
                             </>
                         )
                     )}
-                    {activeTab === 'ready' && row.status === 'packed' && (
+                    {activeTab === 'ready' && row.status === 'packed' && !(row.numberOfPackages > 0) && (
+                        <button
+                            onClick={() => {
+                                setSelectedOrderForPacking(row.id);
+                                setPackageModalMode('count');
+                                setPackageCount(0);
+                                setIsPackageModalOpen(true);
+                            }}
+                            className="p-1.5 px-3 text-xs font-bold uppercase text-amber-700 border border-amber-600 bg-amber-50 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"
+                            title="Enter how many boxes/bags this order is packed in. Needed before you can assign a delivery partner."
+                        >
+                            <Package size={12} /> Enter package count
+                        </button>
+                    )}
+                    {activeTab === 'ready' && row.status === 'packed' && row.numberOfPackages > 0 && (
                         <button
                             onClick={() => {
                                 setSelectedOrderForDispatch(row.id);
@@ -662,9 +696,9 @@ export default function OrdersScreen() {
                                 <div>
                                     <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
                                         <Package size={16} className="text-emerald-400" />
-                                        Pack Order
+                                        {packageModalMode === 'count' ? 'Package Count' : 'Pack Order'}
                                     </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Enter package count</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{packageModalMode === 'count' ? 'This order is already packed' : 'Enter package count'}</p>
                                 </div>
                                 <button onClick={() => setIsPackageModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <X size={20} />
@@ -704,7 +738,7 @@ export default function OrdersScreen() {
                                     title={packageCount < 1 ? 'Enter at least 1 package' : ''}
                                     className="w-full h-14 bg-slate-900 text-white rounded-sm font-black uppercase text-[11px] tracking-[0.2em] shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
-                                    Confirm & Mark Packed
+                                    {packageModalMode === 'count' ? 'Save Package Count' : 'Confirm & Mark Packed'}
                                     <Check size={16} className="text-emerald-400" />
                                 </button>
                             </div>

@@ -17,6 +17,7 @@ import {
     acceptFranchiseOrder,
     rejectFranchiseOrder,
     assignDeliveryPartner,
+    setOrderPackageCount,
     getDispatchedOrders,
     getDeliveryOrderHistory,
     rejectDeliveryTask,
@@ -69,6 +70,12 @@ router.put(
     protectFranchise,
     requireFranchiseAccountVerified,
     rejectFranchiseOrder,
+);
+router.put(
+    "/franchise/:id/packages",
+    protectFranchise,
+    requireFranchiseAccountVerified,
+    setOrderPackageCount,
 );
 router.put(
     "/franchise/:id/assign-delivery",

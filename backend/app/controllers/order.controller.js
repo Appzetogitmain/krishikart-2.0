@@ -2146,6 +2146,41 @@ export const rejectFranchiseOrder = async (req, res) => {
 };
 
 // Assign delivery partner to order
+/**
+ * PUT /orders/franchise/:id/packages  { numberOfPackages }
+ * Lets the franchise enter (or fix) how many boxes/bags an order is packed in. Needed for orders the
+ * system packed automatically after vendor stock arrived, which have no count yet.
+ */
+export const setOrderPackageCount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const count = Number(req.body?.numberOfPackages);
+    if (!Number.isInteger(count) || count < 1 || count > 500) {
+      return handleResponse(res, 400, "Please enter the number of packages (a whole number from 1 to 500).");
+    }
+    const order = await Order.findById(id);
+    if (!order) return handleResponse(res, 404, "Order not found");
+    if (!order.franchiseId || order.franchiseId.toString() !== req.franchise._id.toString()) {
+      return handleResponse(res, 403, "Not authorized to manage this order");
+    }
+    if (!["Packed", "Ready"].includes(order.orderStatus)) {
+      return handleResponse(res, 400, "The package count can only be set while the order is packed and waiting for dispatch.");
+    }
+    order.numberOfPackages = count;
+    order.statusHistory.push({
+      status: order.orderStatus,
+      updatedAt: new Date(),
+      updatedBy: "franchise",
+      message: `Package count entered: ${count}`,
+    });
+    await order.save();
+    return handleResponse(res, 200, "Package count saved", { _id: order._id, numberOfPackages: order.numberOfPackages });
+  } catch (error) {
+    console.error("setOrderPackageCount:", error);
+    return handleResponse(res, 500, "Could not save the package count");
+  }
+};
+
 export const assignDeliveryPartner = async (req, res) => {
   try {
     const { id } = req.params;
@@ -2181,6 +2216,11 @@ export const assignDeliveryPartner = async (req, res) => {
           ? "Please pack this order before assigning a delivery partner."
           : `This order is already "${order.orderStatus}" and can't be assigned for delivery.`,
       );
+    }
+
+    // The delivery slip prints the package count, so it must be known before dispatch
+    if (order.orderStatus !== "Dispatched" && !(Number(order.numberOfPackages) > 0)) {
+      return handleResponse(res, 400, "Please enter how many packages this order is packed in before assigning a delivery partner.");
     }
 
     const partner = await Delivery.findById(deliveryPartnerId).select("isApproved status fullName");
