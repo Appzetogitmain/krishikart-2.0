@@ -22,13 +22,17 @@ import { useConfirm } from '../hooks/useConfirm';
 
 const ActiveDelivery = () => {
     const navigate = useNavigate();
-    const { dispatchedOrders, loading, updateStatus, activeDeliveryId, setActiveDeliveryId } = useDeliveryOrders();
+    const { dispatchedOrders, loading, updateStatus, refuseAtDoor, activeDeliveryId, setActiveDeliveryId } = useDeliveryOrders();
     const [isUpdating, setIsUpdating] = useState(false);
     const submittingRef = useRef(false);
     const [confirm, confirmDialog] = useConfirm();
     const [isDocOpen, setIsDocOpen] = useState(false);
     // COD payment sheet: null = closed, 'choose' = cash or UPI, 'qr' = showing the franchise QR
     const [paySheet, setPaySheet] = useState(null);
+    // Customer did not accept the order at the door
+    const [refuseOpen, setRefuseOpen] = useState(false);
+    const [refuseReason, setRefuseReason] = useState('');
+    const [refuseNote, setRefuseNote] = useState('');
 
     const order = useMemo(() => {
         if (!activeDeliveryId) return null;
@@ -82,6 +86,37 @@ const ActiveDelivery = () => {
         await finishDelivery();
     };
 
+    const REFUSE_REASONS = [
+        { key: 'customer_refused', label: 'Customer refused to take the order' },
+        { key: 'product_damaged', label: 'Product is damaged or spoiled' },
+        { key: 'wrong_item', label: 'Wrong or missing item' },
+        { key: 'quality_not_ok', label: 'Customer not happy with the quality' },
+        { key: 'customer_unavailable', label: 'Customer not available / not reachable' },
+        { key: 'other', label: 'Other' },
+    ];
+
+    const handleRefuse = async () => {
+        if (submittingRef.current || !refuseReason) return;
+        const confirmed = await confirm({
+            title: 'Order not accepted by the customer?',
+            message: 'The order will be cancelled and any money the customer paid online goes back to them. You must bring the goods back to the franchise.',
+            confirmLabel: 'Yes, not accepted',
+            tone: 'danger',
+        });
+        if (!confirmed || submittingRef.current) return;
+        submittingRef.current = true;
+        setIsUpdating(true);
+        const ok = await refuseAtDoor(order.id, refuseReason, refuseNote.trim());
+        setIsUpdating(false);
+        submittingRef.current = false;
+        if (!ok) return;
+        setRefuseOpen(false);
+        setRefuseReason('');
+        setRefuseNote('');
+        setActiveDeliveryId(null);
+        navigate(ROUTES.DASHBOARD);
+    };
+
     const handleCashCollected = async () => {
         if (submittingRef.current) return;
         const confirmed = await confirm({
@@ -131,7 +166,7 @@ const ActiveDelivery = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-full pb-24">
+        <div className="flex flex-col min-h-full pb-36">
             {/* Header */}
             <div className="px-6 pt-8 pb-2 bg-white sticky top-0 z-10 border-b border-border/30">
                 <div className="flex justify-between items-center mb-4">
@@ -386,6 +421,48 @@ const ActiveDelivery = () => {
                 </div>
             )}
 
+            {/* Customer did not accept the order */}
+            {refuseOpen && (
+                <div className="fixed inset-0 z-[60] flex items-end justify-center">
+                    <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isUpdating && setRefuseOpen(false)} />
+                    <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 pb-8 shadow-2xl max-h-[92vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-base font-black text-slate-900">Customer did not accept the order</h3>
+                            <button onClick={() => setRefuseOpen(false)} disabled={isUpdating} className="p-2 -mr-2 rounded-full hover:bg-slate-100" aria-label="Close">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <p className="text-xs text-slate-500 mb-4">Choose what happened. The order will be cancelled and you bring the goods back to the franchise.</p>
+                        <div className="space-y-2">
+                            {REFUSE_REASONS.map((r) => (
+                                <button
+                                    key={r.key}
+                                    type="button"
+                                    onClick={() => setRefuseReason(r.key)}
+                                    className={`w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all ${refuseReason === r.key ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200 text-slate-700'}`}
+                                >
+                                    {r.label}
+                                </button>
+                            ))}
+                        </div>
+                        <textarea
+                            value={refuseNote}
+                            onChange={(e) => setRefuseNote(e.target.value)}
+                            maxLength={300}
+                            placeholder={refuseReason === 'other' ? 'Write what happened (required)' : 'Note (optional)'}
+                            className="mt-3 w-full min-h-[72px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:border-slate-400"
+                        />
+                        <button
+                            onClick={handleRefuse}
+                            disabled={isUpdating || !refuseReason || (refuseReason === 'other' && !refuseNote.trim())}
+                            className="mt-4 w-full bg-rose-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center disabled:opacity-40"
+                        >
+                            {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Mark order as not accepted'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {confirmDialog}
 
             {/* Document Viewer Modal */}
@@ -398,7 +475,15 @@ const ActiveDelivery = () => {
 
             {/* Bottom Action */}
             <div className="fixed bottom-16 left-0 right-0 p-6 bg-gradient-to-t from-white via-white to-transparent pointer-events-none">
-                <div className="max-w-md mx-auto pointer-events-auto">
+                <div className="max-w-md mx-auto pointer-events-auto space-y-2">
+                    <button
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={() => setRefuseOpen(true)}
+                        className="w-full py-2.5 rounded-xl border-2 border-rose-200 bg-white text-rose-600 text-xs font-black uppercase tracking-wider disabled:opacity-50"
+                    >
+                        Customer refused / problem with order
+                    </button>
                     <motion.button
                         whileTap={{ scale: 0.95 }}
                         disabled={isUpdating}

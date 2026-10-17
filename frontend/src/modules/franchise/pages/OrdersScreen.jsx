@@ -18,7 +18,8 @@ import {
     RefreshCw,
     Info,
     Package,
-    Clock
+    Clock,
+    Undo2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
@@ -61,6 +62,25 @@ export default function OrdersScreen() {
     // system after vendor stock arrived) and only the count is missing
     const [packageModalMode, setPackageModalMode] = useState('pack');
     const [packageCount, setPackageCount] = useState(0);
+    // Goods that came back after the customer refused the order: { id, name }
+    const [returnedGoodsOrder, setReturnedGoodsOrder] = useState(null);
+    const [savingGoods, setSavingGoods] = useState(false);
+
+    const settleReturnedGoods = async (action) => {
+        if (!returnedGoodsOrder || savingGoods) return;
+        setSavingGoods(true);
+        try {
+            await api.put(`/orders/franchise/${returnedGoodsOrder.id}/refused-goods`, { action });
+            toast.success(action === 'restock' ? 'Goods added back to your stock' : 'Goods written off');
+            setReturnedGoodsOrder(null);
+            if (refreshOrders) await refreshOrders();
+            if (refreshInventory) refreshInventory();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not update the returned goods');
+        } finally {
+            setSavingGoods(false);
+        }
+    };
     const packingOrder = allOrders.find(o => o.id === selectedOrderForPacking) || null;
     // An order is packed exactly as ordered: at most one package per ordered unit
     const maxPackages = packingOrder
@@ -176,7 +196,8 @@ export default function OrdersScreen() {
     const tabs = [
         { id: 'new', label: 'New', icon: ShoppingBag },
         { id: 'ready', label: 'Ready to Dispatch', icon: Zap },
-        { id: 'completed', label: 'Completed', icon: History }
+        { id: 'completed', label: 'Completed', icon: History },
+        { id: 'refused', label: 'Refused at door', icon: Undo2 }
     ];
 
     const filteredOrders = allOrders.filter(order => {
@@ -189,6 +210,8 @@ export default function OrdersScreen() {
             matchesTab = ['packed', 'dispatched', 'ready'].includes(status);
         } else if (activeTab === 'completed') {
             matchesTab = ['delivered', 'received', 'completed'].includes(status);
+        } else if (activeTab === 'refused') {
+            matchesTab = status === 'cancelled' && !!order.deliveryRefusal;
         }
 
         const hotelName = order.hotelName || order.userId?.fullName || 'Unknown';
@@ -369,6 +392,25 @@ export default function OrdersScreen() {
                                 )}
                             </>
                         )
+                    )}
+                    {activeTab === 'refused' && row.deliveryRefusal && (
+                        <div className="flex flex-col items-end gap-1">
+                            <span className="text-[10px] font-bold text-rose-600 max-w-[220px] text-right">
+                                {row.deliveryRefusal.reasonLabel || 'Not accepted'}{row.deliveryRefusal.note ? ` - ${row.deliveryRefusal.note}` : ''}
+                            </span>
+                            {row.deliveryRefusal.goodsStatus === 'with_delivery' ? (
+                                <button
+                                    onClick={() => setReturnedGoodsOrder({ id: row.id, name: row.hotelName || row.userId?.fullName || 'this order' })}
+                                    className="p-1.5 px-3 text-xs font-bold uppercase text-amber-700 border border-amber-600 bg-amber-50 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"
+                                >
+                                    <Package size={12} /> Goods received back
+                                </button>
+                            ) : (
+                                <span className="text-[10px] font-black uppercase text-slate-500">
+                                    {row.deliveryRefusal.goodsStatus === 'restocked' ? 'Added back to stock' : 'Written off'}
+                                </span>
+                            )}
+                        </div>
                     )}
                     {activeTab === 'ready' && row.status === 'packed' && !(row.numberOfPackages > 0) && (
                         <button
@@ -682,6 +724,44 @@ export default function OrdersScreen() {
             </AnimatePresence>
             {/* Package Count Modal */}
             <AnimatePresence>
+                {returnedGoodsOrder && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !savingGoods && setReturnedGoodsOrder(null)} />
+                        <div className="relative w-full max-w-sm bg-white rounded-sm shadow-2xl overflow-hidden">
+                            <div className="bg-slate-900 p-6 text-white">
+                                <h3 className="text-sm font-black uppercase tracking-widest">Goods received back</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Customer did not accept the order</p>
+                            </div>
+                            <div className="p-6 space-y-3">
+                                <p className="text-xs font-semibold text-slate-600">
+                                    Are the goods from {returnedGoodsOrder.name} good enough to sell again, or are they damaged?
+                                </p>
+                                <button
+                                    disabled={savingGoods}
+                                    onClick={() => settleReturnedGoods('restock')}
+                                    className="w-full h-12 bg-emerald-600 text-white rounded-sm font-black uppercase text-[11px] tracking-widest disabled:opacity-50"
+                                >
+                                    Good - add back to stock
+                                </button>
+                                <button
+                                    disabled={savingGoods}
+                                    onClick={() => settleReturnedGoods('write_off')}
+                                    className="w-full h-12 border border-rose-300 text-rose-600 rounded-sm font-black uppercase text-[11px] tracking-widest disabled:opacity-50"
+                                >
+                                    Damaged - do not add to stock
+                                </button>
+                                <button
+                                    disabled={savingGoods}
+                                    onClick={() => setReturnedGoodsOrder(null)}
+                                    className="w-full h-10 text-slate-400 font-black uppercase text-[10px] tracking-widest"
+                                >
+                                    Not received yet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {isPackageModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div

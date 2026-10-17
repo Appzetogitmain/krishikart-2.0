@@ -463,6 +463,16 @@ export const AUDIT_RULES = [
         details: (ctx) => [{ label: "Reason", value: short(B(ctx, "reason")) }],
     },
     {
+        m: "PUT", p: "/orders/delivery/:id/refused-at-door", module: "Orders", action: "order.refused_at_door", kind: "update",
+        target: { type: "Order", id: (ctx) => P(ctx, "id"), snap: S.orderSnap }, title: "Customer did not accept the order at delivery", severity: "important",
+        details: (ctx) => [{ label: "Reason", value: human(B(ctx, "reason")) }, { label: "Note", value: short(B(ctx, "note")) }],
+    },
+    {
+        m: "PUT", p: "/orders/franchise/:id/refused-goods", module: "Orders", action: "order.refused_goods", kind: "update",
+        target: { type: "Order", id: (ctx) => P(ctx, "id"), snap: S.orderSnap },
+        title: ({ ctx }) => (B(ctx, "action") === "restock" ? "Refused goods added back to stock" : "Refused goods written off"), severity: "important",
+    },
+    {
         m: "PUT", p: "/orders/delivery/:id/status", module: "Orders", action: "order.status", kind: "update",
         target: { type: "Order", id: (ctx) => P(ctx, "id"), snap: S.orderSnap }, title: statusTitle("Order"),
     },

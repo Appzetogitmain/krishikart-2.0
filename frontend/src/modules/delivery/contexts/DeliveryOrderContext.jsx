@@ -123,6 +123,24 @@ export function DeliveryOrderProvider({ children }) {
         }
     };
 
+    // The customer did not accept the order at the door
+    const refuseAtDoor = async (orderId, reason, note = '') => {
+        try {
+            const response = await api.put(`/orders/delivery/${orderId}/refused-at-door`, { reason, note });
+            if (response.data.success) {
+                toast.success('Order marked as not accepted. Please bring the goods back to the franchise.');
+                fetchDispatchedOrders();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Refuse at door error:', error);
+            toast.error(error.response?.data?.message || 'Could not update the order');
+            fetchDispatchedOrders();
+            return false;
+        }
+    };
+
     const rejectTask = async (orderId) => {
         try {
             const response = await api.put(`/orders/delivery/${orderId}/reject`);
@@ -193,6 +211,7 @@ export function DeliveryOrderProvider({ children }) {
             updateStatus,
             updateReturnStatus,
             rejectTask,
+            refuseAtDoor,
             playNotificationSound
         }}>
             {children}

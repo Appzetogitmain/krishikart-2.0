@@ -2420,6 +2420,188 @@ export const getDispatchedOrders = async (req, res) => {
   }
 };
 
+const REFUSAL_REASONS = {
+  customer_refused: "Customer refused to take the order",
+  product_damaged: "Product is damaged or spoiled",
+  wrong_item: "Wrong or missing item",
+  quality_not_ok: "Customer not happy with the quality",
+  customer_unavailable: "Customer not available / not reachable",
+  other: "Other",
+};
+
+/**
+ * PUT /orders/delivery/:id/refused-at-door  { reason, note }
+ * The delivery partner is at the customer's door and the customer does not take the order (or the
+ * goods are not acceptable). The order is cancelled, any prepaid money goes back to the customer,
+ * and the goods are tracked as coming back to the franchise (see confirmRefusedGoodsReturned).
+ */
+export const refuseOrderAtDoor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const partnerId = req.delivery?._id;
+    if (!partnerId) return handleResponse(res, 401, "Unauthorized");
+
+    const reason = String(req.body?.reason || "");
+    const note = String(req.body?.note || "").trim().slice(0, 300);
+    if (!REFUSAL_REASONS[reason]) return handleResponse(res, 400, "Please choose why the order was not accepted.");
+    if (reason === "other" && !note) return handleResponse(res, 400, "Please write a short note about what happened.");
+
+    const label = REFUSAL_REASONS[reason];
+    const now = new Date();
+    // One atomic claim, so a double tap (or a second device) cannot cancel and refund twice
+    const order = await Order.findOneAndUpdate(
+      { _id: id, deliveryPartnerId: partnerId, orderStatus: { $in: ["Dispatched", "Out for Delivery"] } },
+      {
+        $set: {
+          orderStatus: "Cancelled",
+          deliveryRefusal: {
+            reason,
+            reasonLabel: label,
+            note,
+            refusedAt: now,
+            deliveryPartnerId: partnerId,
+            goodsStatus: "with_delivery",
+            resolvedAt: null,
+          },
+        },
+        $push: {
+          statusHistory: {
+            status: "Cancelled",
+            updatedAt: now,
+            updatedBy: `delivery_refused:${label.slice(0, 60)}`,
+          },
+        },
+      },
+      { new: true },
+    );
+
+    if (!order) {
+      const existing = await Order.findById(id).select("deliveryPartnerId orderStatus");
+      if (!existing) return handleResponse(res, 404, "Order not found");
+      if (!existing.deliveryPartnerId || existing.deliveryPartnerId.toString() !== partnerId.toString()) {
+        return handleResponse(res, 403, "This order is not assigned to you");
+      }
+      return handleResponse(res, 400, "This order is no longer out for delivery");
+    }
+
+    let refundResult = { refunded: false, walletRefund: 0, creditRestore: 0 };
+    try {
+      refundResult = await refundCancelledOrder(order._id, "not accepted at delivery");
+    } catch (refundErr) {
+      console.error("[refuseOrderAtDoor] Refund error:", refundErr);
+    }
+
+    const shortId = order._id.toString().slice(-6);
+    const refundText = refundResult.walletRefund > 0 && refundResult.creditRestore > 0
+      ? ` ₹${refundResult.walletRefund} has been added back to your wallet and ₹${refundResult.creditRestore} to your KK Credit.`
+      : refundResult.walletRefund > 0
+        ? ` ₹${refundResult.walletRefund} has been added back to your wallet.`
+        : refundResult.creditRestore > 0
+          ? ` ₹${refundResult.creditRestore} has been added back to your KK Credit.`
+          : "";
+
+    try {
+      await createUserNotification({
+        userId: order.userId,
+        type: "order_update",
+        title: "Order not delivered",
+        message: `Your order #${shortId} was not accepted at delivery (${label}), so it has been cancelled.${refundText}`,
+        link: `/order-detail/${order._id}`,
+        meta: { orderId: order._id.toString(), status: "Cancelled" },
+      });
+    } catch (notifyErr) {
+      console.error("[refuseOrderAtDoor] Notification error:", notifyErr);
+    }
+
+    const payload = {
+      orderId: order._id,
+      status: "Cancelled",
+      reason: label,
+      note,
+      deliveryPartnerName: req.delivery?.fullName || "",
+      updatedAt: now,
+    };
+    emitToOrderRoom(order._id, "order_status_changed", { orderId: order._id, status: "Cancelled", updatedAt: now });
+    if (order.franchiseId) {
+      emitToFranchise(order.franchiseId, "order_refused_at_door", payload);
+      emitToFranchise(order.franchiseId, "order_status_changed", { orderId: order._id, status: "Cancelled", updatedAt: now });
+    }
+    emitToAdmin("order_refused_at_door", payload);
+    try {
+      await createAdminNotification({
+        type: "order_refused_at_door",
+        title: "Order not accepted at delivery",
+        message: `Order #${shortId} was not accepted by the customer (${label}).${note ? ` Note: ${note}` : ""}`,
+        link: "/masteradmin/orders",
+        meta: { orderId: order._id.toString(), status: "Cancelled" },
+      });
+    } catch (notifyErr) {
+      console.error("[refuseOrderAtDoor] Admin notification error:", notifyErr);
+    }
+
+    return handleResponse(res, 200, "Order marked as not accepted by the customer", {
+      _id: order._id,
+      orderStatus: order.orderStatus,
+      refundedToWallet: refundResult.walletRefund,
+      creditRestored: refundResult.creditRestore,
+    });
+  } catch (error) {
+    console.error("refuseOrderAtDoor error:", error);
+    return handleResponse(res, 500, "Could not mark the order as not accepted");
+  }
+};
+
+/**
+ * PUT /orders/franchise/:id/refused-goods  { action: "restock" | "write_off" }
+ * The delivery partner brought the refused goods back. Good goods go back into the franchise's
+ * stock; spoiled or damaged goods are written off and do not.
+ */
+export const confirmRefusedGoodsReturned = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const action = String(req.body?.action || "");
+    if (!["restock", "write_off"].includes(action)) {
+      return handleResponse(res, 400, "Action must be restock or write_off");
+    }
+
+    const existing = await Order.findById(id).select("franchiseId deliveryRefusal");
+    if (!existing) return handleResponse(res, 404, "Order not found");
+    if (!existing.franchiseId || existing.franchiseId.toString() !== req.franchise._id.toString()) {
+      return handleResponse(res, 403, "Not authorized to manage this order");
+    }
+
+    // Claim atomically so the stock can only be put back once
+    const order = await Order.findOneAndUpdate(
+      { _id: id, "deliveryRefusal.goodsStatus": "with_delivery" },
+      {
+        $set: {
+          "deliveryRefusal.goodsStatus": action === "restock" ? "restocked" : "written_off",
+          "deliveryRefusal.resolvedAt": new Date(),
+        },
+      },
+      { new: true },
+    );
+    if (!order) return handleResponse(res, 400, "There are no returned goods waiting for this order");
+
+    if (action === "restock") {
+      for (const item of order.items) {
+        const qty = Number(item.packedQuantity || 0);
+        if (qty > 0) await addStock(order.franchiseId, item.productId, qty);
+      }
+    }
+
+    return handleResponse(
+      res,
+      200,
+      action === "restock" ? "Goods added back to your stock" : "Goods written off (not added to stock)",
+      { _id: order._id, goodsStatus: order.deliveryRefusal.goodsStatus },
+    );
+  } catch (error) {
+    console.error("confirmRefusedGoodsReturned error:", error);
+    return handleResponse(res, 500, "Could not update the returned goods");
+  }
+};
+
 // Reject a delivery task (return back to Packed state)
 export const rejectDeliveryTask = async (req, res) => {
   try {

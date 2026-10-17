@@ -191,6 +191,17 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    // Set when the customer refused the order at the door (or it was not acceptable). The order is then
+    // Cancelled; goodsStatus tracks the goods coming back to the franchise.
+    deliveryRefusal: {
+        reason: { type: String, default: '' },
+        reasonLabel: { type: String, default: '' },
+        note: { type: String, default: '' },
+        refusedAt: { type: Date, default: null },
+        deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery', default: null },
+        goodsStatus: { type: String, enum: ['with_delivery', 'restocked', 'written_off'], default: undefined },
+        resolvedAt: { type: Date, default: null }
+    },
     codTracking: {
         isCollected: {
             type: Boolean,

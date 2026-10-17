@@ -21,6 +21,8 @@ import {
     getDispatchedOrders,
     getDeliveryOrderHistory,
     rejectDeliveryTask,
+    refuseOrderAtDoor,
+    confirmRefusedGoodsReturned,
     getAdminDeliveryTracking
 } from "../controllers/order.controller.js";
 import { protect } from "../middlewares/authmiddleware.js";
@@ -112,6 +114,13 @@ router.put(
 router.get("/delivery/dispatched", protectDelivery, requireApproval, getDispatchedOrders);
 router.get("/delivery/history", protectDelivery, requireApproval, getDeliveryOrderHistory);
 router.put("/delivery/:id/reject", protectDelivery, requireApproval, rejectDeliveryTask);
+router.put("/delivery/:id/refused-at-door", protectDelivery, requireApproval, refuseOrderAtDoor);
+router.put(
+    "/franchise/:id/refused-goods",
+    protectFranchise,
+    requireFranchiseAccountVerified,
+    confirmRefusedGoodsReturned,
+);
 router.put("/delivery/:id/status", protectDelivery, requireApproval, updateOrderStatus);
 router.get("/delivery/return-pickups", protectDelivery, requireApproval, getDeliveryReturnPickups);
 router.put("/delivery/return-pickups/:id/:requestIndex/status", protectDelivery, requireApproval, updateReturnPickupStatus);
