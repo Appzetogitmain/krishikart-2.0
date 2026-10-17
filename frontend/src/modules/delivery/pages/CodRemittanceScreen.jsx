@@ -79,6 +79,18 @@ export default function CodRemittanceScreen() {
         [pendingOrders, selectedOrderIds]
     );
 
+    // The cash goes to the franchise each order went out from, so show the amount per franchise
+    const selectedByFranchise = useMemo(() => {
+        const map = new Map();
+        pendingOrders
+            .filter((o) => selectedOrderIds.includes(o.orderId))
+            .forEach((o) => {
+                const name = o.franchiseName || 'Franchise';
+                map.set(name, (map.get(name) || 0) + Number(o.amount || 0));
+            });
+        return Array.from(map, ([name, amount]) => ({ name, amount }));
+    }, [pendingOrders, selectedOrderIds]);
+
     const toggleOrder = (orderId) => {
         setSelectedOrderIds((prev) =>
             prev.includes(orderId)
@@ -188,7 +200,8 @@ export default function CodRemittanceScreen() {
                 note
             });
             if (response.data.success) {
-                toast.success('COD remittance submitted to admin');
+                const names = selectedByFranchise.map((f) => f.name).join(', ');
+                toast.success(names ? `COD cash submitted to ${names}` : 'COD cash submitted to the franchise');
                 setReferenceNo('');
                 setNote('');
                 await fetchData();
@@ -273,6 +286,7 @@ export default function CodRemittanceScreen() {
                                     <div>
                                         <p className="text-xs font-bold text-slate-900">#{String(order.orderId).slice(-6)}</p>
                                         <p className="text-[11px] text-slate-500">{order.collectedAt && !isNaN(new Date(order.collectedAt).getTime()) ? new Date(order.collectedAt).toLocaleString() : 'N/A'}</p>
+                                        {order.franchiseName && <p className="text-[11px] font-semibold text-slate-600">To: {order.franchiseName}</p>}
                                     </div>
                                 </div>
                                 <p className="text-sm font-black text-slate-900">Rs {Number(order.amount || 0).toFixed(2)}</p>
@@ -282,7 +296,19 @@ export default function CodRemittanceScreen() {
                 </div>
 
                 <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-                    <h2 className="text-sm font-bold text-slate-900">Submit to Admin</h2>
+                    <h2 className="text-sm font-bold text-slate-900">Submit to Franchise</h2>
+                    {selectedByFranchise.length > 0 && (
+                        <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 space-y-1">
+                            <p className="text-[10px] font-bold uppercase text-slate-400">Hand this cash to</p>
+                            {selectedByFranchise.map((f) => (
+                                <div key={f.name} className="flex items-center justify-between text-xs font-bold text-slate-800">
+                                    <span>{f.name}</span>
+                                    <span>Rs {f.amount.toFixed(2)}</span>
+                                </div>
+                            ))}
+                            <p className="text-[10px] text-slate-500 pt-1">The franchise will check and confirm that it received the cash.</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                         {/* Razorpay UPI option temporarily disabled — only cash */}
                         {['cash' /* , 'upi' */].map((method) => (
@@ -329,11 +355,13 @@ export default function CodRemittanceScreen() {
                                 <div>
                                     <p className="text-xs font-bold text-slate-900">{r.createdAt && !isNaN(new Date(r.createdAt).getTime()) ? new Date(r.createdAt).toLocaleString() : 'N/A'}</p>
                                     <p className="text-[11px] text-slate-500">{r.paymentMethod.toUpperCase()} {r.referenceNo ? `• ${r.referenceNo}` : ''}</p>
+                                    {r.franchiseId?.franchiseName && <p className="text-[11px] font-semibold text-slate-600">To: {r.franchiseId.franchiseName}</p>}
+                                    {r.status === 'rejected' && r.rejectionReason && <p className="text-[11px] font-semibold text-rose-600">Reason: {r.rejectionReason}</p>}
                                 </div>
                                 <div className="text-right">
                                     <p className="text-sm font-black text-slate-900">Rs {Number(r.amount || 0).toFixed(2)}</p>
                                     <p className={`text-[11px] font-bold uppercase ${r.status === 'verified' ? 'text-emerald-600' : r.status === 'submitted' ? 'text-blue-600' : 'text-rose-600'}`}>
-                                        {r.status}
+                                        {r.status === 'submitted' ? 'Awaiting franchise' : r.status}
                                     </p>
                                 </div>
                             </div>

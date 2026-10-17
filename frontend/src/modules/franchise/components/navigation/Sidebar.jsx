@@ -46,6 +46,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             group: 'Logistics & Supply', items: [
                 { icon: PackageCheck, label: 'Vendor Receiving', path: '/franchise/receiving' },
                 { icon: Truck, label: 'Deliveries', path: '/franchise/dispatch' },
+                { icon: Wallet, label: 'COD Cash', path: '/franchise/cash' },
                 { icon: ShoppingBasket, label: 'Procurement', path: '/franchise/procurement' },
                 { icon: Undo2, label: 'Returns', path: '/franchise/returns' },
             ]

@@ -6,6 +6,7 @@ import { handleResponse } from "../utils/helper.js";
 // import crypto from "crypto";
 import mongoose from "mongoose";
 import admin from "../services/firebaseAdmin.js";
+import { emitToFranchise, emitToAdmin } from "../lib/socket.js";
 
 /**
  * @desc Get All Active Delivery Partners
@@ -34,7 +35,7 @@ export const getMyCodSummary = async (req, res) => {
             "codTracking.isCollected": true,
             "codTracking.collectedByDeliveryId": deliveryId,
             "codTracking.remittanceStatus": "pending"
-        }).select("_id totalAmount createdAt codTracking");
+        }).select("_id totalAmount createdAt codTracking franchiseId").populate("franchiseId", "franchiseName");
 
         const submittedRemittances = await DeliveryCodRemittance.find({
             deliveryPartnerId: deliveryId,
@@ -54,7 +55,9 @@ export const getMyCodSummary = async (req, res) => {
             pendingOrders: pendingOrders.map((o) => ({
                 orderId: o._id,
                 amount: Number(o.codTracking?.collectedAmount || o.totalAmount || 0),
-                collectedAt: o.codTracking?.collectedAt || o.createdAt
+                collectedAt: o.codTracking?.collectedAt || o.createdAt,
+                franchiseId: o.franchiseId?._id || null,
+                franchiseName: o.franchiseId?.franchiseName || ""
             })),
             totals: {
                 pendingAmount: Number(pendingAmount.toFixed(2)),
@@ -97,36 +100,64 @@ export const submitCodRemittance = async (req, res) => {
             "codTracking.isCollected": true,
             "codTracking.collectedByDeliveryId": deliveryId,
             "codTracking.remittanceStatus": "pending"
-        }).select("_id totalAmount codTracking");
+        }).select("_id totalAmount codTracking franchiseId");
 
         if (!orders.length) {
             return handleResponse(res, 400, "No valid COD orders found for remittance");
         }
 
-        const amount = orders.reduce((sum, o) => sum + Number(o.codTracking?.collectedAmount || o.totalAmount || 0), 0);
+        // The cash goes to the franchise each order went out from, so one submission is split into one
+        // remittance per franchise. Orders with no franchise on them stay with the main admin.
+        const byFranchise = new Map();
+        for (const o of orders) {
+            const key = o.franchiseId ? String(o.franchiseId) : "";
+            if (!byFranchise.has(key)) byFranchise.set(key, []);
+            byFranchise.get(key).push(o);
+        }
 
-        const remittance = await DeliveryCodRemittance.create({
-            deliveryPartnerId: deliveryId,
-            orderIds: orders.map((o) => o._id),
-            amount: Number(amount.toFixed(2)),
-            paymentMethod,
-            referenceNo: String(referenceNo || ""),
-            note: String(note || ""),
-            status: "submitted"
-        });
+        const remittances = [];
+        for (const [franchiseKey, group] of byFranchise) {
+            const amount = group.reduce((sum, o) => sum + Number(o.codTracking?.collectedAmount || o.totalAmount || 0), 0);
 
-        await Order.updateMany(
-            { _id: { $in: orders.map((o) => o._id) } },
-            {
-                $set: {
-                    "codTracking.remittanceStatus": "submitted",
-                    "codTracking.remittanceId": remittance._id,
-                    "codTracking.remittedAt": new Date()
+            const remittance = await DeliveryCodRemittance.create({
+                deliveryPartnerId: deliveryId,
+                franchiseId: franchiseKey || null,
+                orderIds: group.map((o) => o._id),
+                amount: Number(amount.toFixed(2)),
+                paymentMethod,
+                referenceNo: String(referenceNo || ""),
+                note: String(note || ""),
+                status: "submitted"
+            });
+
+            await Order.updateMany(
+                { _id: { $in: group.map((o) => o._id) } },
+                {
+                    $set: {
+                        "codTracking.remittanceStatus": "submitted",
+                        "codTracking.remittanceId": remittance._id,
+                        "codTracking.remittedAt": new Date()
+                    }
                 }
-            }
-        );
+            );
 
-        return handleResponse(res, 201, "COD remittance submitted successfully", remittance);
+            remittances.push(remittance);
+
+            const payload = {
+                remittanceId: remittance._id,
+                amount: remittance.amount,
+                deliveryPartnerName: req.delivery?.fullName || "",
+                orderCount: group.length
+            };
+            if (franchiseKey) emitToFranchise(franchiseKey, "cod_remittance_submitted", payload);
+            emitToAdmin("cod_remittance_submitted", { ...payload, franchiseId: franchiseKey || null });
+        }
+
+        const total = remittances.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+        return handleResponse(res, 201, "COD cash submitted to the franchise", {
+            remittances,
+            totalAmount: Number(total.toFixed(2))
+        });
     } catch (err) {
         console.error("Submit COD remittance error:", err);
         return handleResponse(res, 500, "Internal server error");
@@ -226,6 +257,7 @@ export const getMyCodRemittances = async (req, res) => {
         if (!deliveryId) return handleResponse(res, 401, "Unauthorized");
 
         const remittances = await DeliveryCodRemittance.find({ deliveryPartnerId: deliveryId })
+            .populate("franchiseId", "franchiseName")
             .sort({ createdAt: -1 })
             .limit(50);
 

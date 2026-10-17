@@ -74,6 +74,11 @@ export default function CodRemittanceScreen() {
             )
         },
         {
+            header: 'Handed to',
+            key: 'franchiseId',
+            render: (franchise) => <span className="text-[11px] font-bold text-slate-700">{franchise?.franchiseName || 'Head office'}</span>
+        },
+        {
             header: 'Orders',
             key: 'orderIds',
             render: (orderIds) => <span className="text-[11px] font-bold text-slate-700">{orderIds?.length || 0}</span>
@@ -112,7 +117,9 @@ export default function CodRemittanceScreen() {
             header: 'Actions',
             key: '_id',
             render: (_id, row) => (
-                row.status === 'submitted' ? (
+                row.status === 'submitted' && row.franchiseId ? (
+                    <span className="text-[10px] font-bold text-blue-600">Franchise is checking</span>
+                ) : row.status === 'submitted' ? (
                     <div className="flex items-center gap-2">
                         <button
                             onClick={(e) => {
@@ -125,7 +132,7 @@ export default function CodRemittanceScreen() {
                             Verify
                         </button>
                     </div>
-                ) : <span className="text-[10px] text-slate-400">Reviewed</span>
+                ) : <span className="text-[10px] text-slate-400">{row.verifiedByFranchise?.franchiseName ? `By ${row.verifiedByFranchise.franchiseName}` : 'Reviewed'}</span>
             )
         }
     ];
@@ -152,7 +159,7 @@ export default function CodRemittanceScreen() {
                             <ChevronRight size={10} />
                             <span className="text-slate-900 uppercase tracking-widest">COD Remittance</span>
                         </div>
-                        <h1 className="text-sm font-bold text-slate-900">Verify cash submitted by delivery partners</h1>
+                        <h1 className="text-sm font-bold text-slate-900">COD cash handed over by delivery partners (verified by franchises)</h1>
                     </div>
 
                     <button

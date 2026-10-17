@@ -1841,7 +1841,9 @@ export const getCodRemittances = async (req, res) => {
 
     const remittances = await DeliveryCodRemittance.find(query)
       .populate("deliveryPartnerId", "fullName mobile vehicleNumber")
+      .populate("franchiseId", "franchiseName")
       .populate("verifiedBy", "fullName email")
+      .populate("verifiedByFranchise", "franchiseName")
       .sort({ createdAt: -1 })
       .limit(200);
 
@@ -1869,6 +1871,15 @@ export const reviewCodRemittance = async (req, res) => {
         res,
         400,
         "Only submitted remittances can be reviewed",
+      );
+    }
+
+    // Cash handed to a franchise is checked by that franchise; the admin only watches it
+    if (remittance.franchiseId) {
+      return handleResponse(
+        res,
+        400,
+        "This cash was handed to a franchise, so the franchise verifies it. You can see its status here.",
       );
     }
 

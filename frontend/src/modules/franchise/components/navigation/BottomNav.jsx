@@ -7,6 +7,7 @@ import {
     PackageCheck,
     Truck,
     Undo2,
+    Wallet,
     FileText,
     BarChart3,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ const fullNavItems = [
     { icon: PackageCheck, label: 'Receiving', path: '/franchise/receiving' },
     { icon: Undo2, label: 'Returns', path: '/franchise/returns' },
     { icon: Truck, label: 'Delivery', path: '/franchise/dispatch' },
+    { icon: Wallet, label: 'Cash', path: '/franchise/cash' },
     { icon: User, label: 'Profile', path: '/franchise/profile' },
 ];
 

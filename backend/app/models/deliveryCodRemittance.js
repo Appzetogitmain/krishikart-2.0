@@ -8,6 +8,14 @@ const deliveryCodRemittanceSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // The franchise the cash was handed to (the franchise the orders went out from). Empty on
+    // older remittances, which the main admin still reviews.
+    franchiseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Franchise",
+      default: null,
+      index: true,
+    },
     orderIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -44,6 +52,11 @@ const deliveryCodRemittanceSchema = new mongoose.Schema(
     verifiedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MasterAdmin",
+      default: null,
+    },
+    verifiedByFranchise: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Franchise",
       default: null,
     },
     verifiedAt: {

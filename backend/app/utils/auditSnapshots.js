@@ -327,10 +327,14 @@ export const procurementSnap = async (id) => {
 };
 
 export const remittanceSnap = async (id) => {
-    const r = await byId("DeliveryCodRemittance", id, { path: "deliveryPartnerId", select: "fullName" });
+    const r = await byId("DeliveryCodRemittance", id, [
+        { path: "deliveryPartnerId", select: "fullName" },
+        { path: "franchiseId", select: "franchiseName" },
+    ]);
     if (!r) return null;
+    const to = r.franchiseId?.franchiseName ? ` to ${r.franchiseId.franchiseName}` : "";
     return {
-        label: `Cash deposit of ${money(r.amount)} by ${r.deliveryPartnerId?.fullName || "delivery partner"}`,
+        label: `Cash deposit of ${money(r.amount)} by ${r.deliveryPartnerId?.fullName || "delivery partner"}${to}`,
         values: {
             Status: human(r.status),
             Amount: money(r.amount),

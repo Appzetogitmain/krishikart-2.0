@@ -371,7 +371,12 @@ export const AUDIT_RULES = [
     // ── Cash (COD) deposits ─────────────────────────────────────────────────────
     {
         m: "POST", p: "/delivery/cod/remittance", module: "Cash Deposits", action: "cod.submit", kind: "create",
-        target: { type: "Cash deposit", id: R, snap: S.remittanceSnap }, title: "Cash collected from customers deposited", severity: "important",
+        target: { type: "Cash deposit", id: R, snap: S.remittanceSnap }, title: "Cash collected from customers handed to the franchise", severity: "important",
+    },
+    {
+        m: "PUT", p: "/franchise/cod/remittances/:remittanceId/review", module: "Cash Deposits", action: "cod.franchise_review", kind: "update",
+        target: { type: "Cash deposit", id: (ctx) => P(ctx, "remittanceId"), snap: S.remittanceSnap }, title: reviewTitle("Cash deposit"), severity: "important",
+        details: (ctx) => [{ label: "Reason", value: short(B(ctx, "reason")) }],
     },
     {
         m: "PUT", p: "/masteradmin/cod/remittances/:remittanceId/review", module: "Cash Deposits", action: "cod.review", kind: "update",

@@ -24,6 +24,10 @@ import {
   testPushByToken
 } from "../controllers/franchise.controller.js";
 import {
+  getFranchiseCodRemittances,
+  reviewFranchiseCodRemittance,
+} from "../controllers/franchise.cod.controller.js";
+import {
   createPOSSale,
   getPOSHistory
 } from "../controllers/franchise.pos.controller.js";
@@ -109,6 +113,18 @@ router.post(
   protectFranchise,
   requireFranchiseAccountVerified,
   updateAvailability,
+);
+router.get(
+  "/cod/remittances",
+  protectFranchise,
+  requireFranchiseAccountVerified,
+  getFranchiseCodRemittances,
+);
+router.put(
+  "/cod/remittances/:remittanceId/review",
+  protectFranchise,
+  requireFranchiseAccountVerified,
+  reviewFranchiseCodRemittance,
 );
 router.post("/fcm-token", protectFranchise, saveFCMToken);
 router.post(
