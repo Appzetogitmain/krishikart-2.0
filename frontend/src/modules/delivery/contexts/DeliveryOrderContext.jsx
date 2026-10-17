@@ -93,9 +93,9 @@ export function DeliveryOrderProvider({ children }) {
         }
     };
 
-    const updateStatus = async (orderId, newStatus) => {
+    const updateStatus = async (orderId, newStatus, extra = {}) => {
         try {
-            const response = await api.put(`/orders/delivery/${orderId}/status`, { status: newStatus });
+            const response = await api.put(`/orders/delivery/${orderId}/status`, { status: newStatus, ...extra });
             if (response.data.success) {
                 toast.success(`Status updated to ${newStatus}`);
                 fetchDispatchedOrders();

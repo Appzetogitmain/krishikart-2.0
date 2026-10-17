@@ -1111,7 +1111,7 @@ export const updateReturnPickupStatus = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, allowPartialFulfillment } = req.body;
+    const { status, allowPartialFulfillment, collectionMode } = req.body;
 
     const order = await Order.findById(id);
     if (!order) return handleResponse(res, 404, "Order not found");
@@ -1378,6 +1378,16 @@ export const updateOrderStatus = async (req, res) => {
       order.numberOfPackages = req.body.numberOfPackages;
     }
 
+    // A COD customer may pay by UPI to the franchise's QR instead of giving cash
+    const paidByFranchiseQr =
+      status === "Delivered" && order.paymentMethod === "COD" && collectionMode === "upi_franchise_qr";
+    if (paidByFranchiseQr) {
+      const store = order.franchiseId ? await Franchise.findById(order.franchiseId).select("storeQRCode") : null;
+      if (!store?.storeQRCode) {
+        return handleResponse(res, 400, "This franchise has not uploaded a payment QR code, so the customer cannot pay by UPI. Please collect cash.");
+      }
+    }
+
     order.orderStatus = status;
 
     // Push to history
@@ -1404,7 +1414,15 @@ export const updateOrderStatus = async (req, res) => {
         order.codTracking.collectedAmount = Number(order.totalAmount || 0);
         order.codTracking.collectedAt = new Date();
         order.codTracking.collectedByDeliveryId = collectorId;
-        order.codTracking.remittanceStatus = "pending";
+        if (paidByFranchiseQr) {
+          // The money went straight to the franchise, so the delivery partner holds no cash to hand over
+          order.codTracking.collectionMode = "upi_franchise_qr";
+          order.codTracking.remittanceStatus = "verified";
+          order.codTracking.verifiedAt = new Date();
+        } else {
+          order.codTracking.collectionMode = "cash";
+          order.codTracking.remittanceStatus = "pending";
+        }
       }
     }
 
@@ -2303,7 +2321,7 @@ export const getDispatchedOrders = async (req, res) => {
       deliveryPartnerId: partnerId,
     })
       .populate("userId", "fullName mobile address")
-      .populate("franchiseId", "franchiseName city area mobile location formattedAddress")
+      .populate("franchiseId", "franchiseName city area mobile location formattedAddress storeQRCode")
       .sort({ updatedAt: -1 });
 
     // Map to format delivery app expects
@@ -2347,6 +2365,7 @@ export const getDispatchedOrders = async (req, res) => {
         customerLocation,
         franchise: order.franchiseId?.franchiseName || "Kisaankart Store",
         franchiseAddress: franchiseAddr,
+        franchiseQrCode: order.franchiseId?.storeQRCode || null,
         customerName: order.userId?.fullName || "Customer",
         customerAddress: order.shippingAddress,
         distance: distance,

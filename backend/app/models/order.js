@@ -209,6 +209,13 @@ const orderSchema = new mongoose.Schema({
             ref: 'Delivery',
             default: null
         },
+        // cash = the delivery partner took cash (to be handed to the franchise);
+        // upi_franchise_qr = the customer paid by UPI straight to the franchise's QR, so there is no cash to hand over
+        collectionMode: {
+            type: String,
+            enum: ['cash', 'upi_franchise_qr'],
+            default: 'cash'
+        },
         remittanceStatus: {
             type: String,
             enum: ['pending', 'submitted', 'verified'],
