@@ -83,6 +83,7 @@ import {
   updateFAQ,
   deleteFAQ,
 } from "../controllers/masteradmin.controller.js";
+import { setMotherFranchise } from "../controllers/motherSupply.controller.js";
 import { getComprehensiveReports } from "../controllers/reports.controller.js";
 
 import {
@@ -220,6 +221,12 @@ router.delete(
   protectMasterAdmin,
   requirePermission("franchises"),
   deleteFranchise,
+);
+router.put(
+  "/franchises/:id/mother",
+  protectMasterAdmin,
+  requirePermission("franchises"),
+  setMotherFranchise,
 );
 router.put(
   "/franchises/:id/service-area",

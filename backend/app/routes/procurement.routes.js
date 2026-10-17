@@ -19,6 +19,13 @@ import {
     getRejectedStockReport
 } from "../controllers/procurement.controller.js";
 import {
+    listMotherFranchisesForRequest,
+    assignMotherFranchise,
+    getSupplyRequests,
+    dispatchSupplyRequest,
+    declineSupplyRequest,
+} from "../controllers/motherSupply.controller.js";
+import {
     protectFranchise,
     requireFranchiseAccountVerified,
 } from "../middlewares/franchise.auth.js";
@@ -47,6 +54,26 @@ router.put(
     franchiseConfirmReceipt,
 );
 
+// Mother franchise: stock it was asked to send to other franchises
+router.get(
+    "/franchise/supply-requests",
+    protectFranchise,
+    requireFranchiseAccountVerified,
+    getSupplyRequests,
+);
+router.put(
+    "/franchise/supply-requests/:requestId/dispatch",
+    protectFranchise,
+    requireFranchiseAccountVerified,
+    dispatchSupplyRequest,
+);
+router.put(
+    "/franchise/supply-requests/:requestId/decline",
+    protectFranchise,
+    requireFranchiseAccountVerified,
+    declineSupplyRequest,
+);
+
 // Vendor Routes (View Assignment)
 router.get("/vendor/my-assignments", protectVendor, getVendorAssignments);
 router.get("/vendor/active-dispatch", protectVendor, getVendorActiveDispatch);
@@ -63,6 +90,8 @@ router.put("/vendor/:requestId/status", protectVendor, vendorUpdateStatus);
 router.get("/admin/all", protectMasterAdmin, requireAnyPermission("assignment", "quotations"), getAllProcurementRequests);
 router.get("/admin/reports", protectMasterAdmin, requireAnyPermission("vendor-reports"), getVendorReports);
 router.get("/admin/rejected-stock", protectMasterAdmin, requireAnyPermission("vendor-reports"), getRejectedStockReport);
+router.get("/admin/mother-franchises", protectMasterAdmin, requireAnyPermission("assignment"), listMotherFranchisesForRequest);
+router.put("/admin/:requestId/assign-mother", protectMasterAdmin, requireAnyPermission("assignment"), assignMotherFranchise);
 router.put("/admin/:requestId/status", protectMasterAdmin, requireAnyPermission("assignment", "quotations"), adminUpdateProcurementRequest);
 router.post("/admin/from-order/:orderId", protectMasterAdmin, requireAnyPermission("orders", "assignment"), createProcurementFromOrder);
 

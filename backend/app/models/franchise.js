@@ -93,6 +93,13 @@ const franchiseSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    /** Set by the admin: this franchise also supplies stock to other franchises (acts as a dark store). */
+    isMotherFranchise: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
     role: {
       type: String,
       default: "franchise",

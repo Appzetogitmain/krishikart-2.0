@@ -17,6 +17,7 @@ import {
     Settings,
     CreditCard,
     Undo2,
+    Send,
     Lock,
     BarChart3,
     HelpCircle,
@@ -48,6 +49,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                 { icon: Truck, label: 'Deliveries', path: '/franchise/dispatch' },
                 { icon: Wallet, label: 'COD Cash', path: '/franchise/cash' },
                 { icon: ShoppingBasket, label: 'Procurement', path: '/franchise/procurement' },
+                ...(franchise?.isMotherFranchise ? [{ icon: Send, label: 'Supply to Franchises', path: '/franchise/supply' }] : []),
                 { icon: Undo2, label: 'Returns', path: '/franchise/returns' },
             ]
         },

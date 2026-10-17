@@ -198,7 +198,7 @@ const ReceivingScreen = () => {
                     <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
                         {(row.vendor || row.vendorName || row.assignedVendorName || row.assignedVendorId || 'V')?.[0] || 'V'}
                     </div>
-                    <span className="text-[10px] font-black text-slate-700 uppercase">{row.vendor || row.vendorName || row.assignedVendorName || row.assignedVendorId || 'Kisaankart Franchise'}</span>
+                    <span className="text-[10px] font-black text-slate-700 uppercase">{row.supplierFranchiseId?.franchiseName ? `${row.supplierFranchiseId.franchiseName} (mother franchise)` : (row.vendor || row.vendorName || row.assignedVendorName || row.assignedVendorId || 'Kisaankart Franchise')}</span>
                 </div>
             )
         },
@@ -317,7 +317,7 @@ const ReceivingScreen = () => {
                                     </button>
                                     <div>
                                         <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Checking: {selectedPO.invoice?.invoiceNumber || selectedPO._id}</h2>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{selectedPO.vendor || selectedPO.vendorName || selectedPO.assignedVendorName || selectedPO.assignedVendorId || 'Kisaankart Franchise'}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{selectedPO.supplierFranchiseId?.franchiseName ? `${selectedPO.supplierFranchiseId.franchiseName} (mother franchise)` : (selectedPO.vendor || selectedPO.vendorName || selectedPO.assignedVendorName || selectedPO.assignedVendorId || 'Kisaankart Franchise')}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">

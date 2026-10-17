@@ -23,7 +23,8 @@ import {
     Plus,
     Edit3,
     Trash2,
-    Layers
+    Layers,
+    Warehouse
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
@@ -91,6 +92,21 @@ export default function FranchiseManagementScreen() {
         } catch (error) {
             console.error("Error updating franchise status:", error);
             toast.error(error.response?.data?.message || 'Something went wrong. Please try again.');
+        }
+    };
+
+    const handleMotherToggle = async (franchise) => {
+        const makeMother = !franchise.isMotherFranchise;
+        const msg = makeMother
+            ? `Make ${franchise.franchiseName} a mother franchise? Other franchises can then get stock from it, through you.`
+            : `Stop ${franchise.franchiseName} being a mother franchise?`;
+        if (!window.confirm(msg)) return;
+        try {
+            const response = await api.put(`/masteradmin/franchises/${franchise._id}/mother`, { isMotherFranchise: makeMother });
+            toast.success(response.data?.message || 'Updated');
+            fetchFranchises();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not update the franchise');
         }
     };
 
@@ -221,7 +237,12 @@ export default function FranchiseManagementScreen() {
                                                     <Store size={16} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-bold text-slate-900 text-[11px] tracking-tight leading-none mb-1">{franchise.franchiseName}</p>
+                                                    <p className="font-bold text-slate-900 text-[11px] tracking-tight leading-none mb-1">
+                                                        {franchise.franchiseName}
+                                                        {franchise.isMotherFranchise && (
+                                                            <span className="ml-1.5 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-sm align-middle">Mother</span>
+                                                        )}
+                                                    </p>
                                                     <div className="flex items-center gap-2">
                                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{franchise.city}</p>
                                                         {franchise.servedCategories?.length > 0 && (
@@ -405,6 +426,17 @@ export default function FranchiseManagementScreen() {
                                                                 >
                                                                     <Layers size={12} />
                                                                     Manage Categories
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleMotherToggle(franchise)}
+                                                                    className={cn(
+                                                                        "border text-[10px] font-black uppercase tracking-widest py-2 rounded-sm transition-all flex items-center justify-center gap-2",
+                                                                        franchise.isMotherFranchise ? "bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700" : "bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                                                    )}
+                                                                    title="A mother franchise sends stock to other franchises (like a dark store)"
+                                                                >
+                                                                    <Warehouse size={12} />
+                                                                    {franchise.isMotherFranchise ? 'Mother Franchise: ON' : 'Make Mother Franchise'}
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleStatusChange(franchise._id, franchise.status === 'blocked' ? 'active' : 'blocked')}

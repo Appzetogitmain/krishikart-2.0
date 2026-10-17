@@ -457,6 +457,7 @@ export const createProcurementRequest = async (req, res) => {
     try {
         const franchiseId = req.franchise._id; // Extracted from middleware
         const { items, totalEstimatedAmount } = req.body;
+        const source = req.body.source === "mother_franchise" ? "mother_franchise" : "vendor";
 
         if (!items || items.length === 0) {
             return handleResponse(res, 400, "Items array is required");
@@ -464,6 +465,7 @@ export const createProcurementRequest = async (req, res) => {
 
         const procurementRequest = new ProcurementRequest({
             franchiseId,
+            source,
             orderId: req.body.orderId || null,
             items: items.map(item => ({
                 productId: item.id || item.productId,
@@ -482,7 +484,9 @@ export const createProcurementRequest = async (req, res) => {
         try {
             emitToAdmin('new_procurement_request', {
                 requestId: procurementRequest._id,
-                message: `New procurement request from Franchise for ${items.length} items.`,
+                message: source === "mother_franchise"
+                    ? `New stock request from a franchise for ${items.length} items, to be supplied by a mother franchise.`
+                    : `New procurement request from Franchise for ${items.length} items.`,
                 franchiseId
             });
         } catch(e) {}
@@ -705,6 +709,7 @@ export const getAllProcurementRequests = async (req, res) => {
 
         let requests = await ProcurementRequest.find(query)
             .populate("franchiseId", "franchiseName ownerName mobile city area")
+            .populate("supplierFranchiseId", "franchiseName ownerName mobile city area")
             .sort({ createdAt: -1 })
             .lean();
 
@@ -784,6 +789,7 @@ export const getMyProcurementRequests = async (req, res) => {
     try {
         const franchiseId = req.franchise._id;
         let requests = await ProcurementRequest.find({ franchiseId })
+            .populate("supplierFranchiseId", "franchiseName mobile city area")
             .sort({ createdAt: -1 })
             .lean();
 
@@ -991,6 +997,16 @@ export const franchiseConfirmReceipt = async (req, res) => {
                     requestId: request._id.toString(),
                     receivedItems: request.items.map(i => ({ name: i.name, received: i.receivedQuantity, rejected: i.rejected }))
                 }
+            });
+        }
+
+        // Tell the mother franchise that supplied it
+        if (request.supplierFranchiseId) {
+            const receivedSummary = request.items.map(i => `${i.name}: ${Number(i.receivedQuantity) || 0} ${i.unit}${i.rejected ? " (rejected)" : Number(i.damagedQuantity) > 0 ? ` (${i.damagedQuantity} damaged)` : ""}`).join(', ');
+            emitToFranchise(request.supplierFranchiseId.toString(), 'supply_request_update', {
+                requestId: request._id,
+                status: 'completed',
+                message: `${req.franchise.franchiseName || 'The franchise'} received your supply ${refOf(request._id)}. ${receivedSummary}`
             });
         }
 

@@ -62,6 +62,28 @@ const procurementRequestSchema = new mongoose.Schema({
         type: String, // keeping simple for now, can be ObjectId ref to Vendor model
         default: null,
     },
+    // Where the franchise wants the stock from: a vendor, or a mother franchise (another franchise
+    // that keeps stock for others). The admin decides the actual supplier.
+    source: {
+        type: String,
+        enum: ["vendor", "mother_franchise"],
+        default: "vendor",
+    },
+    // The mother franchise the admin assigned (instead of a vendor)
+    supplierFranchiseId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Franchise",
+        default: null,
+        index: true,
+    },
+    supplierDispatchedAt: { type: Date, default: null },
+    supplierNote: { type: String, default: "" },
+    // Last time a mother franchise said it cannot supply this request
+    lastDecline: {
+        franchiseId: { type: mongoose.Schema.Types.ObjectId, ref: "Franchise", default: null },
+        reason: { type: String, default: "" },
+        at: { type: Date, default: null },
+    },
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User", // Assuming MasterAdmin is a User

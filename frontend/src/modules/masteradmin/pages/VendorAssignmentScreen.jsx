@@ -15,7 +15,8 @@ import {
     Terminal,
     Cpu,
     Activity,
-    Zap
+    Zap,
+    Warehouse
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
@@ -34,6 +35,10 @@ export default function VendorAssignmentScreen() {
     const [vendorCity, setVendorCity] = useState('all');
     const [vendorSearch, setVendorSearch] = useState('');
     const [showVendorList, setShowVendorList] = useState(false);
+    // 'vendor' or 'mother': what the right-hand list shows
+    const [supplierKind, setSupplierKind] = useState('vendor');
+    const [mothers, setMothers] = useState([]);
+    const [isLoadingMothers, setIsLoadingMothers] = useState(false);
 
     const fetchPendingRequests = async () => {
         try {
@@ -42,6 +47,9 @@ export default function VendorAssignmentScreen() {
                 const mappedRequests = response.data.results.map(req => ({
                     id: req._id,
                     ownerName: req.franchiseId?.ownerName || 'Unknown Owner',
+                    franchiseName: req.franchiseId?.franchiseName || '',
+                    source: req.source || 'vendor',
+                    lastDecline: req.lastDecline,
                     mobile: req.franchiseId?.mobile || '',
                     city: req.franchiseId?.city || '',
                     items: req.items || [],
@@ -121,11 +129,74 @@ export default function VendorAssignmentScreen() {
 
     const [selectedItemToAssign, setSelectedItemToAssign] = useState(null);
 
-    const handleAssignProduct = (item) => {
+    const fetchMothers = async (order, item) => {
+        setIsLoadingMothers(true);
+        try {
+            const params = new URLSearchParams({ requestId: order.id });
+            if (item) params.set('productId', item.productId || item.id);
+            const response = await api.get(`/procurement/admin/mother-franchises?${params}`);
+            setMothers(response.data?.results || []);
+        } catch (error) {
+            setMothers([]);
+            toast.error(error.response?.data?.message || 'Could not load mother franchises');
+        } finally {
+            setIsLoadingMothers(false);
+        }
+    };
+
+    const handleAssignProduct = (item, kind) => {
         const productId = item.productId || item.id;
+        const useKind = kind || (selectedOrder?.source === 'mother_franchise' ? 'mother' : 'vendor');
         setSelectedItemToAssign(item);
-        fetchVendorsForOrder(selectedOrder, productId, item.name);
+        setSupplierKind(useKind);
+        if (useKind === 'mother') fetchMothers(selectedOrder, item);
+        else fetchVendorsForOrder(selectedOrder, productId, item.name);
         setShowVendorList(true);
+    };
+
+    // Give the whole request (all items) to one mother franchise
+    const handleWholeToMother = () => {
+        setSelectedItemToAssign(null);
+        setSupplierKind('mother');
+        fetchMothers(selectedOrder, null);
+        setShowVendorList(true);
+    };
+
+    const switchKind = (kind) => {
+        setSupplierKind(kind);
+        if (kind === 'mother') fetchMothers(selectedOrder, selectedItemToAssign);
+        else if (selectedItemToAssign) fetchVendorsForOrder(selectedOrder, selectedItemToAssign.productId || selectedItemToAssign.id, selectedItemToAssign.name);
+    };
+
+    const handleAssignMother = async (mother) => {
+        setIsAssigning(true);
+        try {
+            const assignedItem = selectedItemToAssign;
+            const response = await api.put(`/procurement/admin/${selectedOrder.id}/assign-mother`, {
+                supplierFranchiseId: mother._id,
+                itemId: assignedItem ? (assignedItem.productId || assignedItem._id || assignedItem.id) : undefined,
+            });
+            if (response.data.success) {
+                setAssignmentSuccess(true);
+                if (assignedItem && selectedOrder.items.length > 1) {
+                    const pid = assignedItem.productId || assignedItem._id || assignedItem.id;
+                    const remainingItems = selectedOrder.items.filter(i => (i.productId || i._id || i.id) !== pid);
+                    setSelectedOrder(prev => ({ ...prev, items: remainingItems }));
+                    setPendingRequests(prev => prev.map(r => r.id === selectedOrder.id ? { ...r, items: remainingItems } : r));
+                } else {
+                    setPendingRequests(prev => prev.filter(r => r.id !== selectedOrder.id));
+                    setTimeout(() => setSelectedOrder(null), 2000);
+                }
+                setTimeout(() => {
+                    setAssignmentSuccess(false);
+                    setShowVendorList(false);
+                }, 2000);
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not assign the mother franchise');
+        } finally {
+            setIsAssigning(false);
+        }
     };
 
     // Vendor list: chosen city + name search, vendors of the franchise's own city first
@@ -256,7 +327,13 @@ export default function VendorAssignmentScreen() {
                                             <div className="flex items-center justify-between mb-1">
                                                 <div>
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Franchise</span>
-                                                    <h4 className="font-black text-slate-900 text-xs tracking-tight uppercase">{order.ownerName}</h4>
+                                                    <h4 className="font-black text-slate-900 text-xs tracking-tight uppercase">{order.franchiseName || order.ownerName}</h4>
+                                                    {order.source === 'mother_franchise' && (
+                                                        <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-sm">Wants it from a mother franchise</span>
+                                                    )}
+                                                    {order.lastDecline?.reason && (
+                                                        <span className="block mt-1 text-[10px] font-bold text-amber-600">Last supplier: {order.lastDecline.reason}</span>
+                                                    )}
                                                 </div>
                                                 <span className="text-[10px] font-bold text-slate-400 tabular-nums">{order.createdAt}</span>
                                             </div>
@@ -403,20 +480,37 @@ export default function VendorAssignmentScreen() {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            onClick={() => handleAssignProduct(item)}
-                                                            className="text-[10px] font-black uppercase text-slate-900 bg-white border border-slate-200 rounded-sm px-2 py-1.5 hover:bg-slate-900 hover:text-white transition-all shadow-sm flex items-center gap-1"
-                                                        >
-                                                            Assign <ArrowRight size={10} />
-                                                        </button>
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={() => handleAssignProduct(item, 'vendor')}
+                                                                className="text-[10px] font-black uppercase text-slate-900 bg-white border border-slate-200 rounded-sm px-2 py-1.5 hover:bg-slate-900 hover:text-white transition-all shadow-sm flex items-center gap-1"
+                                                            >
+                                                                Vendor <ArrowRight size={10} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAssignProduct(item, 'mother')}
+                                                                className="text-[10px] font-black uppercase text-indigo-700 bg-white border border-indigo-200 rounded-sm px-2 py-1.5 hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center gap-1"
+                                                            >
+                                                                Mother <ArrowRight size={10} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="p-6 border-t border-slate-400/10 bg-slate-50">
-                                        <p className="text-[10px] text-slate-400 font-bold text-center">Select an item above to find vendors</p>
+                                    <div className="p-6 border-t border-slate-400/10 bg-slate-50 space-y-3">
+                                        {selectedOrder.source === 'mother_franchise' && (
+                                            <p className="text-[10px] text-indigo-700 font-bold text-center">The franchise asked for this from a mother franchise.</p>
+                                        )}
+                                        <button
+                                            onClick={handleWholeToMother}
+                                            className="w-full h-10 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-sm hover:bg-indigo-700 flex items-center justify-center gap-2"
+                                        >
+                                            <Warehouse size={12} /> Give all items to a mother franchise
+                                        </button>
+                                        <p className="text-[10px] text-slate-400 font-bold text-center">Or pick a vendor / mother franchise per item above</p>
                                     </div>
                                 </div>
                             ) : (
@@ -434,9 +528,25 @@ export default function VendorAssignmentScreen() {
                                                 <X size={16} />
                                             </button>
                                         </div>
-                                        <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">Select A Vendor</h2>
-                                        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest italic opacity-60">Matching vendors for {selectedOrder.ownerName}</p>
+                                        <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">{supplierKind === 'mother' ? 'Select A Mother Franchise' : 'Select A Vendor'}</h2>
+                                        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest italic opacity-60">
+                                            {selectedItemToAssign ? `For ${selectedItemToAssign.name}` : 'For all items'} • {selectedOrder.franchiseName || selectedOrder.ownerName}
+                                        </p>
+                                        {selectedItemToAssign && (
+                                            <div className="mt-3 grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-sm">
+                                                {[{ k: 'vendor', l: 'Vendors' }, { k: 'mother', l: 'Mother franchises' }].map(({ k, l }) => (
+                                                    <button
+                                                        key={k}
+                                                        onClick={() => switchKind(k)}
+                                                        className={cn("h-8 text-[10px] font-black uppercase tracking-wider rounded-sm", supplierKind === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500")}
+                                                    >
+                                                        {l}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
 
+                                        {supplierKind === 'vendor' && (<>
                                         <div className="relative mt-4 group">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={12} />
                                             <input
@@ -466,8 +576,49 @@ export default function VendorAssignmentScreen() {
                                                 ))}
                                             </select>
                                         </label>
+                                        </>)}
                                     </div>
 
+                                    {supplierKind === 'mother' ? (
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar bg-slate-50">
+                                        {isLoadingMothers ? (
+                                            <div className="py-10 flex justify-center text-slate-400 text-[10px] font-black uppercase tracking-widest">Loading...</div>
+                                        ) : mothers.length === 0 ? (
+                                            <div className="py-16 text-center border border-dashed border-slate-200 bg-white rounded-sm px-8">
+                                                <Warehouse size={28} className="text-slate-300 mx-auto mb-2" />
+                                                <p className="text-xs font-bold text-slate-700">No mother franchise available</p>
+                                                <p className="text-[10px] text-slate-400 mt-1">Mark a franchise as "Mother Franchise" on the Franchises page first.</p>
+                                            </div>
+                                        ) : mothers.map((m) => (
+                                            <div key={m._id} className="bg-white p-4 border border-slate-200 rounded-sm space-y-3">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <h4 className="font-black text-slate-900 text-xs">{m.franchiseName}</h4>
+                                                        <p className="text-[10px] text-slate-400 font-bold">{[m.area, m.city].filter(Boolean).join(', ')}</p>
+                                                    </div>
+                                                    <span className={cn("px-1.5 py-0.5 text-[9px] font-black uppercase rounded-sm border", m.hasAll ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-amber-50 text-amber-700 border-amber-200")}>
+                                                        {m.hasAll ? 'Has all stock' : 'Stock short'}
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    {m.lines.map((l) => (
+                                                        <div key={l.productId} className="flex justify-between text-[10px] font-bold">
+                                                            <span className="text-slate-600">{l.name}</span>
+                                                            <span className={l.inStock >= l.needed ? 'text-emerald-600' : 'text-rose-600'}>{l.inStock} in stock / {l.needed} {l.unit} needed</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    disabled={isAssigning}
+                                                    onClick={() => handleAssignMother(m)}
+                                                    className="w-full bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider py-2 rounded-sm hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                                >
+                                                    {isAssigning ? 'Assigning...' : 'Give to this mother franchise'} <ArrowRight size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    ) : (
                                     <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar bg-slate-50">
                                         {isLoadingVendors ? (
                                             <div className="py-10 flex flex-col items-center justify-center text-slate-400">
@@ -539,6 +690,7 @@ export default function VendorAssignmentScreen() {
                                             </div>
                                         )}
                                     </div>
+                                    )}
                                 </div>
                             )}
                         </motion.div>

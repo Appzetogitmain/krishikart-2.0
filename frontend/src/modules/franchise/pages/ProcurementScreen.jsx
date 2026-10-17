@@ -40,6 +40,8 @@ export default function ProcurementScreen() {
     const [selectedCategory, setSelectedCategory] = useState('All');
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // Where the stock should come from: a vendor, or a mother franchise (another franchise's stock)
+    const [source, setSource] = useState('vendor');
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [lastRequestId, setLastRequestId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -179,7 +181,8 @@ export default function ProcurementScreen() {
                 price: item.price,
                 quotedPrice: 0
             })),
-            totalEstimatedAmount: totalAmount
+            totalEstimatedAmount: totalAmount,
+            source
         };
 
         try {
@@ -385,6 +388,14 @@ export default function ProcurementScreen() {
                                             <div>
                                                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-1">Request #{reqId ? reqId.toString().slice(-6) : 'PENDING'}</h3>
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{request.createdAt && !isNaN(new Date(request.createdAt).getTime()) ? new Date(request.createdAt).toLocaleDateString() : 'N/A'}</p>
+                                                <p className="text-[10px] font-bold text-slate-500 mt-1">
+                                                    {request.supplierFranchiseId?.franchiseName
+                                                        ? `From mother franchise: ${request.supplierFranchiseId.franchiseName}`
+                                                        : request.source === 'mother_franchise' ? 'From a mother franchise (admin is choosing)' : 'From a vendor'}
+                                                </p>
+                                                {request.status === 'pending_assignment' && request.lastDecline?.reason && (
+                                                    <p className="text-[10px] font-bold text-amber-600 mt-0.5">Previous supplier: {request.lastDecline.reason}</p>
+                                                )}
                                             </div>
                                             <span className={cn(
                                                 "px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm border",
@@ -508,6 +519,28 @@ export default function ProcurementScreen() {
                         <div className="h-px bg-slate-800" />
                     </div>
 
+                    <div className="mb-4">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2 px-1">Get this stock from</p>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { key: 'vendor', label: 'Vendor' },
+                                { key: 'mother_franchise', label: 'Mother Franchise' },
+                            ].map((opt) => (
+                                <button
+                                    key={opt.key}
+                                    type="button"
+                                    onClick={() => setSource(opt.key)}
+                                    className={cn(
+                                        "h-10 rounded-sm text-[10px] font-black uppercase tracking-wider border transition-all",
+                                        source === opt.key ? "bg-white text-slate-900 border-white" : "bg-transparent text-slate-400 border-slate-700 hover:border-slate-500"
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <button
                         onClick={handlePlaceOrder}
                         disabled={isSubmitting || cartItems.length === 0}
@@ -531,7 +564,9 @@ export default function ProcurementScreen() {
 
                     <div className="mt-4 flex items-center justify-center gap-2">
                         <ShieldCheck size={10} className="text-emerald-500/50" />
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Sent to admin for approval</span>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                            {source === 'mother_franchise' ? 'Admin will ask a mother franchise to send it' : 'Sent to admin for approval'}
+                        </span>
                     </div>
                 </div>
             </div>

@@ -487,6 +487,25 @@ export const AUDIT_RULES = [
 
     // ── Stock requests (procurement) ───────────────────────────────────────────
     {
+        m: "PUT", p: "/masteradmin/franchises/:id/mother", module: "Franchise Management", action: "franchise.mother", kind: "update",
+        target: { type: "Franchise", id: (ctx) => P(ctx, "id"), snap: S.franchiseSnap },
+        title: ({ ctx }) => (B(ctx, "isMotherFranchise") === true ? "Franchise made a mother franchise" : "Franchise is no longer a mother franchise"), severity: "important",
+    },
+    {
+        m: "PUT", p: "/procurement/admin/:requestId/assign-mother", module: "Stock Requests", action: "procurement.assign_mother", kind: "update",
+        target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap }, title: "Stock request given to a mother franchise",
+        details: async (ctx) => [{ label: "Mother franchise", value: await nameOf("Franchise", B(ctx, "supplierFranchiseId"), "franchiseName") }],
+    },
+    {
+        m: "PUT", p: "/procurement/franchise/supply-requests/:requestId/dispatch", module: "Stock Requests", action: "procurement.mother_dispatch", kind: "update",
+        target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap }, title: "Mother franchise sent stock", severity: "important",
+    },
+    {
+        m: "PUT", p: "/procurement/franchise/supply-requests/:requestId/decline", module: "Stock Requests", action: "procurement.mother_decline", kind: "update",
+        target: { type: "Stock request", id: (ctx) => P(ctx, "requestId"), snap: S.procurementSnap }, title: "Mother franchise cannot send stock",
+        details: (ctx) => [{ label: "Reason", value: short(B(ctx, "reason")) }],
+    },
+    {
         m: "POST", p: "/procurement/franchise/create", module: "Stock Requests", action: "procurement.create", kind: "create",
         target: { type: "Stock request", id: R, snap: S.procurementSnap }, title: "Store requested new stock",
     },

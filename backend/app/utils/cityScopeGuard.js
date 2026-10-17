@@ -88,6 +88,7 @@ const RECORDS = [
     rule("GET,PUT", "/masteradmin/franchises/:id", { check: "franchise", param: "id" }),
     rule("PUT", "/masteradmin/franchises/:id/status", { check: "franchise", param: "id" }),
     rule("PUT", "/masteradmin/franchises/:id/service-area", { check: "franchise", param: "id" }),
+    rule("PUT", "/masteradmin/franchises/:id/mother", { check: "franchise", param: "id" }),
     rule("PUT", "/masteradmin/franchises/:id/categories", { check: "franchise", param: "id" }),
     rule("PUT", "/masteradmin/franchises/:id/kyc-review", { check: "franchise", param: "id" }),
     rule("PUT", "/masteradmin/franchises/:franchiseId/category-review", { check: "franchise", param: "franchiseId" }),
@@ -107,6 +108,7 @@ const RECORDS = [
     rule("PUT", "/orders/admin/:id/status", { check: "order", param: "id" }),
     rule("POST", "/procurement/admin/from-order/:orderId", { check: "order", param: "orderId" }),
     rule("PUT", "/procurement/admin/:requestId/status", { check: "procurement", param: "requestId" }),
+    rule("PUT", "/procurement/admin/:requestId/assign-mother", { check: "procurement", param: "requestId" }),
 ];
 
 // 3. Lists trimmed to the admin's cities: `kind` says how to read each item; `path` where the list is
