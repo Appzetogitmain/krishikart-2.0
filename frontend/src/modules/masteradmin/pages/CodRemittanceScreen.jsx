@@ -102,14 +102,16 @@ export default function CodRemittanceScreen() {
         {
             header: 'Status',
             key: 'status',
-            render: (st) => (
+            render: (st, row) => (
                 <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${st === 'verified'
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                         : st === 'submitted'
                             ? 'bg-blue-50 text-blue-600 border-blue-100'
                             : 'bg-rose-50 text-rose-600 border-rose-100'
                     }`}>
-                    {st}
+                    {row?.franchiseId
+                        ? (st === 'verified' ? 'Received by franchise' : st === 'submitted' ? 'Awaiting franchise' : st)
+                        : st}
                 </span>
             )
         },
