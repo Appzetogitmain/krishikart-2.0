@@ -1375,7 +1375,14 @@ export const updateOrderStatus = async (req, res) => {
 
     // Accept number of packages when marking as packed
     if (status === "Packed" && req.body.numberOfPackages) {
-      order.numberOfPackages = req.body.numberOfPackages;
+      const packages = Number(req.body.numberOfPackages);
+      if (!Number.isInteger(packages) || packages < 1) {
+        return handleResponse(res, 400, "Please enter the number of packages as a whole number.");
+      }
+      if (isFranchise && packages > maxPackagesFor(order)) {
+        return handleResponse(res, 400, `This order has ${maxPackagesFor(order)} units in total, so it cannot be packed in ${packages} packages.`);
+      }
+      order.numberOfPackages = packages;
     }
 
     // A COD customer may pay by UPI to the franchise's QR instead of giving cash
@@ -2164,6 +2171,13 @@ export const rejectFranchiseOrder = async (req, res) => {
 };
 
 // Assign delivery partner to order
+// A customer's order is packed exactly as ordered, so the number of boxes/bags cannot be more than the
+// number of units ordered (e.g. 41 kg can be at most 41 packages).
+const maxPackagesFor = (order) => {
+  const units = (order.items || []).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+  return Math.min(500, Math.max(1, Math.ceil(units)));
+};
+
 /**
  * PUT /orders/franchise/:id/packages  { numberOfPackages }
  * Lets the franchise enter (or fix) how many boxes/bags an order is packed in. Needed for orders the
@@ -2180,6 +2194,9 @@ export const setOrderPackageCount = async (req, res) => {
     if (!order) return handleResponse(res, 404, "Order not found");
     if (!order.franchiseId || order.franchiseId.toString() !== req.franchise._id.toString()) {
       return handleResponse(res, 403, "Not authorized to manage this order");
+    }
+    if (count > maxPackagesFor(order)) {
+      return handleResponse(res, 400, `This order has ${maxPackagesFor(order)} units in total, so it cannot be packed in ${count} packages.`);
     }
     if (!["Packed", "Ready"].includes(order.orderStatus)) {
       return handleResponse(res, 400, "The package count can only be set while the order is packed and waiting for dispatch.");

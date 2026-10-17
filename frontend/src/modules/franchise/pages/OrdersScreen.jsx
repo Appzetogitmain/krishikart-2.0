@@ -61,6 +61,11 @@ export default function OrdersScreen() {
     // system after vendor stock arrived) and only the count is missing
     const [packageModalMode, setPackageModalMode] = useState('pack');
     const [packageCount, setPackageCount] = useState(0);
+    const packingOrder = allOrders.find(o => o.id === selectedOrderForPacking) || null;
+    // An order is packed exactly as ordered: at most one package per ordered unit
+    const maxPackages = packingOrder
+        ? Math.min(500, Math.max(1, Math.ceil((packingOrder.items || []).reduce((s, i) => s + Number(i.quantity || 0), 0))))
+        : 500;
     const [selectedOrderForDispatch, setSelectedOrderForDispatch] = useState(null);
     const [selectedOrderForPacking, setSelectedOrderForPacking] = useState(null);
     const [isAssigning, setIsAssigning] = useState(false);
@@ -707,7 +712,23 @@ export default function OrdersScreen() {
 
                             <div className="p-8 space-y-6">
                                 <div className="space-y-4">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Number of Packages</label>
+                                    {packingOrder && (
+                                        <div className="rounded-sm border border-slate-200 bg-slate-50 p-3 space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                {packageModalMode === 'count' ? 'Order contents' : 'You are packing exactly what the customer ordered'}
+                                            </p>
+                                            {packingOrder.items.map((i, idx) => (
+                                                <div key={idx} className="flex items-center justify-between text-xs font-bold text-slate-800">
+                                                    <span className="truncate pr-2">{i.name}</span>
+                                                    <span className="tabular-nums shrink-0">{i.quantity} {i.unit}</span>
+                                                </div>
+                                            ))}
+                                            {packageModalMode !== 'count' && (
+                                                <p className="text-[10px] font-semibold text-slate-500 pt-1">This quantity is taken from your stock. It cannot be changed here.</p>
+                                            )}
+                                        </div>
+                                    )}
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Number of boxes / bags (not kg)</label>
                                     <div className="relative group">
                                         <input
                                             type="number"
@@ -716,19 +737,19 @@ export default function OrdersScreen() {
                                             onChange={(e) => {
                                                 const v = e.target.value;
                                                 if (v === '') setPackageCount(0);
-                                                else setPackageCount(Math.max(0, parseInt(v, 10) || 0));
+                                                else setPackageCount(Math.min(maxPackages, Math.max(0, parseInt(v, 10) || 0)));
                                             }}
                                             className="w-full bg-slate-50 border-2 border-slate-100 rounded-sm py-4 px-6 text-3xl font-black text-slate-900 outline-none focus:border-slate-900 transition-all text-center tabular-nums"
                                             placeholder="0"
                                             autoFocus
                                         />
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-                                            <button type="button" onClick={() => setPackageCount(p => p + 1)} className="p-1 hover:bg-white border border-slate-200 rounded text-slate-400 hover:text-slate-900 shadow-sm transition-all"><ArrowUpRight size={12} /></button>
+                                            <button type="button" onClick={() => setPackageCount(p => Math.min(maxPackages, p + 1))} className="p-1 hover:bg-white border border-slate-200 rounded text-slate-400 hover:text-slate-900 shadow-sm transition-all"><ArrowUpRight size={12} /></button>
                                             <button type="button" onClick={() => setPackageCount(p => Math.max(0, p - 1))} className="p-1 hover:bg-white border border-slate-200 rounded text-slate-400 hover:text-slate-900 shadow-sm transition-all"><ArrowDownRight size={12} /></button>
                                         </div>
                                     </div>
                                     <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tight leading-relaxed">
-                                        How many boxes/bags is this order packed in? This number is printed on the delivery slip (Bilty).
+                                        How many boxes/bags is this order packed in? Maximum {maxPackages}. This number is printed on the delivery slip (Bilty).
                                     </p>
                                 </div>
 
