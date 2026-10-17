@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import VendorBackBar from '../components/navigation/VendorBackBar';
+import { describeLoad, loadLabel } from '@/lib/dispatchLoad';
 
 const STATUS_OPTIONS = [
     { value: 'all', label: 'All' },
@@ -217,9 +218,9 @@ export default function DispatchHistoryScreen() {
                                         <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <Scale size={10} className="text-slate-300" />
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Weight</span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Number(dispatch.actualWeight) > 0 ? 'Weight' : 'Quantity'}</span>
                                             </div>
-                                            <p className="text-[11px] font-black text-slate-600">{dispatch.actualWeight || '0'} KG</p>
+                                            <p className="text-[11px] font-black text-slate-600">{describeLoad(dispatch.items, dispatch.actualWeight)}</p>
                                         </div>
                                     </div>
 
@@ -307,8 +308,8 @@ export default function DispatchHistoryScreen() {
                                         <p className="text-sm font-black text-slate-800">{selectedDispatch.franchiseId?.shopName || '—'}</p>
                                     </div>
                                     <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Dispatched Weight</p>
-                                        <p className="text-sm font-black text-slate-800">{selectedDispatch.actualWeight || '0'} KG</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{loadLabel(selectedDispatch.items, selectedDispatch.actualWeight, { prefix: 'Dispatched' })}</p>
+                                        <p className="text-sm font-black text-slate-800">{describeLoad(selectedDispatch.items, selectedDispatch.actualWeight)}</p>
                                     </div>
                                     <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</p>

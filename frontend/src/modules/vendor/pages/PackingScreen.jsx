@@ -116,29 +116,58 @@ export default function PackingScreen() {
     const [actualWeight, setActualWeight] = useState(0);
     const [isWeightEdited, setIsWeightEdited] = useState(false);
 
-    // Deterministic weight of the items being sent, in KG. Items sold by count (pcs, dozen, ...)
-    // can't be converted to weight and are listed separately.
+    // What is being sent. Items sold by weight (kg, g, ...) add up to a total weight in KG. Items
+    // sold by count (pcs, bundle, dozen, ...) can't be turned into weight, so they are totalled
+    // in their own unit and shown as a quantity instead of KG.
     const weightSummary = useMemo(() => {
         const KG_FACTORS = { kg: 1, kgs: 1, g: 0.001, gm: 0.001, gms: 0.001, gram: 0.001, grams: 0.001, quintal: 100, q: 100, ton: 1000, tonne: 1000 };
         let kg = 0;
-        const countItems = [];
+        let hasWeighed = false;
+        const countLines = [];
+        const counts = {};
         (order?.items || []).forEach(item => {
             const id = item.productId || item.name;
             if (!checkedItems[id]) return;
             const qty = Number(itemQuantities[id]) || 0;
-            const factor = KG_FACTORS[String(item.unit || '').trim().toLowerCase()];
-            if (factor) kg += qty * factor;
-            else countItems.push(`${qty} ${item.unit} ${item.name}`);
+            const unit = String(item.unit || 'pcs').trim();
+            const factor = KG_FACTORS[unit.toLowerCase()];
+            if (factor) {
+                hasWeighed = true;
+                kg += qty * factor;
+            } else {
+                countLines.push({ name: item.name, qty, unit });
+                const key = unit.toLowerCase();
+                counts[key] = { unit, qty: (counts[key]?.qty || 0) + qty };
+            }
         });
-        return { kg: +kg.toFixed(2), countItems };
+        const countTotals = Object.values(counts);
+        const countText = countTotals.map(c => `${c.qty} ${c.unit}`).join(' + ');
+        return { kg: +kg.toFixed(2), hasWeighed, hasCounted: countTotals.length > 0, countLines, countTotals, countText };
     }, [order, checkedItems, itemQuantities]);
+
+    // Text for "how much is being sent": 12 KG, 200 pcs, or 12 KG + 200 pcs
+    const dispatchTotalText = [
+        weightSummary.hasWeighed ? `${actualWeight} KG` : null,
+        weightSummary.hasCounted ? weightSummary.countText : null,
+    ].filter(Boolean).join(' + ') || '0';
 
     // Keep the weight in sync with the packed quantities until the vendor types their own value
     useEffect(() => {
         if (!isWeightEdited) setActualWeight(weightSummary.kg);
     }, [weightSummary.kg, isWeightEdited]);
 
-    const isWeightValid = Number.isFinite(actualWeight) && actualWeight >= 0;
+    // Weight is needed only when something sold by weight is being sent; it must be above zero
+    const isWeightValid = !weightSummary.hasWeighed || (Number.isFinite(actualWeight) && actualWeight > 0);
+
+    // Every ticked item needs a quantity to send: more than 0 and not more than was requested
+    const quantityProblem = (order?.items || []).map((item) => {
+        const id = item.productId || item.name;
+        if (!checkedItems[id]) return null;
+        const qty = Number(itemQuantities[id]);
+        if (!Number.isFinite(qty) || qty <= 0) return `Enter how many ${item.unit} of ${item.name} you are sending`;
+        if (qty > Number(item.quantity)) return `${item.name}: you can send at most ${item.quantity} ${item.unit} (what was requested)`;
+        return null;
+    }).find(Boolean) || null;
 
     const goToStep = (target) => {
         if (target === step || step === 4) return;
@@ -150,8 +179,13 @@ export default function PackingScreen() {
             toast.error('Tick at least one item you are sending to continue');
             return;
         }
+        if (quantityProblem) {
+            toast.error(quantityProblem);
+            setStep(1);
+            return;
+        }
         if (target === 3 && !isWeightValid) {
-            toast.error('Please enter a valid total weight');
+            toast.error('Please enter the total weight (more than 0 KG) to continue');
             setStep(2);
             return;
         }
@@ -163,8 +197,13 @@ export default function PackingScreen() {
             toast.error("No active order selected for dispatch");
             return;
         }
+        if (quantityProblem) {
+            toast.error(quantityProblem);
+            setStep(1);
+            return;
+        }
         if (!isWeightValid) {
-            toast.error("Please enter a valid total weight");
+            toast.error("Please enter the total weight (more than 0 KG) to continue");
             setStep(2);
             return;
         }
@@ -185,7 +224,7 @@ export default function PackingScreen() {
             // Status: 'ready_for_pickup' implies vendor has finished and goods are ready
             const response = await api.put(`/procurement/vendor/${order.id}/status`, {
                 status: 'ready_for_pickup',
-                weight: actualWeight,
+                weight: weightSummary.hasWeighed ? actualWeight : 0,
                 itemUpdates
             });
 
@@ -252,7 +291,7 @@ export default function PackingScreen() {
                                 "text-[10px] font-black uppercase tracking-widest text-center mt-3",
                                 step === i ? "text-slate-900" : "text-slate-400 group-hover:text-slate-600"
                             )}>
-                                {i === 1 ? '1. Check Items' : i === 2 ? '2. Weight' : '3. Confirm Dispatch'}
+                                {i === 1 ? '1. Check Items' : i === 2 ? (weightSummary.hasWeighed ? '2. Weight' : '2. Quantity') : '3. Confirm Dispatch'}
                             </p>
                         </button>
                     ))}
@@ -378,11 +417,14 @@ export default function PackingScreen() {
                                 !isPackingComplete && "opacity-40"
                             )}
                         >
-                            Next: Enter Weight
+                            {weightSummary.hasWeighed || !weightSummary.hasCounted ? 'Next: Enter Weight' : 'Next: Check Quantity'}
                             <ChevronRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
                         </button>
                         {!isPackingComplete && (
                             <p className="text-center text-[11px] font-semibold text-slate-400">Tick the items you are sending to continue.</p>
+                        )}
+                        {isPackingComplete && quantityProblem && (
+                            <p className="text-center text-[11px] font-semibold text-rose-600">{quantityProblem}</p>
                         )}
                     </motion.div>
                 )}
@@ -403,55 +445,80 @@ export default function PackingScreen() {
                                     <Scale size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Total Weight</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Weight of the goods you are sending</p>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">{weightSummary.hasWeighed ? 'Total Weight' : 'Total Quantity'}</h3>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{weightSummary.hasWeighed ? 'Weight of the goods you are sending' : 'Number of items you are sending'}</p>
                                 </div>
                             </div>
 
                             <div className="space-y-8 relative">
-                                <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 text-center transition-all hover:bg-white hover:shadow-2xl hover:shadow-slate-100/50">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total weight (edit if your scale shows a different value)</label>
-                                    <div className="flex items-center justify-center gap-3 mt-6">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            value={Number.isFinite(actualWeight) ? actualWeight : ''}
-                                            onChange={(e) => {
-                                                setIsWeightEdited(true);
-                                                setActualWeight(e.target.value === '' ? NaN : parseFloat(e.target.value));
-                                            }}
-                                            step="0.01"
-                                            className="bg-transparent border-none p-0 outline-none text-6xl font-black text-slate-900 w-48 text-right tabular-nums focus:text-blue-600 transition-colors"
-                                        />
-                                        <span className="text-2xl font-black text-slate-300 uppercase mt-5">KG</span>
-                                    </div>
-                                    <div className="mt-8 flex flex-col items-center gap-3">
-                                        <p className="text-[11px] font-semibold text-slate-500">
-                                            Calculated from packed quantities: <span className="font-black text-slate-900">{weightSummary.kg} KG</span>
-                                        </p>
-                                        {weightSummary.countItems.length > 0 && (
-                                            <p className="text-[11px] font-semibold text-amber-600 max-w-sm">
-                                                Not included (sold by count): {weightSummary.countItems.join(', ')}
+                                {weightSummary.hasWeighed && (
+                                    <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 text-center transition-all hover:bg-white hover:shadow-2xl hover:shadow-slate-100/50">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total weight (edit if your scale shows a different value)</label>
+                                        <div className="flex items-center justify-center gap-3 mt-6">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={Number.isFinite(actualWeight) ? actualWeight : ''}
+                                                onChange={(e) => {
+                                                    setIsWeightEdited(true);
+                                                    setActualWeight(e.target.value === '' ? NaN : parseFloat(e.target.value));
+                                                }}
+                                                step="0.01"
+                                                className="bg-transparent border-none p-0 outline-none text-6xl font-black text-slate-900 w-48 text-right tabular-nums focus:text-blue-600 transition-colors"
+                                            />
+                                            <span className="text-2xl font-black text-slate-300 uppercase mt-5">KG</span>
+                                        </div>
+                                        <div className="mt-8 flex flex-col items-center gap-3">
+                                            <p className="text-[11px] font-semibold text-slate-500">
+                                                Calculated from packed quantities: <span className="font-black text-slate-900">{weightSummary.kg} KG</span>
                                             </p>
-                                        )}
-                                        {isWeightEdited && actualWeight !== weightSummary.kg && (
-                                            <button
-                                                onClick={() => { setIsWeightEdited(false); setActualWeight(weightSummary.kg); }}
-                                                className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
-                                            >
-                                                <Activity size={14} />
-                                                Use calculated weight
-                                            </button>
-                                        )}
+                                            {isWeightEdited && actualWeight !== weightSummary.kg && (
+                                                <button
+                                                    onClick={() => { setIsWeightEdited(false); setActualWeight(weightSummary.kg); }}
+                                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
+                                                >
+                                                    <Activity size={14} />
+                                                    Use calculated weight
+                                                </button>
+                                            )}
+                                            {!isWeightValid && (
+                                                <p className="text-[11px] font-bold text-rose-600">Enter the total weight (more than 0 KG) to continue.</p>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+
+                                {weightSummary.hasCounted && (
+                                    <div className="p-8 bg-slate-50 rounded-[40px] border border-slate-100 text-center">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+                                            {weightSummary.hasWeighed ? 'Items counted by number (no weight)' : 'Total quantity you are sending'}
+                                        </label>
+                                        <div className="mt-5 flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2">
+                                            {weightSummary.countTotals.map((c) => (
+                                                <div key={c.unit} className="flex items-baseline gap-2">
+                                                    <span className="text-6xl font-black text-slate-900 tabular-nums">{c.qty}</span>
+                                                    <span className="text-2xl font-black text-slate-300 uppercase">{c.unit}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <ul className="mt-6 space-y-1.5 max-w-sm mx-auto text-left">
+                                            {weightSummary.countLines.map((l, i) => (
+                                                <li key={i} className="flex items-center justify-between gap-3 text-[12px] font-semibold text-slate-600">
+                                                    <span className="truncate">{l.name}</span>
+                                                    <span className="font-black text-slate-900 tabular-nums shrink-0">{l.qty} {l.unit}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <p className="mt-4 text-[11px] font-semibold text-slate-400">Taken from the quantities you set in step 1. Go back to change them.</p>
+                                    </div>
+                                )}
 
                                 <div className="flex items-start gap-4 p-6 bg-slate-900 text-white rounded-[32px] shadow-2xl relative overflow-hidden group">
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl -mr-12 -mt-12 transition-all group-hover:bg-emerald-500/30" />
                                     <ShieldCheck size={24} className="text-emerald-400 shrink-0 mt-0.5" />
                                     <div className="relative">
                                         <p className="text-[11px] font-black uppercase tracking-widest text-emerald-400 mb-1">Good to know</p>
-                                        <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-tight">This weight is printed on the dispatch invoice and stays fixed once you confirm.</p>
+                                        <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-tight">This is printed on the dispatch invoice and stays fixed once you confirm.</p>
                                     </div>
                                 </div>
                             </div>
@@ -490,8 +557,8 @@ export default function PackingScreen() {
  
                         <div className="bg-slate-50/80 backdrop-blur-sm p-8 rounded-[40px] space-y-5 border border-slate-100 relative">
                             <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
-                                <span className="text-slate-400">Total Weight</span>
-                                <span className="text-slate-950 tabular-nums font-black text-sm">{actualWeight} KG</span>
+                                <span className="text-slate-400">{weightSummary.hasWeighed ? (weightSummary.hasCounted ? 'Weight & Quantity' : 'Total Weight') : 'Total Quantity'}</span>
+                                <span className="text-slate-950 tabular-nums font-black text-sm">{dispatchTotalText}</span>
                             </div>
                             <div className="w-full h-px bg-slate-200/50" />
                             <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
@@ -574,8 +641,8 @@ export default function PackingScreen() {
  
                                 <div className="space-y-4 pt-2">
                                     <div className="flex justify-between items-center border-t border-slate-200/50 pt-5">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Weight</span>
-                                        <span className="text-2xl font-black text-slate-950 tabular-nums">{actualWeight} KG</span>
+                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{weightSummary.hasWeighed ? (weightSummary.hasCounted ? 'Weight & Quantity' : 'Total Weight') : 'Total Quantity'}</span>
+                                        <span className="text-2xl font-black text-slate-950 tabular-nums">{dispatchTotalText}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Franchise</span>
@@ -634,7 +701,7 @@ export default function PackingScreen() {
                             ...i,
                             quantity: itemQuantities[i.productId || i.name] || i.quantity
                         })),
-                    totalWeight: actualWeight,
+                    totalWeight: weightSummary.hasWeighed ? actualWeight : 0,
                     franchise: order.franchiseName,
                     destNode: order.franchiseLocation,
                     vendor: JSON.parse(localStorage.getItem('vendorData'))?.shopName || 'Kisaankart Partner'

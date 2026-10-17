@@ -22,6 +22,7 @@ import {
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import DocumentViewer from '../../vendor/components/documents/DocumentViewer';
+import { describeLoad } from '@/lib/dispatchLoad';
 
 // "Kisaankart 1 (Tikam Singh)": the franchise's name with its owner in brackets
 const franchiseLabel = (franchise) => {
@@ -335,9 +336,9 @@ export default function VendorReportsScreen() {
                                             <div className="inline-flex flex-col gap-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl">
                                                 <div className="flex items-center gap-2 text-slate-700">
                                                     <Scale size={16} />
-                                                    <span className="text-sm font-black tabular-nums">{report.actualWeight || 0} KG</span>
+                                                    <span className="text-sm font-black tabular-nums">{describeLoad(report.items, report.actualWeight)}</span>
                                                 </div>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Weight</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">{Number(report.actualWeight) > 0 ? 'Weight' : 'Quantity'}</span>
                                             </div>
                                         </td>
                                         <td className="px-8 py-7">
@@ -477,6 +478,7 @@ export default function VendorReportsScreen() {
                         items: selectedReport.items?.map(i => ({
                             name: i.name,
                             quantity: i.quantity || 0,
+                            dispatchedQuantity: i.dispatchedQuantity || 0,
                             unit: i.unit || 'KG',
                             quotedPrice: i.quotedPrice || 0,
                             price: i.price || 0

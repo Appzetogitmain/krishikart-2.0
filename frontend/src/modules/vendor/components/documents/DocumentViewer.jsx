@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, CheckCircle2, Truck, Package, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { describeLoad, loadLabel } from '@/lib/dispatchLoad';
 
 export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
     const reportRef = useRef();
@@ -211,8 +212,8 @@ export default function DocumentViewer({ isOpen, onClose, data, type = 'DC' }) {
                                     ) : (
                                         <div className="p-6 bg-slate-900 text-white rounded-[32px] space-y-4">
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                <span>Packed Weight</span>
-                                                <span className="text-white">{data.totalWeight || data.weight || '0.00'} KG</span>
+                                                <span>{loadLabel(data.items, data.totalWeight ?? data.weight)}</span>
+                                                <span className="text-white">{describeLoad(data.items, data.totalWeight ?? data.weight)}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
                                                 <span>Document Code</span>

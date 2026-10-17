@@ -21,6 +21,7 @@ import MetricCard from '../components/cards/MetricCard';
 import DataGrid from '../components/tables/DataGrid';
 import api from '@/lib/axios';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
+import { describeLoad } from '@/lib/dispatchLoad';
 
 export default function DashboardScreen() {
     const navigate = useNavigate();
@@ -118,7 +119,10 @@ export default function DashboardScreen() {
         {
             header: 'Items',
             key: 'actualWeight',
-            render: (val) => <span className="text-slate-600 font-black tabular-nums">{val ? `${val} KG` : 'TBD'}</span>
+            render: (val, row) => {
+                const text = describeLoad(row?.items, val);
+                return <span className="text-slate-600 font-black tabular-nums">{text === '0' ? 'TBD' : text}</span>;
+            }
         },
         {
             header: 'Status',
