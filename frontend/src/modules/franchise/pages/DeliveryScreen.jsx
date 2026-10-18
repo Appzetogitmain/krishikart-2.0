@@ -35,6 +35,9 @@ export default function DeliveryScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    // Franchise confirming a delivery also needs the customer's 4-digit code
+    const [confirmingId, setConfirmingId] = useState(null);
+    const [deliveryCode, setDeliveryCode] = useState('');
 
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 600);
@@ -317,9 +320,32 @@ export default function DeliveryScreen() {
 
                                         <div className="flex-1 lg:flex-none" />
 
-                                        {order.status === 'dispatched' && activeTab === 'active' && (
+                                        {order.status === 'dispatched' && activeTab === 'active' && confirmingId === order.id && (
+                                            <div className="w-full flex gap-2">
+                                                <input
+                                                    inputMode="numeric"
+                                                    autoFocus
+                                                    maxLength={4}
+                                                    value={deliveryCode}
+                                                    onChange={(e) => setDeliveryCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                    placeholder="Customer code"
+                                                    className="flex-1 min-w-0 h-11 border-2 border-slate-200 rounded-sm px-2 text-center font-black tracking-[0.3em] outline-none focus:border-slate-900"
+                                                />
+                                                <button
+                                                    disabled={deliveryCode.length !== 4}
+                                                    onClick={async () => {
+                                                        const ok = await updateOrderStatus(order.id, 'Delivered', { otp: deliveryCode });
+                                                        if (ok) { setConfirmingId(null); setDeliveryCode(''); }
+                                                    }}
+                                                    className="h-11 px-3 bg-slate-900 text-white rounded-sm font-black uppercase text-[10px] tracking-widest disabled:opacity-40"
+                                                >
+                                                    Confirm
+                                                </button>
+                                            </div>
+                                        )}
+                                        {order.status === 'dispatched' && activeTab === 'active' && confirmingId !== order.id && (
                                             <button
-                                                onClick={() => updateOrderStatus(order.id, 'Delivered')}
+                                                onClick={() => { setConfirmingId(order.id); setDeliveryCode(''); }}
                                                 className="w-full h-11 bg-slate-900 text-white rounded-sm font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
                                             >
                                                 Confirm Delivery <ArrowRight size={14} />

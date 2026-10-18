@@ -29,6 +29,9 @@ const ActiveDelivery = () => {
     const [isDocOpen, setIsDocOpen] = useState(false);
     // COD payment sheet: null = closed, 'choose' = cash or UPI, 'qr' = showing the franchise QR
     const [paySheet, setPaySheet] = useState(null);
+    // Last step before "delivered": the customer's 4-digit code. pendingMode = how a COD order was paid
+    const [otpCode, setOtpCode] = useState('');
+    const [pendingMode, setPendingMode] = useState(null);
     // Customer did not accept the order at the door
     const [refuseOpen, setRefuseOpen] = useState(false);
     const [refuseReason, setRefuseReason] = useState('');
@@ -42,6 +45,7 @@ const ActiveDelivery = () => {
     // Current order status from backend: 'Dispatched' or 'Delivered'
     const currentStatus = order?.orderStatus || 'Dispatched';
     const isCodOrder = String(order?.paymentMethod || '').toUpperCase() === 'COD';
+    const needsCode = !!order?.needsDeliveryCode;
 
     // Open turn-by-turn directions to the customer's exact pin; fall back to a search on the
     // typed address when the order has no saved coordinates.
@@ -72,18 +76,22 @@ const ActiveDelivery = () => {
     const handleMarkDelivered = async () => {
         // A ref, not state: a quick second tap runs before the re-render that disables the button
         if (!order || submittingRef.current) return;
-        if (isCodOrder) {
-            // COD: first ask how the customer is paying
-            setPaySheet('choose');
-            return;
-        }
-        const confirmed = await confirm({
-            title: 'Mark this order as delivered?',
-            message: 'Only continue if you have handed over the order to the customer.',
-            confirmLabel: 'Yes, delivered',
-        });
-        if (!confirmed || submittingRef.current) return;
-        await finishDelivery();
+        setOtpCode('');
+        setPendingMode(null);
+        // COD: first ask how the customer is paying; then the customer's code
+        setPaySheet(isCodOrder ? 'choose' : 'otp');
+    };
+
+    const goToCode = (mode) => {
+        setPendingMode(mode);
+        setOtpCode('');
+        setPaySheet('otp');
+    };
+
+    const submitDelivered = async () => {
+        if (submittingRef.current) return;
+        if (needsCode && otpCode.length !== 4) return;
+        await finishDelivery({ ...(pendingMode ? { collectionMode: pendingMode } : {}), ...(needsCode ? { otp: otpCode } : {}) });
     };
 
     const REFUSE_REASONS = [
@@ -117,27 +125,8 @@ const ActiveDelivery = () => {
         navigate(ROUTES.DASHBOARD);
     };
 
-    const handleCashCollected = async () => {
-        if (submittingRef.current) return;
-        const confirmed = await confirm({
-            title: 'Cash collected?',
-            message: `Only continue if you have handed over the order and collected Rs ${codAmount} in cash. You will hand this cash to ${franchiseName}.`,
-            confirmLabel: 'Yes, cash collected',
-        });
-        if (!confirmed || submittingRef.current) return;
-        await finishDelivery({ collectionMode: 'cash' });
-    };
-
-    const handleUpiReceived = async () => {
-        if (submittingRef.current) return;
-        const confirmed = await confirm({
-            title: 'UPI payment received?',
-            message: `Only continue if the customer has paid Rs ${codAmount} on the franchise QR and the payment went through. There is no cash to hand over for this order.`,
-            confirmLabel: 'Yes, payment received',
-        });
-        if (!confirmed || submittingRef.current) return;
-        await finishDelivery({ collectionMode: 'upi_franchise_qr' });
-    };
+    const handleCashCollected = () => goToCode('cash');
+    const handleUpiReceived = () => goToCode('upi_franchise_qr');
 
     if (loading && !order) {
         return (
@@ -347,8 +336,8 @@ const ActiveDelivery = () => {
                     <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isUpdating && setPaySheet(null)} />
                     <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 pb-8 shadow-2xl max-h-[92vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-4">
-                            {paySheet === 'qr' ? (
-                                <button onClick={() => setPaySheet('choose')} className="p-2 -ml-2 rounded-full hover:bg-slate-100" aria-label="Back">
+                            {paySheet === 'qr' || (paySheet === 'otp' && isCodOrder) ? (
+                                <button onClick={() => setPaySheet(paySheet === 'otp' && pendingMode === 'upi_franchise_qr' ? 'qr' : 'choose')} disabled={isUpdating} className="p-2 -ml-2 rounded-full hover:bg-slate-100" aria-label="Back">
                                     <ArrowLeft className="w-5 h-5" />
                                 </button>
                             ) : <span />}
@@ -410,11 +399,42 @@ const ActiveDelivery = () => {
                                     disabled={isUpdating || !order?.franchiseQrCode}
                                     className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
                                 >
-                                    {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Payment received - Mark Delivered'}
+                                    {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Payment received - Next'}
                                 </button>
                                 <button onClick={() => setPaySheet('choose')} disabled={isUpdating} className="text-xs font-bold text-slate-500">
                                     Customer wants to pay cash instead
                                 </button>
+                            </div>
+                        )}
+
+                        {paySheet === 'otp' && (
+                            <div className="space-y-4 text-center">
+                                <div>
+                                    <p className="text-xs font-bold uppercase text-slate-400">Confirm delivery</p>
+                                    <p className="text-sm text-slate-600 mt-1">
+                                        {pendingMode === 'cash' ? `Cash Rs ${codAmount} collected. ` : pendingMode === 'upi_franchise_qr' ? `Rs ${codAmount} paid on ${franchiseName}'s QR. ` : ''}
+                                        {needsCode ? 'Ask the customer for their 4-digit delivery code (it is in their app and notifications).' : 'Only continue if you have handed over the order to the customer.'}
+                                    </p>
+                                </div>
+                                {needsCode && (
+                                    <input
+                                        inputMode="numeric"
+                                        autoFocus
+                                        maxLength={4}
+                                        value={otpCode}
+                                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                        placeholder="----"
+                                        className="w-48 mx-auto block h-16 border-2 border-slate-200 rounded-2xl text-center text-3xl font-black tracking-[0.5em] outline-none focus:border-primary"
+                                    />
+                                )}
+                                <button
+                                    onClick={submitDelivered}
+                                    disabled={isUpdating || (needsCode && otpCode.length !== 4)}
+                                    className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
+                                >
+                                    {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Mark Delivered'}
+                                </button>
+                                <p className="text-[11px] text-slate-400">Customer not taking the order? Close this and use "Customer refused / problem with order".</p>
                             </div>
                         )}
                     </div>

@@ -200,7 +200,22 @@ const orderSchema = new mongoose.Schema({
         refusedAt: { type: Date, default: null },
         deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery', default: null },
         goodsStatus: { type: String, enum: ['with_delivery', 'restocked', 'written_off'], default: undefined },
+        // The partner handed the goods back to the franchise (franchise code entered)
+        handedBackAt: { type: Date, default: null },
         resolvedAt: { type: Date, default: null }
+    },
+    // Delivery confirmation codes (see utils/deliveryOtp.js). The codes themselves are never
+    // returned unless explicitly selected, so the delivery partner cannot see them.
+    deliveryOtp: {
+        customerCode: { type: String, select: false },
+        franchiseCode: { type: String, select: false },
+        generatedAt: { type: Date, default: null },
+        customerVerifiedAt: { type: Date, default: null },
+        franchiseVerifiedAt: { type: Date, default: null },
+        customerAttempts: { type: Number, default: 0 },
+        customerLockedUntil: { type: Date, default: null },
+        franchiseAttempts: { type: Number, default: 0 },
+        franchiseLockedUntil: { type: Date, default: null }
     },
     codTracking: {
         isCollected: {

@@ -15,6 +15,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useRequireAuth } from '../hooks/useRequireAuth'
 import { joinOrderRoom } from '@/lib/socket'
+import DeliveryCodeCard from '../components/common/DeliveryCodeCard'
 
 export default function OrderDetailScreen() {
     const navigate = useNavigate()
@@ -171,6 +172,7 @@ export default function OrderDetailScreen() {
 
                     {/* Tracking & Logistics Context */}
                     <div className="space-y-3">
+                        <DeliveryCodeCard order={order} />
                         {isOrderActive && (
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}

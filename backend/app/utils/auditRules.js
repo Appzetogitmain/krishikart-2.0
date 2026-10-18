@@ -468,6 +468,10 @@ export const AUDIT_RULES = [
         details: (ctx) => [{ label: "Reason", value: human(B(ctx, "reason")) }, { label: "Note", value: short(B(ctx, "note")) }],
     },
     {
+        m: "PUT", p: "/orders/delivery/:id/handed-back", module: "Orders", action: "order.handed_back", kind: "update",
+        target: { type: "Order", id: (ctx) => P(ctx, "id"), snap: S.orderSnap }, title: "Refused goods handed back to the franchise (code checked)", severity: "important",
+    },
+    {
         m: "PUT", p: "/orders/franchise/:id/refused-goods", module: "Orders", action: "order.refused_goods", kind: "update",
         target: { type: "Order", id: (ctx) => P(ctx, "id"), snap: S.orderSnap },
         title: ({ ctx }) => (B(ctx, "action") === "restock" ? "Refused goods added back to stock" : "Refused goods written off"), severity: "important",

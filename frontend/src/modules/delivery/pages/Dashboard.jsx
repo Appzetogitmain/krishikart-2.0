@@ -12,6 +12,7 @@ import {
     Clock
 } from 'lucide-react';
 import MetricCard from '../components/cards/MetricCard';
+import ReturnToFranchiseCard from '../components/cards/ReturnToFranchiseCard';
 import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
 import { useDeliveryOrders } from '../contexts/DeliveryOrderContext';
 import api from '@/lib/axios';
@@ -165,6 +166,7 @@ const Dashboard = () => {
             </div>
 
             <div className="px-6 space-y-6 pt-6">
+                <ReturnToFranchiseCard />
                 {!delivery?.isApproved && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}

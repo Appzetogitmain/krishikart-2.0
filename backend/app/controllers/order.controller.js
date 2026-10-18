@@ -30,6 +30,21 @@ import { createUserNotification } from "../utils/userNotification.js";
 import { resolveDeliverySchedule, getDeliveryOffDays } from "../utils/deliverySchedule.js";
 import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
+import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
+
+const OUT_FOR_DELIVERY = ["Dispatched", "Out for Delivery"];
+
+/** Adds the customer's delivery code to their own orders that are on the way. */
+const withCustomerCode = async (plainOrders) => {
+  const open = plainOrders.filter((o) => OUT_FOR_DELIVERY.includes(o.orderStatus));
+  if (!open.length) return plainOrders;
+  const codes = await otpsOf(open.map((o) => o._id));
+  return plainOrders.map((o) =>
+    OUT_FOR_DELIVERY.includes(o.orderStatus) && codes[String(o._id)]?.customerCode
+      ? { ...o, deliveryOtpCode: codes[String(o._id)].customerCode }
+      : o,
+  );
+};
 import { acquireUserLock, releaseUserLock } from "../utils/userLock.js";
 import { takeStock, takeStockUpTo, addStock } from "../utils/stock.js";
 
@@ -426,6 +441,7 @@ export const getMyOrders = async (req, res) => {
           );
 
           groupedOrders.push({
+            _groupDocs: true,
             orderGroupId: order.orderGroupId,
             isSplitOrder: true,
             totalOrders: groupOrders.length,
@@ -454,8 +470,15 @@ export const getMyOrders = async (req, res) => {
       }
     }
 
+    // Orders on the way carry the customer's delivery code (shown only to the customer)
+    for (const g of groupedOrders) {
+      delete g._groupDocs;
+      g.orders = await withCustomerCode(g.orders.map((o) => o.toObject()));
+    }
+    const standaloneWithCodes = await withCustomerCode(standaloneOrders);
+
     // Combine grouped and standalone orders, sorted by creation date
-    const allOrders = [...groupedOrders, ...standaloneOrders].sort(
+    const allOrders = [...groupedOrders, ...standaloneWithCodes].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
@@ -515,7 +538,7 @@ export const getOrdersByGroupId = async (req, res) => {
         ["Placed", "Assigned", "Accepted", "Packed", "Procuring", "Ready", "Dispatched", "Out for Delivery"].includes(order.orderStatus)
       ),
       anyCancelled: enrichedOrders.some((order) => order.orderStatus === "Cancelled"),
-      orders: enrichedOrders,
+      orders: await withCustomerCode(enrichedOrders.map((o) => (o.toObject ? o.toObject() : o))),
     };
 
     return handleResponse(
@@ -555,7 +578,9 @@ export const getOrderById = async (req, res) => {
       return handleResponse(res, 403, "Unauthorized access");
     }
 
-    const [enrichedOrder] = await applyFranchiseStockShortageFlags([order]);
+    let [enrichedOrder] = await applyFranchiseStockShortageFlags([order]);
+    // Only the customer sees their own delivery code
+    if (isOwner) [enrichedOrder] = await withCustomerCode([enrichedOrder.toObject ? enrichedOrder.toObject() : enrichedOrder]);
 
     return handleResponse(res, 200, "Order details fetched", enrichedOrder);
   } catch (error) {
@@ -1328,6 +1353,11 @@ export const updateOrderStatus = async (req, res) => {
           return handleResponse(res, 403, "This order is not assigned to you");
         }
       }
+      // Delivered needs the customer's code (orders dispatched before codes existed have none)
+      if (status === "Delivered" && (isDelivery || isFranchise)) {
+        const check = await verifyDeliveryOtp(order._id, "customer", req.body?.otp);
+        if (!check.ok) return handleResponse(res, check.status, check.message);
+      }
       // User Specific: Check if user owns the order
       if (isUser) {
         if (order.userId.toString() !== req.user.id.toString()) {
@@ -1852,12 +1882,17 @@ export const getFranchiseOrders = async (req, res) => {
       fs.appendFileSync("debug_log.txt", debugInfo);
     }
 
+    // The franchise's return code is shown only while refused goods are on their way back
+    const comingBack = orders.filter((o) => o.deliveryRefusal?.goodsStatus === "with_delivery" && !o.deliveryRefusal?.handedBackAt);
+    const returnCodes = await otpsOf(comingBack.map((o) => o._id));
+
     const formattedOrders = orders.map((order) => {
       const dateObj = new Date(order.createdAt || Date.now());
       const isValidDate = !isNaN(dateObj.getTime());
 
       return {
         ...order.toObject(),
+        returnOtpCode: returnCodes[String(order._id)]?.franchiseCode || null,
         date: isValidDate
           ? dateObj.toLocaleDateString("en-IN", {
               day: "2-digit",
@@ -2283,6 +2318,22 @@ export const assignDeliveryPartner = async (req, res) => {
 
     await order.save();
 
+    // Fresh delivery codes for this hand-over; the customer gets theirs now
+    const { customerCode } = await createDeliveryOtps(order._id);
+    emitToOrderRoom(order._id, "order_status_changed", { orderId: order._id, status: "Dispatched", updatedAt: new Date() });
+    try {
+      await createUserNotification({
+        userId: order.userId,
+        type: "order_update",
+        title: "Order on the way",
+        message: `Your order #${order._id.toString().slice(-6)} is out for delivery. Your delivery code is ${customerCode}. Share it with the delivery partner only when you receive your order.`,
+        link: `/order-detail/${order._id}`,
+        meta: { orderId: order._id.toString(), status: "Dispatched" },
+      });
+    } catch (notifyErr) {
+      console.error("[assignDeliveryPartner] OTP notification error:", notifyErr);
+    }
+
     console.log(
       "[AssignDeliveryPartner] Order dispatched with delivery partner",
       {
@@ -2383,6 +2434,7 @@ export const getDispatchedOrders = async (req, res) => {
         franchise: order.franchiseId?.franchiseName || "Kisaankart Store",
         franchiseAddress: franchiseAddr,
         franchiseQrCode: order.franchiseId?.storeQRCode || null,
+        needsDeliveryCode: !!order.deliveryOtp?.generatedAt,
         customerName: order.userId?.fullName || "Customer",
         customerAddress: order.shippingAddress,
         distance: distance,
@@ -2461,6 +2513,7 @@ export const refuseOrderAtDoor = async (req, res) => {
             refusedAt: now,
             deliveryPartnerId: partnerId,
             goodsStatus: "with_delivery",
+            handedBackAt: null,
             resolvedAt: null,
           },
         },
@@ -2564,10 +2617,13 @@ export const confirmRefusedGoodsReturned = async (req, res) => {
       return handleResponse(res, 400, "Action must be restock or write_off");
     }
 
-    const existing = await Order.findById(id).select("franchiseId deliveryRefusal");
+    const existing = await Order.findById(id).select("+deliveryOtp.franchiseCode");
     if (!existing) return handleResponse(res, 404, "Order not found");
     if (!existing.franchiseId || existing.franchiseId.toString() !== req.franchise._id.toString()) {
       return handleResponse(res, 403, "Not authorized to manage this order");
+    }
+    if (existing.deliveryRefusal?.goodsStatus === "with_delivery" && existing.deliveryOtp?.franchiseCode && !existing.deliveryRefusal?.handedBackAt) {
+      return handleResponse(res, 400, "The delivery partner has not handed the goods back yet. Give them your return code when they bring the goods.");
     }
 
     // Claim atomically so the stock can only be put back once
@@ -2599,6 +2655,81 @@ export const confirmRefusedGoodsReturned = async (req, res) => {
   } catch (error) {
     console.error("confirmRefusedGoodsReturned error:", error);
     return handleResponse(res, 500, "Could not update the returned goods");
+  }
+};
+
+/**
+ * GET /orders/delivery/returns-to-franchise
+ * Orders the customer did not take that this partner still has to bring back to the franchise.
+ */
+export const getReturnsToFranchise = async (req, res) => {
+  try {
+    const partnerId = req.delivery?._id;
+    const orders = await Order.find({
+      "deliveryRefusal.deliveryPartnerId": partnerId,
+      "deliveryRefusal.goodsStatus": "with_delivery",
+      "deliveryRefusal.handedBackAt": null,
+    })
+      .populate("franchiseId", "franchiseName mobile city area formattedAddress")
+      .populate("userId", "fullName")
+      .sort({ "deliveryRefusal.refusedAt": -1 })
+      .lean();
+    return handleResponse(res, 200, "Goods to return", orders.map((o) => ({
+      _id: o._id,
+      franchiseName: o.franchiseId?.franchiseName || "Franchise",
+      franchiseMobile: o.franchiseId?.mobile || "",
+      franchiseAddress: o.franchiseId?.formattedAddress || [o.franchiseId?.area, o.franchiseId?.city].filter(Boolean).join(", "),
+      customerName: o.userId?.fullName || "Customer",
+      reason: o.deliveryRefusal?.reasonLabel || "",
+      refusedAt: o.deliveryRefusal?.refusedAt,
+      numberOfPackages: o.numberOfPackages || 0,
+      items: (o.items || []).map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit })),
+    })));
+  } catch (error) {
+    console.error("getReturnsToFranchise error:", error);
+    return handleResponse(res, 500, "Server error");
+  }
+};
+
+/**
+ * PUT /orders/delivery/:id/handed-back  { otp }
+ * The partner hands refused goods back to the franchise; the franchise's code confirms it.
+ */
+export const handBackToFranchise = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const partnerId = req.delivery?._id;
+    const order = await Order.findById(id).select("deliveryRefusal franchiseId");
+    if (!order) return handleResponse(res, 404, "Order not found");
+    if (String(order.deliveryRefusal?.deliveryPartnerId) !== String(partnerId)) {
+      return handleResponse(res, 403, "This order is not yours to return");
+    }
+    if (order.deliveryRefusal?.goodsStatus !== "with_delivery" || order.deliveryRefusal?.handedBackAt) {
+      return handleResponse(res, 400, "These goods have already been handed back");
+    }
+
+    const check = await verifyDeliveryOtp(order._id, "franchise", req.body?.otp);
+    if (!check.ok) return handleResponse(res, check.status, check.message);
+
+    const updated = await Order.findOneAndUpdate(
+      { _id: id, "deliveryRefusal.handedBackAt": null },
+      { $set: { "deliveryRefusal.handedBackAt": new Date() } },
+      { new: true },
+    );
+    if (!updated) return handleResponse(res, 400, "These goods have already been handed back");
+
+    if (order.franchiseId) {
+      emitToFranchise(order.franchiseId, "order_status_changed", {
+        orderId: order._id,
+        status: "Cancelled",
+        message: `Goods of refused order #${order._id.toString().slice(-6)} are back. Add them to stock or write them off.`,
+        updatedAt: new Date(),
+      });
+    }
+    return handleResponse(res, 200, "Goods handed back to the franchise", { _id: updated._id, handedBackAt: updated.deliveryRefusal.handedBackAt });
+  } catch (error) {
+    console.error("handBackToFranchise error:", error);
+    return handleResponse(res, 500, "Server error");
   }
 };
 

@@ -6,6 +6,7 @@ import PageTransition from '../components/layout/PageTransition'
 import { Button } from '@/components/ui/button'
 import { useOrders } from '@/modules/user/contexts/OrderContext'
 import { joinOrderRoom } from '@/lib/socket'
+import DeliveryCodeCard from '../components/common/DeliveryCodeCard'
 
 const stepMappings = [
     { label: 'Placed', matchStatuses: ['placed', 'pending'], icon: ShoppingBag, desc: 'We have received your order.' },
@@ -141,6 +142,7 @@ export default function OrderTrackingScreen() {
                 </div>
 
                 <div className="p-4 space-y-4">
+                    <DeliveryCodeCard order={order} />
                     {/* Status Overview */}
                     <div className="bg-slate-900 rounded-[24px] p-6 text-center relative overflow-hidden shadow-xl shadow-slate-200">
                         <div className="relative z-10">

@@ -22,6 +22,8 @@ import {
     getDeliveryOrderHistory,
     rejectDeliveryTask,
     refuseOrderAtDoor,
+    getReturnsToFranchise,
+    handBackToFranchise,
     confirmRefusedGoodsReturned,
     getAdminDeliveryTracking
 } from "../controllers/order.controller.js";
@@ -115,6 +117,8 @@ router.get("/delivery/dispatched", protectDelivery, requireApproval, getDispatch
 router.get("/delivery/history", protectDelivery, requireApproval, getDeliveryOrderHistory);
 router.put("/delivery/:id/reject", protectDelivery, requireApproval, rejectDeliveryTask);
 router.put("/delivery/:id/refused-at-door", protectDelivery, requireApproval, refuseOrderAtDoor);
+router.get("/delivery/returns-to-franchise", protectDelivery, requireApproval, getReturnsToFranchise);
+router.put("/delivery/:id/handed-back", protectDelivery, requireApproval, handBackToFranchise);
 router.put(
     "/franchise/:id/refused-goods",
     protectFranchise,

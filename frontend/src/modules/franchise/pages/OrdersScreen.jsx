@@ -398,7 +398,12 @@ export default function OrdersScreen() {
                             <span className="text-[10px] font-bold text-rose-600 max-w-[220px] text-right">
                                 {row.deliveryRefusal.reasonLabel || 'Not accepted'}{row.deliveryRefusal.note ? ` - ${row.deliveryRefusal.note}` : ''}
                             </span>
-                            {row.deliveryRefusal.goodsStatus === 'with_delivery' ? (
+                            {row.deliveryRefusal.goodsStatus === 'with_delivery' && row.returnOtpCode ? (
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-slate-500">Return code - tell the delivery partner when they bring the goods back</p>
+                                    <p className="text-lg font-black tracking-[0.3em] text-slate-900 tabular-nums">{row.returnOtpCode}</p>
+                                </div>
+                            ) : row.deliveryRefusal.goodsStatus === 'with_delivery' ? (
                                 <button
                                     onClick={() => setReturnedGoodsOrder({ id: row.id, name: row.hotelName || row.userId?.fullName || 'this order' })}
                                     className="p-1.5 px-3 text-xs font-bold uppercase text-amber-700 border border-amber-600 bg-amber-50 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"

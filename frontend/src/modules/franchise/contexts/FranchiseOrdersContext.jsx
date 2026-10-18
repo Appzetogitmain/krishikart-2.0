@@ -182,6 +182,7 @@ export function FranchiseOrdersProvider({ children }) {
             status: (o.orderStatus || '').toLowerCase(),
             numberOfPackages: Number(o.numberOfPackages) || 0,
             deliveryRefusal: o.deliveryRefusal?.reason ? o.deliveryRefusal : null,
+            returnOtpCode: o.returnOtpCode || null,
             total: o.totalAmount,
             items: (Array.isArray(o.items) ? o.items : []).map(i => ({
                 id: i.productId || i.product,
