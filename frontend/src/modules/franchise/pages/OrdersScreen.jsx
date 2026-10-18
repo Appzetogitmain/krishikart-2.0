@@ -81,13 +81,13 @@ export default function OrdersScreen() {
             setSavingGoods(false);
         }
     };
+    const [selectedOrderForDispatch, setSelectedOrderForDispatch] = useState(null);
+    const [selectedOrderForPacking, setSelectedOrderForPacking] = useState(null);
     const packingOrder = allOrders.find(o => o.id === selectedOrderForPacking) || null;
     // An order is packed exactly as ordered: at most one package per ordered unit
     const maxPackages = packingOrder
         ? Math.min(500, Math.max(1, Math.ceil((packingOrder.items || []).reduce((s, i) => s + Number(i.quantity || 0), 0))))
         : 500;
-    const [selectedOrderForDispatch, setSelectedOrderForDispatch] = useState(null);
-    const [selectedOrderForPacking, setSelectedOrderForPacking] = useState(null);
     const [isAssigning, setIsAssigning] = useState(false);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [rejectingOrderId, setRejectingOrderId] = useState(null);
