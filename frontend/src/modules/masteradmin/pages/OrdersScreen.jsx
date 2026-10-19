@@ -361,7 +361,9 @@ export default function OrdersScreen() {
             String(a.fullName || '').localeCompare(String(b.fullName || ''))
         );
 
-    const handleProcure = (order) => {
+    const handleProcure = (rawOrder) => {
+        // Items already requested from a vendor for this order are left out, so the rest can go to another vendor
+        const order = { ...rawOrder, items: (rawOrder.items || []).map(i => (i.procurementRequested ? { ...i, isShortage: false } : i)) };
         setSelectedOrderForProcurement({
             ...order,
             id: order._id,

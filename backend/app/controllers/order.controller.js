@@ -16,6 +16,7 @@ import Franchise from "../models/franchise.js";
 import Delivery from "../models/delivery.js";
 import GlobalSetting from "../models/globalSetting.js";
 import Inventory from "../models/inventory.js";
+import ProcurementRequest from "../models/procurementRequest.js";
 import { geocodeAddress, getDistance } from "../utils/geo.js";
 import {
   assignOrderToFranchise,
@@ -93,27 +94,44 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 // delivery, delivered or cancelled, its stock was already taken (or it is gone), so it is never "short".
 const AWAITING_STOCK = ["Placed", "Assigned", "Accepted", "Procuring", "pending"];
 
+/**
+ * Products of each order that an open stock request (not yet received or rejected) already covers,
+ * as Map(orderId -> Set(productId)). Lets one order's shortages be split across several vendors.
+ */
+const openProcurementByOrder = async (orderIds) => {
+  const map = new Map();
+  if (!orderIds.length) return map;
+  const open = await ProcurementRequest.find({
+    orderId: { $in: orderIds },
+    status: { $nin: ["completed", "rejected"] },
+  }).select("orderId items.productId").lean();
+  for (const r of open) {
+    const key = String(r.orderId);
+    if (!map.has(key)) map.set(key, new Set());
+    for (const i of r.items || []) map.get(key).add(String(i.productId));
+  }
+  return map;
+};
+
 const applyFranchiseStockShortageFlags = async (orders) => {
   if (!Array.isArray(orders) || orders.length === 0) {
     return orders;
   }
 
+  const waiting = orders.filter((o) => AWAITING_STOCK.includes(o.orderStatus));
   const franchiseIds = [
     ...new Set(
-      orders
+      waiting
         .map((order) => order.franchiseId?._id || order.franchiseId)
         .filter(Boolean)
         .map((id) => id.toString()),
     ),
   ];
 
-  if (franchiseIds.length === 0) {
-    return orders;
-  }
-
-  const inventories = await Inventory.find({
-    franchiseId: { $in: franchiseIds },
-  }).lean();
+  const [inventories, requested] = await Promise.all([
+    franchiseIds.length ? Inventory.find({ franchiseId: { $in: franchiseIds } }).lean() : [],
+    openProcurementByOrder(waiting.map((o) => o._id)),
+  ]);
 
   const inventoryByFranchise = new Map(
     inventories.map((inventory) => [
@@ -125,13 +143,14 @@ const applyFranchiseStockShortageFlags = async (orders) => {
   return orders.map((order) => {
     if (!AWAITING_STOCK.includes(order.orderStatus)) {
       const plain = order.toObject ? order.toObject() : { ...order };
-      plain.items = (plain.items || []).map((item) => ({ ...item, isShortage: false, shortageQty: 0 }));
+      plain.items = (plain.items || []).map((item) => ({ ...item, isShortage: false, shortageQty: 0, procurementRequested: false }));
       return plain;
     }
     const franchiseId = order.franchiseId?._id || order.franchiseId;
     if (!franchiseId) {
       return order;
     }
+    const requestedHere = requested.get(String(order._id)) || new Set();
 
     const inventory = inventoryByFranchise.get(franchiseId.toString());
     const orderObject = order.toObject ? order.toObject() : { ...order };
@@ -151,6 +170,8 @@ const applyFranchiseStockShortageFlags = async (orders) => {
         ...item,
         isShortage: shortageQty > 0,
         shortageQty,
+        // Already asked from a vendor / mother franchise for this order
+        procurementRequested: shortageQty > 0 && requestedHere.has(String(productId)),
       };
     });
 
@@ -300,7 +321,7 @@ const placeOrder = async (req, res) => {
     for (const g of computedGroups) {
       let fulfillmentCategoryId = null;
       try {
-        fulfillmentCategoryId = new mongoose.Types.ObjectId(g.categoryId);
+        fulfillmentCategoryId = g.categoryId ? new mongoose.Types.ObjectId(g.categoryId) : null;
       } catch {
         fulfillmentCategoryId = null;
       }

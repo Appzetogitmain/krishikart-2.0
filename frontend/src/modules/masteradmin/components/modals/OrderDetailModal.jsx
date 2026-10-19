@@ -326,8 +326,9 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                     ))}
                                                 </div>
                                                 <div className="bg-slate-900 p-6 flex flex-col gap-3">
-                                                    {order.items?.some(i => i.isShortage) && ['placed', 'assigned', 'accepted'].includes((order.orderStatus || '').toLowerCase()) && (
+                                                    {(order.items?.some(i => i.isShortage && !i.procurementRequested) && ['placed', 'assigned', 'accepted', 'procuring'].includes((order.orderStatus || '').toLowerCase()) || (order.items?.some(i => i.isShortage) && ['placed', 'assigned', 'accepted'].includes((order.orderStatus || '').toLowerCase()))) && (
                                                         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            {order.items?.some(i => i.isShortage) && ['placed', 'assigned', 'accepted'].includes((order.orderStatus || '').toLowerCase()) && (
                                                             <button
                                                                 onClick={() => onAllowPartial?.(order)}
                                                                 disabled={order.allowPartialFulfillment}
@@ -341,6 +342,8 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 <Truck size={15} />
                                                                 {order.allowPartialFulfillment ? 'Partial Delivery Allowed' : 'Partial Delivery Allow Karein'}
                                                             </button>
+                                                            )}
+                                                            {order.items?.some(i => i.isShortage && !i.procurementRequested) && ['placed', 'assigned', 'accepted', 'procuring'].includes((order.orderStatus || '').toLowerCase()) && (
                                                             <button
                                                                 onClick={() => {
                                                                     onClose();
@@ -349,8 +352,9 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                                 className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 py-3 rounded-sm text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]"
                                                             >
                                                                 <Package size={16} />
-                                                                Stock Mangwayein
+                                                                {order.items.some(i => i.procurementRequested) ? 'Baaki Stock Mangwayein' : 'Stock Mangwayein'}
                                                             </button>
+                                                            )}
                                                         </div>
                                                     )}
 

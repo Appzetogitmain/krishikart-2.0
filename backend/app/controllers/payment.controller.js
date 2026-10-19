@@ -298,7 +298,7 @@ async function processVerifiedPayment(req, res, userId) {
         for (const g of computedGroups) {
             let fulfillmentCategoryId = null;
             try {
-                fulfillmentCategoryId = new mongoose.Types.ObjectId(g.categoryId);
+                fulfillmentCategoryId = g.categoryId ? new mongoose.Types.ObjectId(g.categoryId) : null;
             } catch {
                 fulfillmentCategoryId = null;
             }

@@ -105,6 +105,11 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                             Stock Kam Hai
                                         </span>
                                     )}
+                                    {order.items?.some(i => i.procurementRequested) && ['placed', 'assigned', 'accepted', 'procuring'].includes((order.orderStatus || '').toLowerCase()) && (
+                                        <span title={order.items.filter(i => i.procurementRequested).map(i => i.name).join(', ')} className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+                                            Vendor se manga ({order.items.filter(i => i.procurementRequested).length}/{order.items.filter(i => i.isShortage).length})
+                                        </span>
+                                    )}
                                     {order.isPartOfGroup && (
                                         <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
                                             Split Order
@@ -150,7 +155,6 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                 <div className="flex items-center justify-end gap-2">
                                     {/* Only while the order still waits for stock; never for packed/delivered/cancelled orders */}
                                     {order.items?.some(i => i.isShortage) && ['placed', 'assigned', 'accepted'].includes((order.orderStatus || '').toLowerCase()) && (
-                                        <>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -168,6 +172,9 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                 <Truck size={13} strokeWidth={3} />
                                                 {order.allowPartialFulfillment ? 'Partial Delivery Allowed' : 'Partial Delivery Allow Karein'}
                                             </button>
+                                    )}
+                                    {/* Short items not yet requested from any vendor (one order can be split across vendors) */}
+                                    {order.items?.some(i => i.isShortage && !i.procurementRequested) && ['placed', 'assigned', 'accepted', 'procuring'].includes((order.orderStatus || '').toLowerCase()) && (
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -183,9 +190,8 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                                 )}
                                             >
                                                 <Package size={14} strokeWidth={3} className="group-hover/button:scale-110 transition-transform" />
-                                                Stock Mangwayein
+                                                {order.items.some(i => i.procurementRequested) ? 'Baaki Stock Mangwayein' : 'Stock Mangwayein'}
                                             </button>
-                                        </>
                                     )}
                                     <button
                                         onClick={(e) => {

@@ -50,8 +50,10 @@ export async function resolveCheckoutCoordinates(shippingAddress, shippingLocati
 }
 
 /**
- * Build category-split order slices: prices from nearest serving franchise per SKU,
- * coupon on combined subtotal, single delivery fee on first slice, tax per slice.
+ * Build order slices, one per franchise: each item is priced and served by the nearest franchise
+ * that has it, and all items served by the same franchise go into ONE order (a basket only splits
+ * when its items really come from different franchises). Coupon on the combined subtotal, single
+ * delivery fee on the first slice, tax per slice.
  * @returns {{ ok: true, payload } | { ok: false, status: number, message: string }}
  */
 export async function computeSplitCheckoutPayload({
@@ -116,6 +118,7 @@ export async function computeSplitCheckoutPayload({
     }
     lines.push({
       categoryId: catId,
+      franchiseKey: offer.franchiseId ? String(offer.franchiseId) : `category:${catId}`,
       orderItem: {
         productId: product._id,
         name: product.name,
@@ -137,16 +140,20 @@ export async function computeSplitCheckoutPayload({
     };
   }
 
+  // One order per serving franchise
   const groupsMap = new Map();
   for (const line of lines) {
-    if (!groupsMap.has(line.categoryId)) {
-      groupsMap.set(line.categoryId, []);
+    if (!groupsMap.has(line.franchiseKey)) {
+      groupsMap.set(line.franchiseKey, { items: [], categoryIds: new Set() });
     }
-    groupsMap.get(line.categoryId).push(line.orderItem);
+    const g = groupsMap.get(line.franchiseKey);
+    g.items.push(line.orderItem);
+    g.categoryIds.add(line.categoryId);
   }
 
-  const groupEntries = [...groupsMap.entries()].map(([categoryId, items]) => ({
-    categoryId,
+  const groupEntries = [...groupsMap.values()].map(({ items, categoryIds }) => ({
+    // Kept for older reports: the category when the order has only one, otherwise none
+    categoryId: categoryIds.size === 1 ? [...categoryIds][0] : null,
     items,
     subtotal: items.reduce((s, i) => s + i.subtotal, 0),
   }));

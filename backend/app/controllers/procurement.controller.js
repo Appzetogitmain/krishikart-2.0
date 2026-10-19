@@ -1241,6 +1241,25 @@ export const createProcurementFromOrder = async (req, res) => {
             return handleResponse(res, 400, "No items in this order require procurement");
         }
 
+        // Items already asked from a vendor for this order are not asked again, so one order's
+        // shortages can be split across several vendors without ordering anything twice
+        const openRequests = await ProcurementRequest.find({
+            orderId: order._id,
+            status: { $nin: ["completed", "rejected"] },
+        }).select("items.productId").lean();
+        const alreadyRequested = new Set(openRequests.flatMap(r => (r.items || []).map(i => String(i.productId))));
+        const twice = Object.keys(customQuantities || {}).filter(pid => alreadyRequested.has(String(pid)) && Number(customQuantities[pid]) > 0);
+        if (twice.length) {
+            const names = shortageItems.filter(i => twice.includes(String(i.productId))).map(i => i.name).join(", ");
+            return handleResponse(res, 400, `Already requested from a vendor for this order: ${names || "some items"}.`);
+        }
+        const notYetRequested = shortageItems.filter(i => !alreadyRequested.has(String(i.productId)));
+        if (notYetRequested.length === 0) {
+            return handleResponse(res, 400, "All short items of this order have already been requested from a vendor.");
+        }
+        shortageItems.length = 0;
+        shortageItems.push(...notYetRequested);
+
         if (!vendorId) {
             return handleResponse(res, 400, "Vendor is required to create procurement");
         }
