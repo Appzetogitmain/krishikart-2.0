@@ -326,7 +326,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                     ))}
                                                 </div>
                                                 <div className="bg-slate-900 p-6 flex flex-col gap-3">
-                                                    {order.items?.some(i => i.isShortage) && (order.orderStatus || '').toLowerCase() !== 'procuring' && (
+                                                    {order.items?.some(i => i.isShortage) && ['placed', 'assigned', 'accepted'].includes((order.orderStatus || '').toLowerCase()) && (
                                                         <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                             <button
                                                                 onClick={() => onAllowPartial?.(order)}

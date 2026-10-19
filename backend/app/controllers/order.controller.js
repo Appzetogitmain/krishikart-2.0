@@ -89,6 +89,10 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
+// Stock shortage only matters while an order is still waiting for stock. Once it is packed, out for
+// delivery, delivered or cancelled, its stock was already taken (or it is gone), so it is never "short".
+const AWAITING_STOCK = ["Placed", "Assigned", "Accepted", "Procuring", "pending"];
+
 const applyFranchiseStockShortageFlags = async (orders) => {
   if (!Array.isArray(orders) || orders.length === 0) {
     return orders;
@@ -119,6 +123,11 @@ const applyFranchiseStockShortageFlags = async (orders) => {
   );
 
   return orders.map((order) => {
+    if (!AWAITING_STOCK.includes(order.orderStatus)) {
+      const plain = order.toObject ? order.toObject() : { ...order };
+      plain.items = (plain.items || []).map((item) => ({ ...item, isShortage: false, shortageQty: 0 }));
+      return plain;
+    }
     const franchiseId = order.franchiseId?._id || order.franchiseId;
     if (!franchiseId) {
       return order;

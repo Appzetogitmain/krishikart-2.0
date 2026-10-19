@@ -100,7 +100,7 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                                     <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-sm">
                                         {order.items?.length || 0} {order.items?.length === 1 ? 'Item' : 'Items'}
                                     </span>
-                                    {order.items?.some(i => i.isShortage) && (
+                                    {order.items?.some(i => i.isShortage) && ['placed', 'assigned', 'accepted', 'procuring'].includes((order.orderStatus || '').toLowerCase()) && (
                                         <span title="Required quantity available nahi hai" className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter animate-pulse">
                                             Stock Kam Hai
                                         </span>
@@ -148,7 +148,8 @@ export default function OrdersTable({ orders, onAction, onOrderClick, onProcure,
                             </td>
                             <td className="px-4 py-4 text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                    {order.items?.some(i => i.isShortage) && (order.orderStatus || '').toLowerCase() !== 'procuring' && (
+                                    {/* Only while the order still waits for stock; never for packed/delivered/cancelled orders */}
+                                    {order.items?.some(i => i.isShortage) && ['placed', 'assigned', 'accepted'].includes((order.orderStatus || '').toLowerCase()) && (
                                         <>
                                             <button
                                                 onClick={(e) => {
