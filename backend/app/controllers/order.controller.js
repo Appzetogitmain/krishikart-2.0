@@ -2504,10 +2504,13 @@ export const getDispatchedOrders = async (req, res) => {
 
 const REFUSAL_REASONS = {
   customer_refused: "Customer refused to take the order",
-  product_damaged: "Product is damaged or spoiled",
-  wrong_item: "Wrong or missing item",
-  quality_not_ok: "Customer not happy with the quality",
+  owner_not_present: "Owner not present to receive",
+  no_cash: "Customer had no cash (COD)",
   customer_unavailable: "Customer not available / not reachable",
+  quality_not_ok: "Quality issue",
+  product_damaged: "Product damaged or spoiled (before delivery)",
+  damaged_in_delivery: "Damaged during delivery (handling)",
+  wrong_item: "Wrong or missing item",
   other: "Other",
 };
 

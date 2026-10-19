@@ -96,10 +96,13 @@ const ActiveDelivery = () => {
 
     const REFUSE_REASONS = [
         { key: 'customer_refused', label: 'Customer refused to take the order' },
-        { key: 'product_damaged', label: 'Product is damaged or spoiled' },
-        { key: 'wrong_item', label: 'Wrong or missing item' },
-        { key: 'quality_not_ok', label: 'Customer not happy with the quality' },
+        { key: 'owner_not_present', label: 'Owner not present to receive' },
+        { key: 'no_cash', label: 'Customer had no cash (COD)' },
         { key: 'customer_unavailable', label: 'Customer not available / not reachable' },
+        { key: 'quality_not_ok', label: 'Quality issue' },
+        { key: 'product_damaged', label: 'Product damaged or spoiled (before delivery)' },
+        { key: 'damaged_in_delivery', label: 'Damaged during delivery (handling)' },
+        { key: 'wrong_item', label: 'Wrong or missing item' },
         { key: 'other', label: 'Other' },
     ];
 
