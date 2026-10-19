@@ -17,6 +17,16 @@ export default function VendorReportsHub() {
                             />
                         ),
                     },
+                    {
+                        label: 'Sales Value & Rates',
+                        render: () => (
+                            <ReportView
+                                endpoint="/reports/vendor/finance"
+                                title="Sales Value & Rates"
+                                subtitle="What franchises accepted from you, at your selling rates, minus damaged goods and return credit notes."
+                            />
+                        ),
+                    },
                     { label: 'Payments Due', render: () => <ReceivablesReportScreen /> },
                 ]}
             />

@@ -7,7 +7,7 @@ import handleResponse from "../utils/helper.js";
 import { emitToAdmin, emitToFranchise } from "../lib/socket.js";
 import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
-import { takeStock, addStock } from "../utils/stock.js";
+import { takeStock, addStock, avgCostOf } from "../utils/stock.js";
 import { scopeOf } from "../utils/adminScope.js";
 
 /*
@@ -314,6 +314,9 @@ export const dispatchSupplyRequest = async (req, res) => {
             const p = plan.find((x) => String(x.item._id) === String(i._id));
             i.quantity = p.qty;
             i.dispatchedQuantity = p.qty;
+            // The receiving franchise's stock is valued at what the mother franchise paid for it
+            const cost = isId(i.productId) ? await avgCostOf(me, i.productId) : null;
+            if (cost !== null) i.quotedPrice = cost;
         }
         fresh.totalQuotedAmount = round2(fresh.items.reduce((s, i) => s + (i.quotedPrice || i.price || 0) * i.quantity, 0));
         fresh.status = "picked_up";

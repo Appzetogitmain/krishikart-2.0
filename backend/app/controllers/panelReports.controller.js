@@ -14,6 +14,7 @@ import FranchiseAdminPayout from "../models/franchiseAdminPayout.js";
 import handleResponse from "../utils/helper.js";
 import { franchiseScopeMatch, customerIdsInScope, toObjectIds } from "../utils/adminScope.js";
 import { getISTDayKey, istDayKeyToDate } from "../utils/deliverySchedule.js";
+import { buildAdminFinanceReport, buildFranchiseFinanceReport, buildVendorFinanceReport } from "../utils/financeReports.js";
 
 /**
  * Reports for every panel (admin, franchise, vendor, delivery partner).
@@ -650,6 +651,10 @@ async function buildReport(role, req) {
     const range = parseRange(req.query);
     let report;
     if (role === "admin") report = await buildAdminReport(range, req.cityScope || null);
+    // Profit & margin: each role only ever gets its own data (franchise/vendor id from the login)
+    else if (role === "admin-finance") report = await buildAdminFinanceReport(range, req.cityScope || null);
+    else if (role === "franchise-finance") report = await buildFranchiseFinanceReport(range, req.franchise._id);
+    else if (role === "vendor-finance") report = await buildVendorFinanceReport(range, req.vendor._id);
     else if (role === "franchise") report = await buildFranchiseReport(range, req.franchise._id);
     else if (role === "vendor") report = await buildVendorReport(range, req.vendor._id);
     else report = await buildDeliveryReport(range, req.delivery._id);
@@ -673,7 +678,7 @@ function toWorkbook(report) {
 
     const used = new Set(["Summary"]);
     for (const s of report.sections) {
-        const header = s.columns.map((c) => c.label + (c.format === "currency" ? " (₹)" : ""));
+        const header = s.columns.map((c) => c.label + (c.format === "currency" ? " (₹)" : c.format === "percent" ? " (%)" : ""));
         const rows = s.rows.map((r) => s.columns.map((c) => (c.format === "date" ? fmtDate(r[c.key]) : r[c.key] ?? "")));
         const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
         sheet["!cols"] = s.columns.map((c) => ({ wch: Math.max(12, c.label.length + 4, c.key === "address" ? 40 : 0) }));
@@ -718,3 +723,9 @@ export const exportAdminReport = exportHandler("admin");
 export const exportFranchiseReport = exportHandler("franchise");
 export const exportVendorReport = exportHandler("vendor");
 export const exportDeliveryReport = exportHandler("delivery");
+export const getAdminFinanceReport = handler("admin-finance");
+export const exportAdminFinanceReport = exportHandler("admin-finance");
+export const getFranchiseFinanceReport = handler("franchise-finance");
+export const exportFranchiseFinanceReport = exportHandler("franchise-finance");
+export const getVendorFinanceReport = handler("vendor-finance");
+export const exportVendorFinanceReport = exportHandler("vendor-finance");

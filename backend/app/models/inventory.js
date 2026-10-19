@@ -25,6 +25,12 @@ const inventorySchema = new mongoose.Schema({
                 type: Number,
                 default: null, // If null, fallback to global product price
             },
+            // Weighted-average price actually paid for this stock (vendor rate, or the mother
+            // franchise's own cost). Used to value goods sold in the financial reports.
+            avgCost: {
+                type: Number,
+                default: null,
+            },
             lastUpdated: {
                 type: Date,
                 default: Date.now,

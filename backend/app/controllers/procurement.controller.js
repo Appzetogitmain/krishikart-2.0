@@ -12,7 +12,7 @@ import { emitToVendor, emitToAdmin, emitToFranchise } from "../lib/socket.js";
 import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
-import { takeStockUpTo, addStock } from "../utils/stock.js";
+import { takeStockUpTo, addStock, addStockWithCost } from "../utils/stock.js";
 import { vendorReturnCredits } from "./stockReturn.controller.js";
 
 /* ---------- Rate bargaining between admin and vendor ---------- */
@@ -1027,7 +1027,8 @@ export const franchiseConfirmReceipt = async (req, res) => {
                 const damaged = Number(reqItem.damagedQuantity) || 0;
                 const quantityToAdd = Math.max(0, received - damaged);
                 if (quantityToAdd > 0) {
-                    await addStock(request.franchiseId, prodId, quantityToAdd);
+                    // Valued at the rate actually paid (vendor's agreed rate, or the mother franchise's cost)
+                    await addStockWithCost(request.franchiseId, prodId, quantityToAdd, Number(reqItem.quotedPrice || reqItem.price || 0));
                     addedByProduct[String(prodId)] = quantityToAdd;
                 }
             }

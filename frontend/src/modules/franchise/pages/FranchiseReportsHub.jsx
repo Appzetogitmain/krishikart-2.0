@@ -17,6 +17,16 @@ export default function FranchiseReportsHub() {
                             />
                         ),
                     },
+                    {
+                        label: 'Profit & Margin',
+                        render: () => (
+                            <ReportView
+                                endpoint="/reports/franchise/finance"
+                                title="Profit & Margin"
+                                subtitle="Your delivered sales, what the goods cost you from the company, and your profit and margin."
+                            />
+                        ),
+                    },
                     { label: 'Commission & Payments', render: () => <CommissionReportScreen /> },
                 ]}
             />

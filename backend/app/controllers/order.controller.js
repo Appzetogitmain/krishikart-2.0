@@ -32,6 +32,7 @@ import { resolveDeliverySchedule, getDeliveryOffDays } from "../utils/deliverySc
 import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
+import { recordDeliveredOrder } from "../utils/finance.js";
 
 const OUT_FOR_DELIVERY = ["Dispatched", "Out for Delivery"];
 
@@ -1692,6 +1693,15 @@ export const updateOrderStatus = async (req, res) => {
         status,
       },
     });
+
+    // Financial record of the delivered order (once per order; never blocks the delivery)
+    if (status === "Delivered") {
+      try {
+        await recordDeliveredOrder(order._id);
+      } catch (financeErr) {
+        console.error("[Finance] could not record delivered order", order._id.toString(), financeErr);
+      }
+    }
 
     return handleResponse(res, 200, `Order status updated to ${status}`, order);
   } catch (error) {

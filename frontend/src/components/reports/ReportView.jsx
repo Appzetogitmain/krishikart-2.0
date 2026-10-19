@@ -46,6 +46,7 @@ const formatValue = (value, format) => {
     if (value === null || value === undefined || value === '') return '—';
     if (format === 'currency') return `₹${inr.format(Number(value) || 0)}`;
     if (format === 'number') return inr.format(Number(value) || 0);
+    if (format === 'percent') return `${inr.format(Number(value) || 0)}%`;
     if (format === 'date') {
         const [y, m, d] = String(value).split('-');
         return d ? `${d}-${m}-${y}` : value;
@@ -97,7 +98,7 @@ function ReportSection({ section }) {
                                         key={c.key}
                                         className={cn(
                                             'px-4 py-2 text-xs font-semibold text-slate-500 whitespace-nowrap',
-                                            (c.format === 'currency' || c.format === 'number') && 'text-right'
+                                            (c.format === 'currency' || c.format === 'number' || c.format === 'percent') && 'text-right'
                                         )}
                                     >
                                         {c.label}
@@ -113,7 +114,7 @@ function ReportSection({ section }) {
                                             key={c.key}
                                             className={cn(
                                                 'px-4 py-2 text-slate-700 whitespace-nowrap',
-                                                (c.format === 'currency' || c.format === 'number') && 'text-right tabular-nums',
+                                                (c.format === 'currency' || c.format === 'number' || c.format === 'percent') && 'text-right tabular-nums',
                                                 c.key === 'address' && 'whitespace-normal min-w-[220px]'
                                             )}
                                         >

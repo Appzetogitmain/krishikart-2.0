@@ -44,6 +44,76 @@ export async function takeStockUpTo(franchiseId, productId, qty) {
     return 0;
 }
 
+/**
+ * Adds `qty` bought at `rate` per unit, and updates the product's weighted-average cost in one
+ * atomic step: newAvg = (stock x avg + qty x rate) / (stock + qty). Without a known rate it is a
+ * plain addStock.
+ */
+export async function addStockWithCost(franchiseId, productId, qty, rate) {
+    qty = Number(qty) || 0;
+    rate = Number(rate);
+    if (qty <= 0) return;
+    if (!Number.isFinite(rate) || rate <= 0) return addStock(franchiseId, productId, qty);
+    const fid = toId(franchiseId);
+    const pid = toId(productId);
+    const now = new Date();
+    // Straight to the driver: Mongoose would cast this pipeline as stock rows and null them out
+    const r = await Inventory.collection.updateOne(
+        { franchiseId: fid, "items.productId": pid },
+        [{
+            $set: {
+                items: {
+                    $map: {
+                        input: "$items",
+                        as: "it",
+                        in: {
+                            $cond: [
+                                { $eq: ["$$it.productId", pid] },
+                                {
+                                    $mergeObjects: ["$$it", {
+                                        avgCost: {
+                                            $let: {
+                                                vars: { s: { $max: [{ $ifNull: ["$$it.currentStock", 0] }, 0] }, a: { $ifNull: ["$$it.avgCost", null] } },
+                                                in: {
+                                                    $cond: [
+                                                        { $or: [{ $eq: ["$$a", null] }, { $lte: ["$$s", 0] }] },
+                                                        rate,
+                                                        { $round: [{ $divide: [{ $add: [{ $multiply: ["$$s", "$$a"] }, qty * rate] }, { $add: ["$$s", qty] }] }, 4] },
+                                                    ],
+                                                },
+                                            },
+                                        },
+                                        currentStock: { $add: [{ $ifNull: ["$$it.currentStock", 0] }, qty] },
+                                        lastUpdated: now,
+                                    }],
+                                },
+                                "$$it",
+                            ],
+                        },
+                    },
+                },
+            },
+        }],
+    );
+    if (r.matchedCount === 0) {
+        await Inventory.updateOne(
+            { franchiseId: fid, "items.productId": { $ne: pid } },
+            { $push: { items: { productId: pid, currentStock: qty, avgCost: rate, lastUpdated: now } } },
+            { upsert: true },
+        ).catch(async (err) => {
+            if (err?.code !== 11000) throw err;
+            await addStockWithCost(franchiseId, productId, qty, rate);
+        });
+    }
+}
+
+/** The weighted-average cost of a product in a franchise's stock (null when not known). */
+export async function avgCostOf(franchiseId, productId) {
+    const inv = await Inventory.findOne({ franchiseId: toId(franchiseId), "items.productId": toId(productId) }, { "items.$": 1 }).lean();
+    const v = inv?.items?.[0]?.avgCost;
+    return Number.isFinite(Number(v)) && v !== null ? Number(v) : null;
+}
+
 /** Adds `qty` to a product's stock, creating the inventory row if needed. */
 export async function addStock(franchiseId, productId, qty) {
     qty = Number(qty) || 0;

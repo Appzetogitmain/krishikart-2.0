@@ -9,7 +9,7 @@ import handleResponse from "../utils/helper.js";
 import { emitToAdmin, emitToFranchise, emitToVendor } from "../lib/socket.js";
 import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
-import { takeStock, addStock } from "../utils/stock.js";
+import { takeStock, addStock, addStockWithCost } from "../utils/stock.js";
 import { scopeOf } from "../utils/adminScope.js";
 
 /*
@@ -356,7 +356,7 @@ const confirmReceived = async (ret, receiverName, note) => {
     ret.creditNote = credit;
 
     if (ret.destination.type === "mother_franchise") {
-        for (const i of ret.items) if (i.condition === "good") await addStock(ret.destination.franchiseId, i.productId, i.quantity);
+        for (const i of ret.items) if (i.condition === "good") await addStockWithCost(ret.destination.franchiseId, i.productId, i.quantity, i.price);
     }
     const body = `${receiverName} received your return ${refOf(ret._id)}. Credit note ${credit.number} for ₹${credit.amount}.`;
     notifyFranchise(ret.fromFranchiseId, "Return received", body, { returnId: ret._id });
