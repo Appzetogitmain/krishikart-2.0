@@ -196,6 +196,20 @@ export default function FranchisePayoutsScreen() {
             render: (val) => <span className="text-[11px] font-black text-emerald-600 tabular-nums">{formatCurrency(val)}</span>
         },
         {
+            // All-time: earned on delivered orders minus what was paid (franchise-disputed payments don't count)
+            header: 'Balance (all time)',
+            key: 'balance',
+            align: 'right',
+            render: (bal) => bal ? (
+                <div className="flex flex-col items-end leading-tight">
+                    <span className="text-[11px] font-black text-slate-900 tabular-nums">{formatCurrency(bal.balanceDue)} due</span>
+                    <span className="text-[10px] text-slate-500 tabular-nums">Earned {formatCurrency(bal.earned)} • Paid {formatCurrency(bal.paid)}</span>
+                    {bal.awaitingCount > 0 && <span className="text-[10px] font-bold text-amber-600">{bal.awaitingCount} awaiting franchise confirmation</span>}
+                    {bal.disputedCount > 0 && <span className="text-[10px] font-bold text-rose-600">{bal.disputedCount} reported not received</span>}
+                </div>
+            ) : <span className="text-[10px] text-slate-400">—</span>
+        },
+        {
             header: 'Category Commission',
             key: 'categories',
             render: (categories) => (
@@ -499,6 +513,14 @@ export default function FranchisePayoutsScreen() {
                                                     {formatCurrency(item.amount)}
                                                 </span>
                                             </div>
+                                            <p className={
+                                                (item.status === 'confirmed' ? 'text-emerald-600' : item.status === 'disputed' ? 'text-rose-600' : 'text-amber-600') + ' mt-1 text-[10px] font-black uppercase tracking-wider'
+                                            }>
+                                                {item.status === 'confirmed' ? 'Franchise confirmed received' : item.status === 'disputed' ? 'Franchise says not received' : 'Waiting for franchise confirmation'}
+                                            </p>
+                                            {item.status === 'disputed' && item.disputeNote ? (
+                                                <p className="text-rose-600 mt-0.5">"{item.disputeNote}"</p>
+                                            ) : null}
                                             {item.reference ? (
                                                 <p className="text-slate-600 mt-1">Ref: {item.reference}</p>
                                             ) : null}

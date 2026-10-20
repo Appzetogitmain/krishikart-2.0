@@ -27,7 +27,7 @@ export default function FranchiseReportsHub() {
                             />
                         ),
                     },
-                    { label: 'Commission & Payments', render: () => <CommissionReportScreen /> },
+                    { label: 'Earnings & Payments', render: () => <CommissionReportScreen /> },
                 ]}
             />
         </div>

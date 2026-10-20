@@ -18,6 +18,15 @@ const franchiseAdminPayoutSchema = new mongoose.Schema(
       ref: "MasterAdmin",
       default: null,
     },
+    // The franchise confirms it received the money, or says it did not (with a note)
+    status: {
+      type: String,
+      enum: ["awaiting_confirmation", "confirmed", "disputed"],
+      default: "awaiting_confirmation",
+      index: true,
+    },
+    respondedAt: { type: Date, default: null },
+    disputeNote: { type: String, default: "" },
   },
   { timestamps: true },
 );

@@ -43,7 +43,8 @@ import { syncInventoryToAssignedProducts } from "../utils/vendorInventorySync.js
 import {
   fetchPayoutOrders,
   aggregatePayoutsFromOrders,
-} from "../utils/franchisePayoutReport.js";
+} from "../utils/franchisePayoutReport.js";
+import { balanceOf } from "../utils/franchiseEarnings.js";
 import {
   LEGAL_CMS_KEYS,
   LEGAL_CMS_DESCRIPTIONS,
@@ -1757,9 +1758,12 @@ export const getFranchisePayoutsSummary = async (req, res) => {
     const orders = await fetchPayoutOrders({ franchiseId: null, from, to });
     const { summary, franchiseRows } =
       await aggregatePayoutsFromOrders(orders);
+    // Overall balance per franchise from the delivery records and recorded payments
+    const balances = await balanceOf(franchiseRows.map((r) => r.franchiseId));
+    const rows = franchiseRows.map((r) => ({ ...r, balance: balances.get(String(r.franchiseId)) || null }));
     return handleResponse(res, 200, "Franchise payouts calculated", {
       summary,
-      franchises: franchiseRows,
+      franchises: rows,
     });
   } catch (err) {
     console.error("Get franchise payouts summary error:", err);

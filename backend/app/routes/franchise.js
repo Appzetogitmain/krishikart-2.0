@@ -27,6 +27,7 @@ import {
   getFranchiseCodRemittances,
   reviewFranchiseCodRemittance,
 } from "../controllers/franchise.cod.controller.js";
+import { getMyEarnings, confirmPayout, disputePayout } from "../controllers/franchiseEarnings.controller.js";
 import {
   createPOSSale,
   getPOSHistory
@@ -73,6 +74,24 @@ router.get(
   protectFranchise,
   requireFranchiseAccountVerified,
   getFranchisePayoutReport,
+);
+router.get(
+  "/reports/earnings",
+  protectFranchise,
+  requireFranchiseAccountVerified,
+  getMyEarnings,
+);
+router.put(
+  "/reports/admin-payouts/:id/confirm",
+  protectFranchise,
+  requireFranchiseAccountVerified,
+  confirmPayout,
+);
+router.put(
+  "/reports/admin-payouts/:id/dispute",
+  protectFranchise,
+  requireFranchiseAccountVerified,
+  disputePayout,
 );
 router.get(
   "/reports/admin-payouts",

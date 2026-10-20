@@ -307,6 +307,17 @@ export const AUDIT_RULES = [
         title: "Franchise commission has been changed", severity: "important",
     },
     {
+        m: "PUT", p: "/franchise/reports/admin-payouts/:id/confirm", module: "Payments & Payouts", action: "franchise.payout_confirm", kind: "event",
+        target: { type: "Payout", id: (ctx) => P(ctx, "id"), snap: async (id) => { const m = (await import("mongoose")).default.models.FranchiseAdminPayout; const x = m && (await m.findById(id).lean()); return x ? { label: money(x.amount), values: { Status: human(x.status) } } : null; } },
+        title: "Franchise confirmed it received a payout", severity: "important",
+    },
+    {
+        m: "PUT", p: "/franchise/reports/admin-payouts/:id/dispute", module: "Payments & Payouts", action: "franchise.payout_dispute", kind: "event",
+        target: { type: "Payout", id: (ctx) => P(ctx, "id"), snap: async (id) => { const m = (await import("mongoose")).default.models.FranchiseAdminPayout; const x = m && (await m.findById(id).lean()); return x ? { label: money(x.amount), values: { Status: human(x.status) } } : null; } },
+        title: "Franchise says a payout did not arrive", severity: "critical",
+        details: (ctx) => [{ label: "Reason", value: short(B(ctx, "note")) }],
+    },
+    {
         m: "POST", p: "/masteradmin/franchises/:id/admin-payouts", module: "Payments & Payouts", action: "franchise.payout", kind: "event",
         target: { type: "Franchise", id: (ctx) => P(ctx, "id"), snap: async (id) => ({ label: await nameOf("Franchise", id, "franchiseName"), values: {} }) },
         title: "Payout recorded for franchise", severity: "important",
