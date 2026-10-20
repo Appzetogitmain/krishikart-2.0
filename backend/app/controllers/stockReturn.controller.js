@@ -40,16 +40,18 @@ const deliveryReturnable = async (request) => {
     for (const r of used) for (const i of r.items) usedBy[String(i.productId)] = (usedBy[String(i.productId)] || 0) + Number(i.quantity || 0);
     return request.items
         .map((i) => {
-            const bad = i.rejected
-                ? Number(i.receivedQuantity || i.dispatchedQuantity || i.quantity || 0)
-                : Number(i.damagedQuantity || 0);
+            // Never more than was sent and received, even if an older check-in recorded more damage
+            const sent = Number(i.dispatchedQuantity) > 0 ? Number(i.dispatchedQuantity) : Number(i.quantity) || 0;
+            const received = Math.min(sent, Number(i.receivedQuantity ?? sent) || 0);
+            const damaged = Math.min(Number(i.damagedQuantity || 0), received);
+            const bad = i.rejected ? (received || sent) : damaged;
             return {
                 productId: String(i.productId),
                 name: i.name,
                 unit: i.unit,
                 price: Number(i.quotedPrice || i.price || 0),
                 rejected: !!i.rejected,
-                damaged: Number(i.damagedQuantity || 0),
+                damaged,
                 returnable: round2(Math.max(0, bad - (usedBy[String(i.productId)] || 0))),
             };
         })

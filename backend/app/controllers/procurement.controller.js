@@ -860,6 +860,27 @@ export const franchiseConfirmReceipt = async (req, res) => {
 
         const { items: auditData } = req.body; // Expecting [{ productId: string, receivedQuantity: number, damagedQuantity: number, rejected: boolean }]
 
+        // Quantities must make sense before anything is saved: received 0..sent, damaged 0..received
+        if (Array.isArray(auditData)) {
+            for (const a of auditData) {
+                const it = request.items.find(i => (i._id?.toString() === a.productId) || (i.productId === a.productId));
+                if (!it) continue;
+                const sent = Number(it.dispatchedQuantity) > 0 ? Number(it.dispatchedQuantity) : Number(it.quantity) || 0;
+                const received = Number(a.receivedQuantity) || 0;
+                const damaged = Number(a.damagedQuantity) || 0;
+                const unit = it.unit || "";
+                if (received < 0 || damaged < 0) {
+                    return handleResponse(res, 400, `${it.name}: quantities cannot be negative.`);
+                }
+                if (received > sent) {
+                    return handleResponse(res, 400, `${it.name}: only ${sent} ${unit} was sent, so you cannot receive ${received} ${unit}.`);
+                }
+                if (a.rejected !== true && damaged > received) {
+                    return handleResponse(res, 400, `${it.name}: damaged (${damaged} ${unit}) cannot be more than received (${received} ${unit}).`);
+                }
+            }
+        }
+
         request.status = 'completed';
         const rejectedItems = [];
         const damagedItems = [];

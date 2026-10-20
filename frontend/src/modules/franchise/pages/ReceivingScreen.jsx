@@ -123,11 +123,20 @@ const ReceivingScreen = () => {
         });
     };
 
-    const updateItem = (id, field, value) => {
-        setReceivingData(prev => ({
-            ...prev,
-            [id]: { ...prev[id], [field]: value }
-        }));
+    // Received can't be more than the vendor sent; damaged can't be more than received
+    const updateItem = (id, field, value, sent) => {
+        setReceivingData(prev => {
+            const cur = prev[id] || {};
+            const v = Math.max(0, Number.isFinite(value) ? value : 0);
+            const next = { ...cur };
+            if (field === 'received') {
+                next.received = sent !== undefined ? Math.min(v, sent) : v;
+                if ((next.damage || 0) > next.received) next.damage = next.received;
+            } else {
+                next.damage = Math.min(v, Number(cur.received) || 0);
+            }
+            return { ...prev, [id]: next };
+        });
     };
 
     const handleSubmit = async () => {
@@ -404,9 +413,12 @@ const ReceivingScreen = () => {
                                                                 <div className={`flex items-center border rounded-lg p-1 w-32 ${rejectedItems.has(itemId) ? 'bg-slate-50 border-slate-100' : 'bg-slate-50 border-slate-200'}`}>
                                                                     <input
                                                                         type="number"
+                                                                        min="0"
+                                                                        step="any"
+                                                                        max={item.dispatchedQuantity || item.quantity}
                                                                         value={data.received}
                                                                         disabled={rejectedItems.has(itemId)}
-                                                                        onChange={(e) => updateItem(itemId, 'received', parseInt(e.target.value) || 0)}
+                                                                        onChange={(e) => updateItem(itemId, 'received', parseFloat(e.target.value) || 0, Number(item.dispatchedQuantity || item.quantity))}
                                                                         className={`bg-transparent w-full text-center font-black text-sm outline-none tabular-nums py-1 ${rejectedItems.has(itemId) ? 'text-slate-300' : ''}`}
                                                                     />
                                                                 </div>
@@ -418,10 +430,13 @@ const ReceivingScreen = () => {
                                                                 <div className={`flex items-center border rounded-lg p-1 w-24 ${rejectedItems.has(itemId) ? 'bg-slate-50 border-slate-100' : 'bg-rose-50 border-rose-100'}`}>
                                                                     <input
                                                                         type="number"
+                                                                        min="0"
+                                                                        step="any"
+                                                                        max={data.received}
                                                                         value={data.damage}
                                                                         disabled={rejectedItems.has(itemId)}
                                                                         placeholder="0"
-                                                                        onChange={(e) => updateItem(itemId, 'damage', parseInt(e.target.value) || 0)}
+                                                                        onChange={(e) => updateItem(itemId, 'damage', parseFloat(e.target.value) || 0)}
                                                                         className={`bg-transparent w-full text-center font-black text-sm outline-none tabular-nums placeholder:text-rose-300 ${rejectedItems.has(itemId) ? 'text-slate-300' : 'text-rose-600'}`}
                                                                     />
                                                                     <AlertTriangle size={14} className={`mr-2 shrink-0 ${rejectedItems.has(itemId) ? 'text-slate-200' : 'text-rose-300'}`} />
