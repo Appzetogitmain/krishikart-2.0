@@ -20,7 +20,7 @@ export const PORTAL_LANGUAGES = [
 ];
 const CODES = PORTAL_LANGUAGES.map((l) => l.code);
 
-const cacheKey = (lang) => `vendorTr:v6:${lang}`; // bump the version when server wording changes
+const cacheKey = (lang) => `vendorTr:v7:${lang}`; // bump the version when server wording changes
 const langKey = (vendorId) => `vendorLang:${vendorId || ''}`;
 
 const readCache = (lang) => {

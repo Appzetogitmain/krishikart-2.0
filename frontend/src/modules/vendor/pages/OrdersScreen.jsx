@@ -1,340 +1,201 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    ClipboardList,
-    Clock,
-    CheckCircle2,
-    Truck,
-    Search,
-    ChevronRight,
-    AlertCircle,
-    Package,
-    IndianRupee,
-    ArrowRight,
-    LayoutGrid,
-    List as ListIcon,
-    Calendar
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOrders } from '@/modules/user/contexts/OrderContext';
-// import { useProcurement } from '@/modules/franchise/contexts/ProcurementContext';
-import FilterBar from '../components/tables/FilterBar';
-import DataGrid from '../components/tables/DataGrid';
-import VendorBackBar from '../components/navigation/VendorBackBar';
-
+import { ChevronRight, ClipboardList, Loader2, Package, Search } from 'lucide-react';
 import api from '@/lib/axios';
-import { keepPage, peekPage } from '../lib/pageCache';
+import { cn } from '@/lib/utils';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
+import { useVendorLanguage } from '../contexts/VendorLanguageContext';
+import { VendorDesktopHeader, VendorMobileTopBar, formatDay, formatTime } from '../components/layout/VendorPageHeader';
+import { keepPage, peekPage } from '../lib/pageCache';
+import { franchiseNameOf, loadOf, loadText, rupees, shortId } from '../lib/packing';
+import { DONE, NEEDS_RATES, NEEDS_REPLY, READY, TO_PACK, statusOf } from '../lib/requestStatus';
+
+const TABS = [
+    { value: 'new', label: 'New', statuses: [...NEEDS_RATES, ...NEEDS_REPLY, 'quoted'] },
+    { value: 'pack', label: 'Packing', statuses: TO_PACK },
+    { value: 'ready', label: 'Ready', statuses: READY },
+    { value: 'done', label: 'Completed', statuses: DONE },
+];
+
+// Amount to show: the agreed/quoted total once there is one, else the estimate
+const amountOf = (r) => Number(r.totalQuotedAmount) || Number(r.vendorQuoteTotal)
+    || (r.items || []).reduce((s, i) => s + (Number(i.quotedPrice) || 0) * (Number(i.quantity) || 0), 0)
+    || Number(r.totalEstimatedAmount) || 0;
+
+function Thumb({ src }) {
+    return src
+        ? <img src={src} alt="" className="w-9 h-9 object-contain" loading="lazy" />
+        : <span className="w-9 h-9 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center"><Package size={16} /></span>;
+}
 
 export default function OrdersScreen() {
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(!peekPage('assignments'));
-    const [activeTab, setActiveTab] = useState('New');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-    // const { orders: contextOrders } = useOrders();
-    const tabs = ['New', 'Preparing', 'Ready', 'Completed'];
-
-    // Map context orders that require procurement into the vendor format
-    /* const liveVendorOrders = contextOrders
-        .filter(o => o.fulfillmentType === 'requires_procurement')
-        .map(o => ({
-            id: o.id,
-            franchiseName: o.franchise || 'Main Center',
-            total: o.procurementTotal || o.total,
-            procurementTotal: o.procurementTotal,
-            status: (o.status === 'assigned' || !o.status) ? 'new' : o.status,
-            items: o.items,
-            priority: o.priority || 'normal',
-            deadline: o.deadline || new Date(Date.now() + 3600000).toISOString()
-        })); */
-
-    const [procurementRequests, setProcurementRequests] = useState(() => peekPage('assignments') || []);
     const { newAssignmentData, statusAlertData } = useVendorAuth();
+    const { t, locale } = useVendorLanguage();
+    const [requests, setRequests] = useState(() => peekPage('assignments') || []);
+    const [loading, setLoading] = useState(!peekPage('assignments'));
+    const [tab, setTab] = useState('new');
+    const [search, setSearch] = useState('');
 
-    const fetchAssignments = async () => {
+    const load = useCallback(async () => {
         try {
-            const response = await api.get('/procurement/vendor/my-assignments');
-            if (response.data.success) {
-                setProcurementRequests(keepPage('assignments', response.data.results));
-            }
+            const res = await api.get('/procurement/vendor/my-assignments');
+            setRequests(keepPage('assignments', res.data?.results || []));
         } catch (error) {
-            console.error("Failed to fetch vendor assignments", error);
+            console.error('Failed to fetch vendor assignments', error);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchAssignments();
     }, []);
 
-    // Refresh when something changes: a new request, a rate offer or status update from the admin,
-    // or the vendor coming back to this window
+    // Refresh on a new request / admin update, when the vendor comes back, and every minute
+    useEffect(() => { load(); }, [load, newAssignmentData, statusAlertData]);
     useEffect(() => {
-        if (newAssignmentData || statusAlertData) {
-            fetchAssignments();
-        }
-    }, [newAssignmentData, statusAlertData]);
-
-    useEffect(() => {
-        const onFocus = () => fetchAssignments();
+        const onFocus = () => load();
         window.addEventListener('focus', onFocus);
-        const timer = setInterval(fetchAssignments, 60000);
-        return () => {
-            window.removeEventListener('focus', onFocus);
-            clearInterval(timer);
-        };
-    }, []);
+        const timer = setInterval(load, 60000);
+        return () => { window.removeEventListener('focus', onFocus); clearInterval(timer); };
+    }, [load]);
 
-    const mappedProcurementRequests = procurementRequests.map(req => ({
-        id: req._id,
-        franchiseName: req.franchiseId?.shopName || req.franchiseId?.ownerName || 'Franchise Request',
-        franchiseMobile: req.franchiseId?.mobile || '+91 00000 00000',
-        total: req.totalEstimatedAmount || 0,
-        status: req.status,
-        items: req.items.map(i => ({
-            ...i,
-            image: i.image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&q=20" // Placeholder
-        })),
-        date: req.createdAt,
-        isProcurement: true,
-        priority: 'high',
-        deadline: new Date((req.createdAt ? new Date(req.createdAt).getTime() : Date.now()) + 7200000).toISOString()
-    }));
+    const q = search.trim().toLowerCase().replace(/^#/, '');
+    const inTab = (v) => requests.filter((r) => TABS.find((x) => x.value === v).statuses.includes(r.status));
+    const shown = useMemo(() => inTab(tab)
+        .filter((r) => !q || [franchiseNameOf(r.franchiseId), shortId(r._id), String(r._id), ...(r.items || []).map((i) => i.name)].join(' ').toLowerCase().includes(q))
+        .sort((a, b) => (NEEDS_REPLY.includes(b.status) - NEEDS_REPLY.includes(a.status)) || new Date(b.createdAt) - new Date(a.createdAt)),
+    [requests, tab, q]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // const allOrders = [...mappedProcurementRequests, ...liveVendorOrders, ...mockOrders.filter(m => !liveVendorOrders.find(l => l.id === m.id))];
-    const allOrders = mappedProcurementRequests;
+    if (loading) {
+        return <div className="flex items-center justify-center h-[60vh]"><Loader2 className="animate-spin text-green-700" size={40} /></div>;
+    }
 
-    const filteredOrders = allOrders.filter(order => {
-        const statusMap = {
-            'New': ['new', 'assigned', 'bidding', 'accepted', 'requested', 'quoted', 'negotiating'],
-            'Preparing': ['preparing', 'approved'],
-            'Ready': ['ready', 'ready_for_pickup'],
-            'Completed': ['completed', 'delivered', 'shipped', 'picked_up']
-        };
+    const open = (r) => navigate(`/vendor/orders/${r._id}`);
 
-        const matchesTab = statusMap[activeTab].includes(order.status);
-        const matchesSearch = (order.franchiseName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.items?.some(item => (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+    const tabs = (
+        <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {TABS.map((x) => (
+                <button key={x.value} type="button" onClick={() => setTab(x.value)}
+                    className={cn('h-11 px-4 rounded-xl text-base font-semibold whitespace-nowrap border', tab === x.value ? 'bg-slate-900 border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-700')}>
+                    {t(x.label)} ({inTab(x.value).length})
+                </button>
+            ))}
+        </div>
+    );
 
-        return matchesTab && matchesSearch;
-    });
+    const searchBox = (
+        <div className="flex items-center gap-2.5 h-12 px-4 rounded-xl border border-slate-200 bg-white">
+            <Search size={20} className="text-slate-400 shrink-0" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search franchise, item or order ID...')} className="flex-1 min-w-0 bg-transparent outline-none text-base" />
+        </div>
+    );
 
-    const columns = [
-        {
-            header: 'Order Reference',
-            key: 'id',
-            render: (val, row) => (
-                <div>
-                    <p className="text-primary font-black uppercase tracking-widest">{val}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{row.franchiseName}</p>
+    const empty = (
+        <div className="text-center py-14 px-4 rounded-2xl bg-white border border-slate-100">
+            <ClipboardList size={44} className="mx-auto text-slate-300 mb-3" />
+            <p className="text-lg font-semibold text-slate-800">{t('No orders here')}</p>
+        </div>
+    );
+
+    return (
+        <div className="pb-24 lg:pb-6">
+            <VendorDesktopHeader icon={ClipboardList} title={t('Manage Orders')} subtitle={t('Requests from franchises. Enter your rates, then pack when the admin approves.')} />
+
+            {/* Mobile */}
+            <div className="lg:hidden">
+                <VendorMobileTopBar />
+                <h1 className="text-3xl font-bold text-slate-900">{t('Orders')}</h1>
+                <p className="text-lg text-slate-600 mt-1 mb-4">{t('Requests from franchises')}</p>
+                <div className="mb-3">{tabs}</div>
+                <div className="mb-3">{searchBox}</div>
+                {!shown.length ? empty : (
+                    <div className="space-y-3">
+                        {shown.map((r) => {
+                            const st = statusOf(r.status);
+                            return (
+                                <button key={r._id} type="button" onClick={() => open(r)} className="w-full flex items-center gap-2 rounded-2xl border border-slate-100 bg-white p-4 text-left">
+                                    <span className="flex-1 min-w-0">
+                                        <span className="flex items-start justify-between gap-2">
+                                            <span className="min-w-0">
+                                                <span className="block text-lg font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(r.franchiseId)}</span>
+                                                <span className="block text-sm text-slate-500"><span translate="no">{shortId(r._id)}</span> • {formatTime(new Date(r.createdAt), locale)}</span>
+                                            </span>
+                                            <span className={cn('px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap', st.cls)}>{t(st.label)}</span>
+                                        </span>
+                                        <span className="flex items-end justify-between gap-2 mt-2">
+                                            <span className="flex items-center gap-1.5 min-w-0">
+                                                {(r.items || []).slice(0, 3).map((i, k) => <Thumb key={k} src={i.image} />)}
+                                                {(r.items || []).length > 3 && <span className="h-8 min-w-8 px-1.5 rounded-lg bg-slate-100 text-sm font-semibold text-slate-700 flex items-center justify-center">+{r.items.length - 3}</span>}
+                                            </span>
+                                            <span className="text-right shrink-0">
+                                                <span className="block text-base text-slate-700">{loadText(loadOf(r.items || [], (i) => i.quantity), t)}</span>
+                                                {amountOf(r) > 0 && <span className="block text-lg font-bold text-slate-900">{rupees(amountOf(r))}</span>}
+                                            </span>
+                                        </span>
+                                        {st.next && <span className="block mt-2 text-sm font-semibold text-green-700">{t(st.next)} →</span>}
+                                    </span>
+                                    <ChevronRight size={22} className="text-slate-500 shrink-0" />
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* Desktop */}
+            <div className="hidden lg:block">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                    {tabs}
+                    <div className="w-[380px]">{searchBox}</div>
                 </div>
-            )
-        },
-        {
-            header: 'Items',
-            key: 'items',
-            render: (val) => (
-                <div className="flex -space-x-2">
-                    {val?.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="w-8 h-8 rounded-full border-2 border-white bg-slate-50 overflow-hidden shadow-sm">
-                            <img src={item.image} className="w-full h-full object-cover" alt="" />
-                        </div>
-                    ))}
-                    {val?.length > 3 && (
-                        <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-900 flex items-center justify-center text-[10px] font-black text-white shadow-sm">
-                            +{val.length - 3}
+                <div className="rounded-3xl bg-white border border-slate-100 overflow-hidden">
+                    {!shown.length ? empty : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[900px]">
+                                <thead>
+                                    <tr className="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                        {['#', 'Date & Time', 'Order ID', 'Franchise', 'Items (Qty)', 'Total Qty', 'Amount', 'Status', 'Action'].map((h) => (
+                                            <th key={h} className="px-3 py-4 first:pl-5 last:pr-5">{h === '#' ? h : t(h)}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {shown.map((r, k) => {
+                                        const st = statusOf(r.status);
+                                        const when = new Date(r.createdAt);
+                                        return (
+                                            <tr key={r._id} className="hover:bg-slate-50/60 cursor-pointer" onClick={() => open(r)}>
+                                                <td className="pl-5 pr-3 py-4 text-base text-slate-700">{k + 1}</td>
+                                                <td className="px-3 py-4">
+                                                    <p className="text-base font-semibold text-slate-900 whitespace-nowrap">{formatDay(when, locale)}</p>
+                                                    <p className="text-sm text-slate-500">{formatTime(when, locale)}</p>
+                                                </td>
+                                                <td className="px-3 py-4 text-base font-semibold text-slate-900" translate="no">{shortId(r._id)}</td>
+                                                <td className="px-3 py-4">
+                                                    <p className="text-base font-semibold text-slate-900" translate="no">{franchiseNameOf(r.franchiseId)}</p>
+                                                    <p className="text-sm text-slate-500">{r.franchiseId?.city || ''}</p>
+                                                </td>
+                                                <td className="px-3 py-4">
+                                                    <span className="flex items-center gap-1.5">
+                                                        {(r.items || []).slice(0, 3).map((i, n) => <Thumb key={n} src={i.image} />)}
+                                                        {(r.items || []).length > 3 && <span className="h-8 min-w-8 px-1.5 rounded-lg bg-slate-100 text-sm font-semibold text-slate-700 flex items-center justify-center">+{r.items.length - 3}</span>}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-4 text-base text-slate-900">{loadText(loadOf(r.items || [], (i) => i.quantity), t)}</td>
+                                                <td className="px-3 py-4 text-base font-semibold text-slate-900 whitespace-nowrap">{amountOf(r) > 0 ? rupees(amountOf(r)) : '—'}</td>
+                                                <td className="px-3 py-4"><span className={cn('px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap', st.cls)}>{t(st.label)}</span></td>
+                                                <td className="pl-3 pr-5 py-4">
+                                                    <span className={cn('inline-flex items-center h-10 px-4 rounded-xl text-sm font-bold whitespace-nowrap', st.next ? 'bg-green-700 text-white' : 'border border-slate-200 text-slate-800')}>
+                                                        {t(NEEDS_RATES.includes(r.status) ? 'Enter rates' : NEEDS_REPLY.includes(r.status) ? 'Reply' : 'View')}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>
-            )
-        },
-        {
-            header: 'Status',
-            key: 'status',
-            align: 'right',
-            render: (val) => (
-                <span className={cn(
-                    "px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border",
-                    statusColors[val] || "bg-slate-50 text-slate-400 border-slate-100"
-                )}>
-                    {val}
-                </span>
-            )
-        }
-    ];
-
-    const statusColors = {
-        'new': "bg-blue-50 text-blue-600 border-blue-100",
-        'assigned': "bg-blue-50 text-blue-600 border-blue-100",
-        'bidding': "bg-amber-50 text-amber-600 border-amber-100",
-        'accepted': "bg-emerald-50 text-emerald-600 border-emerald-100",
-        'ready': "bg-emerald-50 text-emerald-600 border-emerald-100",
-        'preparing': "bg-amber-50 text-amber-600 border-amber-100",
-        'completed': "bg-slate-50 text-slate-400 border-slate-100",
-        'delivered': "bg-slate-50 text-slate-400 border-slate-100",
-        'requested': "bg-indigo-50 text-indigo-600 border-indigo-100",
-        'quoted': "bg-amber-50 text-amber-600 border-amber-100",
-        'negotiating': "bg-orange-100 text-orange-700 border-orange-200",
-        'approved': "bg-emerald-50 text-emerald-600 border-emerald-100"
-    };
-
-    if (isLoading) {
-        return (
-            <div className="space-y-6 animate-pulse">
-                <div className="h-10 w-48 bg-slate-100 rounded-xl" />
-                <div className="h-14 w-full bg-slate-100 rounded-2xl" />
-                <div className="space-y-4">
-                    {[1, 2, 3].map(i => <div key={i} className="h-40 bg-slate-100 rounded-[32px]" />)}
-                </div>
             </div>
-        );
-    }
-
-    return (
-        <div className="space-y-6 pb-20">
-            <header className="flex items-center justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                    <VendorBackBar className="mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Supply Requests</h1>
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-1">Active: {allOrders.length} orders</p>
-                    </div>
-                </div>
-                <div className="flex bg-white border border-slate-100 rounded-2xl p-1 shadow-sm">
-                    <button
-                        onClick={() => setViewMode('grid')}
-                        className={cn("p-2 rounded-xl transition-all", viewMode === 'grid' ? "bg-slate-900 text-white" : "text-slate-400")}
-                    >
-                        <LayoutGrid size={18} />
-                    </button>
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className={cn("p-2 rounded-xl transition-all", viewMode === 'list' ? "bg-slate-900 text-white" : "text-slate-400")}
-                    >
-                        <ListIcon size={18} />
-                    </button>
-                </div>
-            </header>
-
-            {/* Rate offers from the admin stay here until the vendor accepts, counters or declines */}
-            {allOrders.some((o) => o.status === 'negotiating') && (
-                <div className="rounded-[24px] border-2 border-orange-200 bg-orange-50 p-4 sm:p-5 space-y-3">
-                    <div>
-                        <h2 className="text-sm font-black text-slate-900">Waiting for your reply</h2>
-                        <p className="text-[12px] text-slate-600">The admin offered a different rate. Accept it, send your rate, or decline.</p>
-                    </div>
-                    <div className="space-y-2">
-                        {allOrders.filter((o) => o.status === 'negotiating').map((o) => (
-                            <button
-                                key={o.id}
-                                type="button"
-                                onClick={() => navigate(`/vendor/orders/${o.id}`)}
-                                className="w-full flex items-center justify-between gap-3 rounded-2xl bg-white border border-orange-100 px-4 py-3 text-left hover:border-orange-300 transition-all"
-                            >
-                                <div className="min-w-0">
-                                    <p className="text-[12px] font-black text-slate-900 uppercase tracking-widest">#{String(o.id).slice(-6).toUpperCase()}</p>
-                                    <p className="text-[12px] text-slate-500 truncate">{o.franchiseName} · {o.items.map((i) => i.name).join(', ')}</p>
-                                </div>
-                                <span className="shrink-0 px-3 py-1.5 rounded-xl bg-orange-600 text-white text-[11px] font-black">Reply</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            <FilterBar
-                categories={tabs}
-                activeCategory={activeTab}
-                onCategoryChange={setActiveTab}
-                searchTerm={searchTerm}
-                onSearchChange={(v) => setSearchTerm(typeof v === 'string' ? v.trim() : v)}
-                placeholder="Search orders..."
-            />
-
-            {viewMode === 'list' ? (
-                <DataGrid
-                    columns={columns}
-                    data={filteredOrders}
-                    onRowClick={(row) => navigate(`/vendor/orders/${row.id}`)}
-                />
-            ) : (
-                <div className="space-y-4">
-                    <AnimatePresence mode="popLayout">
-                        {filteredOrders.map((order, index) => (
-                            <motion.div
-                                key={order.id}
-                                layout
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                onClick={() => navigate(`/vendor/orders/${order.id}`, { state: { order } })}
-                                className="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all cursor-pointer group relative overflow-hidden active:scale-[0.98]"
-                            >
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white rotate-3 shadow-lg group-hover:rotate-0 transition-transform">
-                                            <ClipboardList size={22} strokeWidth={1.5} />
-                                        </div>
-                                        <div>
-                                            <p className="text-primary font-black uppercase tracking-[0.2em] text-[10px]">ID: {order.id}</p>
-                                            <h4 className="text-lg font-black text-slate-900 tracking-tighter">{order.franchiseName}</h4>
-                                        </div>
-                                    </div>
-                                    <div className={cn(
-                                        "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                                        statusColors[order.status] || "bg-slate-50 text-slate-400 border-slate-100"
-                                    )}>
-                                        {order.status === 'negotiating' ? 'New rate offered' : order.status}
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-6">
-                                    {order.items?.map((item, idx) => (
-                                        <div key={idx} className="flex-shrink-0 flex items-center gap-2 bg-slate-50 p-2 pr-4 rounded-xl border border-slate-100 group-hover:bg-white transition-colors duration-500">
-                                            <div className="w-10 h-10 rounded-lg bg-white overflow-hidden border border-slate-100">
-                                                <img src={item.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-900 uppercase tracking-tight leading-none">{item.name}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{item.quantity} {item.unit}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="flex items-center justify-between pt-6 border-t border-slate-50">
-                                    <div className="flex items-center gap-6">
-                                        <div className="flex items-center gap-2 text-slate-400 capitalize">
-                                            <Calendar size={14} />
-                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                                                {new Date(order.date || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-slate-900 group-hover:text-white transition-all transform group-hover:translate-x-1">
-                                        <ChevronRight size={18} />
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                </div>
-            )}
-
-            {filteredOrders.length === 0 && (
-                <div className="py-20 flex flex-col items-center justify-center text-center">
-                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-4 border border-dashed border-slate-200">
-                        <AlertCircle size={32} />
-                    </div>
-                    <h4 className="text-slate-900 font-black tracking-tight uppercase tracking-widest">No orders right now</h4>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">No orders match your search</p>
-                </div>
-            )}
         </div>
     );
 }

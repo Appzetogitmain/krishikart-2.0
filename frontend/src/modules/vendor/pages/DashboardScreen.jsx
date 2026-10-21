@@ -1,403 +1,176 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import {
-    Truck,
-    TrendingUp,
-    Clock,
-    IndianRupee,
-    Wallet,
-    ChevronRight,
-    ArrowUpRight,
-    Settings,
-    Home,
-    Package,
-    Activity,
-    ClipboardList
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import MetricCard from '../components/cards/MetricCard';
-import DataGrid from '../components/tables/DataGrid';
+import {
+    ChevronRight,
+    ClipboardList,
+    FileText,
+    History,
+    IndianRupee,
+    LayoutDashboard,
+    Loader2,
+    Package,
+    PackageCheck,
+    Truck,
+    Undo2,
+} from 'lucide-react';
 import api from '@/lib/axios';
-import { keepPage, peekPage } from '../lib/pageCache';
+import { cn } from '@/lib/utils';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
-import { describeLoad } from '@/lib/dispatchLoad';
+import { useVendorLanguage } from '../contexts/VendorLanguageContext';
+import { VendorDesktopHeader, VendorMobileTopBar, formatDay, formatTime } from '../components/layout/VendorPageHeader';
+import { keepPage, peekPage } from '../lib/pageCache';
+import { franchiseNameOf, loadOf, loadText, rupees, shortId } from '../lib/packing';
+import { DONE, NEEDS_RATES, NEEDS_REPLY, READY, TO_PACK, statusOf } from '../lib/requestStatus';
+
+function Thumb({ src }) {
+    return src
+        ? <img src={src} alt="" className="w-9 h-9 object-contain" loading="lazy" />
+        : <span className="w-9 h-9 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center"><Package size={16} /></span>;
+}
 
 export default function DashboardScreen() {
     const navigate = useNavigate();
-    const { vendor, isAuthenticated, newAssignmentData, statusAlertData } = useVendorAuth();
-    const cached = peekPage('dashboard');
-    const [isLoading, setIsLoading] = useState(!cached);
-    const [activeDispatches, setActiveDispatches] = useState(cached?.activeDispatches || []);
-    const [dashboardStats, setDashboardStats] = useState(cached?.stats || {
-        activeOps: 0,
-        pendingSettlement: 0,
-        totalTurnover: 0,
-        payoutCycleDays: 0,
-        verificationStatus: 'Pending Verification',
-        syncMinutes: 0,
-        trends: {
-            pendingSettlement: 0,
-            yieldDelta: 0,
-            totalTurnover: 0
-        },
-        inventory: {
-            stockQuantity: 0,
-            availableProduce: 0
-        },
-        performance: {
-            fulfillmentRate: 0,
-            avgPrepTime: '0.0 Days',
-            archiveVol: 0,
-            yieldDelta: 0
+    const { vendor, newAssignmentData, statusAlertData } = useVendorAuth();
+    const { t, locale } = useVendorLanguage();
+    const [requests, setRequests] = useState(() => peekPage('assignments') || []);
+    const [stats, setStats] = useState(() => peekPage('dashboard')?.stats || null);
+    const [returns, setReturns] = useState(() => peekPage('returns') || []);
+    const [loading, setLoading] = useState(!peekPage('assignments'));
+
+    const load = useCallback(async () => {
+        const [reqs, st, rets] = await Promise.allSettled([
+            api.get('/procurement/vendor/my-assignments'),
+            api.get('/procurement/vendor/dashboard-stats'),
+            api.get('/stock-returns/vendor'),
+        ]);
+        if (reqs.status === 'fulfilled') setRequests(keepPage('assignments', reqs.value.data?.results || []));
+        if (st.status === 'fulfilled') {
+            const s = st.value.data?.result || st.value.data?.results || null;
+            setStats(s);
+            keepPage('dashboard', { ...peekPage('dashboard'), stats: s });
         }
-    });
+        if (rets.status === 'fulfilled') setReturns(keepPage('returns', rets.value.data?.results || []));
+        setLoading(false);
+    }, []);
 
-
-
-    const fetchDashboardData = async () => {
-        try {
-            // Load both independently so one failing call doesn't blank the whole dashboard
-            const [dispatchRes, statsRes] = await Promise.allSettled([
-                api.get('/procurement/vendor/active-dispatch'),
-                api.get('/procurement/vendor/dashboard-stats')
-            ]);
-
-            if (dispatchRes.status === 'fulfilled' && dispatchRes.value.data.success) {
-                setActiveDispatches(dispatchRes.value.data.results || []);
-                keepPage('dashboard', { ...peekPage('dashboard'), activeDispatches: dispatchRes.value.data.results || [] });
-            }
-            if (statsRes.status === 'fulfilled' && statsRes.value.data.success) {
-                setDashboardStats(statsRes.value.data.result || statsRes.value.data.results || {});
-                keepPage('dashboard', { ...peekPage('dashboard'), stats: statsRes.value.data.result || statsRes.value.data.results || {} });
-            }
-
-            const failed = [dispatchRes, statsRes].filter(r => r.status === 'rejected');
-            // A 401 is handled globally (session expired -> login), so don't show a second error
-            const realFailures = failed.filter(r => r.reason?.response?.status !== 401);
-            if (realFailures.length) {
-                console.error("Failed to fetch dashboard data", realFailures.map(r => r.reason));
-                toast.error("Could not load some dashboard data", {
-                    description: realFailures[0].reason?.response?.data?.message || "Please check your connection and try again."
-                });
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    // Refresh on a new request / admin update, and when the vendor comes back to the app
+    useEffect(() => { load(); }, [load, newAssignmentData, statusAlertData]);
     useEffect(() => {
-        if (isAuthenticated) {
-            fetchDashboardData();
-        }
-    }, [isAuthenticated, newAssignmentData, statusAlertData]);
+        const onFocus = () => load();
+        window.addEventListener('focus', onFocus);
+        return () => window.removeEventListener('focus', onFocus);
+    }, [load]);
 
-    const {
-        activeOps = 0,
-        pendingSettlement = 0,
-        totalTurnover = 0,
-        payoutCycleDays = 0,
-        verificationStatus = 'Pending Verification',
-        syncMinutes = 0,
-        trends = {},
-        performance = {},
-        recentRequests = [],
-        inventory = { stockQuantity: 0, availableProduce: 0 },
-        topFranchise = null
-    } = dashboardStats || {};
+    const count = useMemo(() => {
+        const n = (list) => requests.filter((r) => list.includes(r.status)).length;
+        return {
+            rates: n(NEEDS_RATES),
+            reply: n(NEEDS_REPLY),
+            pack: n(TO_PACK),
+            ready: n(READY),
+            done: n(DONE),
+            returns: returns.filter((r) => r.status === 'sent').length,
+        };
+    }, [requests, returns]);
 
-    const safePayoutDays = isNaN(Number(payoutCycleDays)) ? 0 : Number(payoutCycleDays);
+    const recent = useMemo(() => [...requests].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)).slice(0, 6), [requests]);
+    const firstName = String(vendor?.fullName || '').trim().split(/\s+/)[0] || '';
 
-    const dispatchColumns = [
-        {
-            header: 'Order Ref',
-            key: '_id',
-            render: (val) => <span className="text-primary font-black uppercase tracking-widest">{val.slice(-6)}</span>
-        },
-        {
-            header: 'Franchise',
-            key: 'franchiseId',
-            render: (val) => <span className="text-slate-900 font-bold">{val?.franchiseName || val?.ownerName || 'Franchise'}</span>
-        },
-        {
-            header: 'Items',
-            key: 'actualWeight',
-            render: (val, row) => {
-                const text = describeLoad(row?.items, val);
-                return <span className="text-slate-600 font-black tabular-nums">{text === '0' ? 'TBD' : text}</span>;
-            }
-        },
-        {
-            header: 'Status',
-            key: 'status',
-            align: 'right',
-            render: (val) => (
-                <span className={cn(
-                    "px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter",
-                    val === 'ready_for_pickup' || val === 'picked_up' ? "bg-emerald-100 text-emerald-600" :
-                        val === 'approved' ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600"
-                )}>
-                    {val.replace(/_/g, ' ')}
-                </span>
-            )
-        }
-    ];
-
-    if (isLoading) {
-        return (
-            <div className="space-y-8 animate-pulse">
-                <div className="h-10 w-48 bg-slate-100 rounded-xl" />
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-40 bg-slate-100 rounded-[32px]" />)}
-                </div>
-            </div>
-        );
+    if (loading) {
+        return <div className="flex items-center justify-center h-[60vh]"><Loader2 className="animate-spin text-green-700" size={40} /></div>;
     }
 
-    return (
-        <div className="space-y-8">
-            <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">Order Activity</h1>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <p className="text-[10px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em]">
-                            Account Status: <span className={cn(vendor?.status === 'active' ? "text-emerald-500" : "text-amber-500")}>{vendor?.status || 'Active'}</span>
-                        </p>
+    const tiles = [
+        { label: 'New requests', sub: 'Enter your rates', value: count.rates + count.reply, icon: ClipboardList, tone: 'bg-blue-50', iconTone: 'bg-blue-100 text-blue-700', go: '/vendor/orders' },
+        { label: 'To pack', sub: 'Pack & Dispatch', value: count.pack, icon: Package, tone: 'bg-amber-50', iconTone: 'bg-amber-100 text-amber-600', go: '/vendor/dispatch' },
+        { label: 'Ready for pickup', sub: 'Waiting for delivery', value: count.ready, icon: PackageCheck, tone: 'bg-green-50', iconTone: 'bg-green-100 text-green-700', go: '/vendor/dispatch' },
+        { label: 'Payment pending', sub: 'To be paid to you', value: rupees(stats?.pendingSettlement), icon: IndianRupee, tone: 'bg-violet-50', iconTone: 'bg-violet-100 text-violet-700', go: '/vendor/reports' },
+    ];
 
-                    </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 sm:justify-end sm:shrink-0">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/vendor/profile')}
-                        className="h-10 sm:h-11 min-h-[44px] px-3 sm:px-4 bg-white border border-slate-200 text-slate-900 rounded-xl sm:rounded-2xl inline-flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm hover:bg-slate-50 transition-all font-black text-[10px] sm:text-[10px] uppercase tracking-wide sm:tracking-widest active:scale-[0.98]"
-                    >
-                        <Settings className="h-4 w-4 sm:h-[17px] sm:w-[17px] text-slate-600 shrink-0" strokeWidth={2} />
-                        Profile
+    const actions = [
+        { label: 'New orders', hint: count.reply ? `${count.reply} admin offer to reply` : 'Enter rates for new requests', icon: ClipboardList, go: '/vendor/orders', badge: count.rates + count.reply },
+        { label: 'Pack & Dispatch', hint: "Pack today's goods and send for delivery", icon: Truck, go: '/vendor/dispatch', badge: count.pack },
+        { label: 'Returns', hint: 'Check goods franchises sent back', icon: Undo2, go: '/vendor/returns', badge: count.returns },
+        { label: 'Dispatch History', hint: 'Orders you have dispatched', icon: History, go: '/vendor/dispatch-history', badge: 0 },
+        { label: 'My Quotations', hint: 'Your rates and the final prices', icon: FileText, go: '/vendor/quotations', badge: 0 },
+    ];
+
+    const recentList = (
+        <div className="space-y-3">
+            {!recent.length && <p className="text-base text-slate-500 text-center py-8">{t('No orders yet')}</p>}
+            {recent.map((r) => {
+                const st = statusOf(r.status);
+                return (
+                    <button key={r._id} type="button" onClick={() => navigate(`/vendor/orders/${r._id}`)}
+                        className="w-full flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left">
+                        <span className="flex-1 min-w-0">
+                            <span className="flex items-start justify-between gap-2">
+                                <span className="min-w-0">
+                                    <span className="block text-lg font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(r.franchiseId)}</span>
+                                    <span className="block text-sm text-slate-500"><span translate="no">{shortId(r._id)}</span> • {formatDay(new Date(r.createdAt), locale)}, {formatTime(new Date(r.createdAt), locale)}</span>
+                                </span>
+                                <span className={cn('px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap', st.cls)}>{t(st.label)}</span>
+                            </span>
+                            <span className="flex items-center gap-1.5 mt-2">
+                                {(r.items || []).slice(0, 3).map((i, k) => <Thumb key={k} src={i.image} />)}
+                                <span className="text-sm text-slate-500 ml-1">{(r.items || []).length} {t('items')} • {loadText(loadOf(r.items || [], (i) => i.quantity), t)}</span>
+                            </span>
+                        </span>
+                        <ChevronRight size={22} className="text-slate-500 shrink-0" />
                     </button>
-                </div>
-            </header>
+                );
+            })}
+        </div>
+    );
 
-            {/* Quick navigation — Home → Orders & related ops */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                {[
-                    { label: 'Orders', path: '/vendor/orders', icon: ClipboardList, hint: 'Manage requests' },
-                    { label: 'Dispatch', path: '/vendor/dispatch', icon: Truck, hint: 'Orders to dispatch' },
-                    { label: 'Inventory', path: '/vendor/inventory', icon: Package, hint: 'Stock levels' },
-                    { label: 'History', path: '/vendor/dispatch-history', icon: Clock, hint: 'Past orders' },
-                ].map((item) => (
-                    <button
-                        key={item.path}
-                        type="button"
-                        onClick={() => navigate(item.path)}
-                        className="group flex items-center gap-3 p-3 sm:p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:border-slate-900 hover:shadow-md transition-all text-left active:scale-[0.98]"
-                    >
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-colors shrink-0">
-                            <item.icon size={18} strokeWidth={2} />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-xs font-black text-slate-900 uppercase tracking-tight truncate">{item.label}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.hint}</p>
-                        </div>
-                        <ChevronRight size={14} className="ml-auto text-slate-300 group-hover:text-slate-900 shrink-0" />
+    return (
+        <div className="pb-24 lg:pb-6">
+            <VendorDesktopHeader icon={LayoutDashboard} title={`${t('Namaste')}${firstName ? `, ${firstName}` : ''}`} subtitle={t("Here is today's work.")} />
+
+            <div className="lg:hidden">
+                <VendorMobileTopBar />
+                <h1 className="text-3xl font-bold text-slate-900">{t('Namaste')}{firstName ? <span translate="no">, {firstName}</span> : ''}</h1>
+                <p className="text-lg text-slate-600 mt-1 mb-4">{t("Here is today's work.")}</p>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                {tiles.map((k) => (
+                    <button key={k.label} type="button" onClick={() => navigate(k.go)}
+                        className={cn('rounded-2xl p-4 lg:p-5 flex items-start gap-3 text-left lg:bg-white lg:border lg:border-slate-100', k.tone)}>
+                        <span className={cn('w-11 h-11 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center shrink-0', k.iconTone)}><k.icon size={24} /></span>
+                        <span className="min-w-0">
+                            <span className="block text-sm lg:text-base text-slate-600 leading-tight">{t(k.label)}</span>
+                            <span className="block text-2xl lg:text-3xl font-bold text-slate-900 mt-1 break-words">{k.value}</span>
+                            <span className="block text-xs lg:text-sm text-slate-500 mt-0.5">{t(k.sub)}</span>
+                        </span>
                     </button>
                 ))}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-
-                <button
-                    type="button"
-                    onClick={() => navigate('/vendor/orders')}
-                    className="text-left rounded-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-                >
-                    <MetricCard
-                        label="Active Orders"
-                        value={activeOps}
-                        icon={Activity}
-                        color="amber"
-                        index={0}
-                    />
-                </button>
-                <MetricCard
-                    label="Payment Pending"
-                    value={`₹${pendingSettlement.toLocaleString()}`}
-                    icon={Wallet}
-                    color="emerald"
-                    trend={{ value: Math.abs(trends.pendingSettlement || 0), positive: (trends.pendingSettlement || 0) >= 0 }}
-                    index={1}
-                />
-
-                <MetricCard
-                    label="Payment Time"
-                    value={`${safePayoutDays.toFixed(1)} Days`}
-                    icon={Clock}
-                    color="slate"
-                    index={2}
-                />
-
-                <MetricCard
-                    label="Fulfillment"
-                    value={`${performance.fulfillmentRate}%`}
-                    icon={Activity}
-                    color="amber"
-                    index={3}
-                />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="lg:col-span-2 bg-slate-900 rounded-2xl sm:rounded-[40px] p-5 sm:p-8 text-white relative overflow-hidden group shadow-2xl shadow-slate-900/20"
-                >
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start gap-3 mb-6 sm:mb-10">
-                            <div className="min-w-0">
-                                <h3 className="text-lg sm:text-xl font-black tracking-tight mb-1 sm:mb-2">Business Overview</h3>
-                                <p className="text-slate-400 text-[10px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Live stock and performance</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl backdrop-blur-md border border-white/5 shrink-0">
-                                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
-                                <span className="text-[10px] sm:text-[10px] font-black uppercase tracking-wider sm:tracking-widest">{verificationStatus}</span>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-8">
-                            <div className="min-w-0">
-                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Stock Level</p>
-                                <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{inventory.stockQuantity} Units</p>
-                                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-widest font-black">Total Quantity</p>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Products Listed</p>
-                                <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{inventory.availableProduce} Active</p>
-                                <p className="text-[10px] text-emerald-400 mt-2 uppercase tracking-widest font-black">Market Ready</p>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Fulfillment</p>
-                                <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{performance.fulfillmentRate}%</p>
-                                <div className="mt-2 w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary" style={{ width: `${performance.fulfillmentRate}%` }} />
-                                </div>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[10px] sm:text-[10px] font-black text-slate-500 uppercase tracking-wider sm:tracking-widest mb-1 sm:mb-2">Last Updated</p>
-                                <p className="text-xl sm:text-2xl font-black tabular-nums leading-none">{syncMinutes}m</p>
-                                <p className="text-[10px] text-blue-400 mt-2 uppercase tracking-widest font-black">Minutes Ago</p>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.45 }}
-                        className="bg-white rounded-2xl sm:rounded-[32px] p-5 sm:p-6 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-primary"
-                    >
-                        <div>
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary mb-4 border border-primary/10 shadow-sm">
-                                <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
-                            </div>
-                            <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Manage <br /> Orders</h4>
-                            <p className="text-[10px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Supply requests and quotations</p>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => navigate('/vendor/orders')}
-                            className="mt-5 group w-full bg-primary text-white rounded-xl sm:rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-all hover:bg-primary/90"
-                        >
-                            <span className="text-[10px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Open Orders</span>
-                            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                        </button>
-                    </motion.div>
-
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="bg-white rounded-2xl sm:rounded-[32px] p-5 sm:p-6 border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-xl hover:shadow-slate-200/50 transition-all border-b-4 border-b-slate-900"
-                    >
-                        <div>
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-900 mb-4 border border-slate-100 shadow-sm">
-                                <Truck className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
-                            </div>
-                            <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight uppercase">Dispatch <br /> Manage</h4>
-                            <p className="text-[10px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Ready for new orders</p>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => navigate('/vendor/dispatch')}
-                            className="mt-5 group w-full bg-slate-900 text-white rounded-xl sm:rounded-2xl py-3.5 flex items-center justify-center gap-2 transition-all hover:bg-slate-800"
-                        >
-                            <span className="text-[10px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em]">Go to Dispatch</span>
-                            <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                        </button>
-                    </motion.div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-2xl sm:rounded-[40px] p-5 sm:p-8 border border-slate-100 shadow-sm">
-                    <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
-                        <div className="min-w-0">
-                            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Dispatch</h3>
-                            <p className="text-[10px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1">Pickup Pending</p>
-                        </div>
-                    </div>
-                    <DataGrid
-                        columns={dispatchColumns}
-                        data={activeDispatches}
-                        onRowClick={(row) => navigate(`/vendor/dispatch?order=${row._id}`)}
-                        className="border-none shadow-none"
-                    />
-                </div>
-
-                <div className="bg-white rounded-2xl sm:rounded-[40px] p-5 sm:p-8 border border-slate-100 shadow-sm">
-                    <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8">
-                        <div className="min-w-0">
-                            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">Recent Quotations</h3>
-                            <p className="text-[10px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[0.15em] sm:tracking-[0.2em] mt-1">View All</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => navigate('/vendor/orders')}
-                            className="shrink-0 inline-flex items-center gap-1 text-[10px] sm:text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80"
-                        >
-                            All orders
-                            <ChevronRight size={14} />
-                        </button>
-                    </div>
-                    <div className="space-y-4">
-                        {recentRequests.map((req, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-50 hover:border-slate-200 transition-all cursor-pointer" onClick={() => navigate(`/vendor/orders/${req.id}`)}>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-slate-900 border border-slate-100 font-black text-[10px]">
-                                        {req.ref}
-                                    </div>
-                                    <div>
-                                        <p className={`text-xs font-black uppercase tracking-tight ${req.status === 'negotiating' ? 'text-orange-600' : 'text-slate-900'}`}>{req.status === 'negotiating' ? 'New rate offered · reply' : req.status.replace(/_/g, ' ')}</p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(req.createdAt).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-black text-slate-900 tabular-nums">₹{req.amount.toLocaleString()}</p>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Value</p>
-                                </div>
-                            </div>
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 mt-6">
+                <div>
+                    <h2 className="text-xl font-bold text-slate-900 mb-3">{t("Today's work")}</h2>
+                    <div className="space-y-3">
+                        {actions.map((a) => (
+                            <button key={a.label} type="button" onClick={() => navigate(a.go)}
+                                className="w-full flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 text-left active:scale-[0.99] transition-transform">
+                                <span className="w-14 h-14 rounded-full bg-green-50 text-green-700 flex items-center justify-center shrink-0"><a.icon size={26} /></span>
+                                <span className="flex-1 min-w-0">
+                                    <span className="block text-lg font-bold text-slate-900">{t(a.label)}</span>
+                                    <span className="block text-sm text-slate-500">{t(a.hint)}</span>
+                                </span>
+                                {a.badge > 0 && <span className="min-w-8 h-8 px-2 rounded-full bg-green-700 text-white text-base font-bold flex items-center justify-center">{a.badge}</span>}
+                                <ChevronRight size={22} className="text-slate-500 shrink-0" />
+                            </button>
                         ))}
-                        {recentRequests.length === 0 && (
-                            <div className="py-10 text-center">
-                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No Recent Activity</p>
-                            </div>
-                        )}
                     </div>
+                </div>
+                <div>
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xl font-bold text-slate-900">{t('Recent orders')}</h2>
+                        <button type="button" onClick={() => navigate('/vendor/orders')} className="text-base font-semibold text-green-700">{t('View All')}</button>
+                    </div>
+                    {recentList}
                 </div>
             </div>
         </div>
