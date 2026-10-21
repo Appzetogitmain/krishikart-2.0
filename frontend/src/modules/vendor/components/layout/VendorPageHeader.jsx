@@ -48,7 +48,7 @@ export function VendorMobileTopBar() {
         <div className="lg:hidden flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
                 <Leaf size={38} className="text-green-600 fill-green-600" strokeWidth={1.5} />
-                <div className="leading-tight">
+                <div className="leading-tight" translate="no">
                     <p className="text-xl font-bold text-slate-900">Vendor Portal</p>
                     <p className="text-xs font-semibold tracking-wider text-slate-500">KISAANKART</p>
                 </div>
@@ -99,7 +99,7 @@ export function VendorDesktopHeader({ icon: Icon, title, subtitle, dateSlot }) {
                     <UserCircle size={44} className="text-slate-400" />
                 )}
                 <div className="leading-tight max-w-[160px]">
-                    <p className="text-base font-bold text-slate-900 truncate">{vendor?.fullName || 'Vendor'}</p>
+                    <p className="text-base font-bold text-slate-900 truncate" translate="no">{vendor?.fullName || 'Vendor'}</p>
                     <p className="text-sm text-slate-500">{t('Vendor')}</p>
                 </div>
                 <LanguageButton />

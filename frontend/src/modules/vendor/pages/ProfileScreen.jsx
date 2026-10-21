@@ -496,7 +496,7 @@ export default function ProfileScreen() {
                         <input type="file" ref={fileInputRef} onChange={handleProfilePictureUpload} className="hidden" accept="image/*" />
                     </div>
 
-                    <h2 className="text-2xl font-black tracking-tight mb-1">{vendor.fullName}</h2>
+                    <h2 className="text-2xl font-black tracking-tight mb-1" translate="no">{vendor.fullName}</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">{vendor.email}</span>
                         {/* <Award size={12} className="text-amber-400" /> */}

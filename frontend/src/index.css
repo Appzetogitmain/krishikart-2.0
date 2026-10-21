@@ -457,3 +457,8 @@ body {
     .kk-press:active, .kk-press:hover { transform: none; }
     .kk-shimmer, .kk-pop { animation: none; }
 }
+
+/* Vendor portal in an Indian language: letter-spacing splits Devanagari & co. into pieces */
+.portal-indic body * {
+    letter-spacing: normal !important;
+}

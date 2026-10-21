@@ -204,7 +204,7 @@ function OrderDetail({ order, onBack, onPickedUp, busy, asModal }) {
                 {info.map(([k, v]) => (
                     <div key={k} className="grid grid-cols-[130px_1fr] gap-3 text-base">
                         <span className="text-slate-500">{t(k)}</span>
-                        <span className="font-semibold text-slate-900 break-words">{v}</span>
+                        <span className="font-semibold text-slate-900 break-words" translate="no">{v}</span>
                     </div>
                 ))}
             </div>
@@ -436,7 +436,7 @@ export default function DispatchHistoryScreen() {
                                             <span className="flex items-start justify-between gap-2">
                                                 <span className="min-w-0">
                                                     <span className="block text-lg font-bold text-slate-900">{shortId(o._id)}</span>
-                                                    <span className="block text-base text-slate-700 truncate">{franchiseNameOf(o.franchiseId)}</span>
+                                                    <span className="block text-base text-slate-700 truncate" translate="no">{franchiseNameOf(o.franchiseId)}</span>
                                                     <span className="block text-sm text-slate-500">{formatTime(whenOf(o), locale)}</span>
                                                 </span>
                                                 <StatusBadge status={o.status} />
@@ -564,7 +564,7 @@ export default function DispatchHistoryScreen() {
                                                 </td>
                                                 <td className="px-3 py-4 text-base font-semibold text-slate-900">{shortId(o._id)}</td>
                                                 <td className="px-3 py-4">
-                                                    <p className="text-base font-semibold text-slate-900">{franchiseNameOf(o.franchiseId)}</p>
+                                                    <p className="text-base font-semibold text-slate-900" translate="no">{franchiseNameOf(o.franchiseId)}</p>
                                                     <p className="text-sm text-slate-500">{o.franchiseId?.city || ''}</p>
                                                 </td>
                                                 <td className="px-3 py-4"><ItemIcons items={o.items || []} max={2} /></td>

@@ -20,7 +20,7 @@ export default function LanguagePickerModal({ open, onClose, closable = false })
 
     return (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-slate-900/50 p-0 sm:p-6">
-            <div className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] max-h-[92vh] overflow-y-auto">
+            <div translate="no" className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center gap-3 mb-1">
                     <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center">
                         <Languages size={26} />

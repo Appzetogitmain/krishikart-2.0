@@ -29,7 +29,7 @@ import { franchiseNameOf, loadOf, loadText, unitLabel } from '../lib/packing';
 const OPEN = ['approved', 'preparing'];
 
 const STATUS_STYLE = {
-    pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700' },
+    pending: { label: 'To be packed', className: 'bg-amber-50 text-amber-700' },
     packing: { label: 'Packing', className: 'bg-green-100 text-green-800' },
     ready: { label: 'Ready', className: 'bg-green-100 text-green-800' },
 };
@@ -100,7 +100,7 @@ function ItemName({ name, className }) {
     return (
         <div className={cn('min-w-0', className)}>
             <p className="text-lg font-semibold text-slate-900 leading-snug break-words">{local}</p>
-            {local !== name && <p className="text-xs text-slate-500 truncate">{name}</p>}
+            {local !== name && <p className="text-xs text-slate-500 truncate" translate="no">{name}</p>}
         </div>
     );
 }
@@ -345,7 +345,7 @@ export default function PackingScreen() {
                                 <Store size={26} />
                             </span>
                             <span className="flex-1 min-w-0">
-                                <span className="block text-xl font-bold text-slate-900 truncate">{franchiseNameOf(g.franchise)}</span>
+                                <span className="block text-xl font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(g.franchise)}</span>
                                 <span className="block text-base text-slate-500 mt-0.5">
                                     {g.rows.length} {t('items')} <span className="mx-1.5">•</span> {loadText(l, t)}
                                 </span>
@@ -365,7 +365,7 @@ export default function PackingScreen() {
                 <Store size={30} />
             </div>
             <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-slate-900 truncate">{franchiseNameOf(group.franchise)}</h2>
+                <h2 className="text-2xl font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(group.franchise)}</h2>
                 <p className="text-base text-slate-500 mt-0.5">
                     {group.rows.length} {t('items')} <span className="mx-1.5">•</span> {t('Total')} {loadText(groupLoad(group, true), t)}
                 </p>
@@ -519,7 +519,7 @@ export default function PackingScreen() {
                 </button>
                 <h1 className="text-2xl font-bold text-slate-900 pt-2">{t('Edit List')}</h1>
                 <p className="text-base text-slate-500 mt-1 flex items-center justify-center gap-1.5">
-                    <Store size={16} /> {franchiseNameOf(group.franchise)} <span className="mx-1">•</span> {today}
+                    <Store size={16} /> <span translate="no">{franchiseNameOf(group.franchise)}</span> <span className="mx-1">•</span> {today}
                 </p>
             </div>
             <div className="hidden lg:block mb-4">{franchiseHeader}</div>
@@ -602,7 +602,7 @@ export default function PackingScreen() {
                 <CheckCircle2 size={56} />
             </div>
             <h2 className="text-3xl font-bold text-slate-900">{t('Sent for delivery')}</h2>
-            <p className="text-xl text-slate-700 mt-3">{sentSummary.name}</p>
+            <p className="text-xl text-slate-700 mt-3" translate="no">{sentSummary.name}</p>
             <p className="text-lg text-slate-500 mt-1">{sentSummary.count} {t('items')} <span className="mx-1.5">•</span> {sentSummary.load}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
                 <button type="button" onClick={closeGroup} className={cn(bigGreen, 'px-8')}>

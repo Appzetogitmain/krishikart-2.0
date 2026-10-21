@@ -92,8 +92,9 @@ export default function QuotationHistoryScreen() {
             header: 'Admin Price',
             key: 'totalQuotedAmount',
             render: (val, row) => {
-                const vendorTotal = row.vendorQuoteTotal || row.totalQuotedAmount;
-                const variance = val - vendorTotal;
+                const amount = Number(val) || 0; // older requests may not have a total yet
+                const vendorTotal = Number(row.vendorQuoteTotal || row.totalQuotedAmount) || 0;
+                const variance = amount - vendorTotal;
                 const hasBeenAudited = variance !== 0;
 
                 return (
@@ -103,7 +104,7 @@ export default function QuotationHistoryScreen() {
                                 "text-[11px] font-black tabular-nums",
                                 hasBeenAudited ? "text-slate-900" : "text-slate-300"
                             )}>
-                                ₹{val.toLocaleString()}
+                                ₹{amount.toLocaleString()}
                             </span>
                         </div>
                         {hasBeenAudited && (
@@ -205,8 +206,8 @@ export default function QuotationHistoryScreen() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <AnimatePresence mode="popLayout">
                         {filteredOrders.map((order, index) => {
-                            const vendorTotal = order.vendorQuoteTotal || order.totalQuotedAmount;
-                            const authorizedTotal = order.totalQuotedAmount;
+                            const vendorTotal = Number(order.vendorQuoteTotal || order.totalQuotedAmount) || 0;
+                            const authorizedTotal = Number(order.totalQuotedAmount) || 0;
                             const variance = authorizedTotal - vendorTotal;
                             const hasBeenAudited = variance !== 0;
                             const isApproved = ['approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed'].includes(order.status);
