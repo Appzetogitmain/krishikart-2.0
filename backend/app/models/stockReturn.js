@@ -32,6 +32,8 @@ const stockReturnSchema = new mongoose.Schema(
         condition: { type: String, enum: ["good", "damaged"], default: "damaged" },
         fromStock: { type: Boolean, default: false }, // leaves the franchise's stock when sent
         photos: { type: [String], default: [] }, // franchise's photos of the goods (up to 3)
+        // What is wrong with this item (shown to the vendor in Rejected Stock)
+        issue: { type: String, enum: ["rotten", "overripe", "small_size", "dried", "damaged", "other", null], default: null },
         // Vendor's check when the goods arrive: accept (all or part) or reject this item
         vendorDecision: { type: String, enum: ["accepted", "rejected", null], default: null },
         acceptedQuantity: { type: Number, default: null },

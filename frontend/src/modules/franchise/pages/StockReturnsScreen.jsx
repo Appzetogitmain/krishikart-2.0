@@ -6,6 +6,17 @@ import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 
+// What is wrong with an item (the vendor sees this in Rejected Stock)
+const ISSUES = [
+    { value: 'rotten', label: 'Rotten' },
+    { value: 'overripe', label: 'Overripe / mushy' },
+    { value: 'small_size', label: 'Small size' },
+    { value: 'dried', label: 'Dried / wilted' },
+    { value: 'damaged', label: 'Damaged / crushed' },
+    { value: 'other', label: 'Other' },
+];
+const issueLabel = (v) => ISSUES.find((x) => x.value === v)?.label;
+
 const STATUS = {
     requested: { label: 'Waiting for admin', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
     approved: { label: 'Approved - send it', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -46,6 +57,7 @@ export default function StockReturnsScreen() {
     const [sourceId, setSourceId] = useState('');
     const [qty, setQty] = useState({});
     const [photos, setPhotos] = useState({}); // productId -> [photo urls] (proof of damage, up to 3)
+    const [issues, setIssues] = useState({}); // productId -> what is wrong with it
     const [uploading, setUploading] = useState(null);
     const [reason, setReason] = useState('');
     const [note, setNote] = useState('');
@@ -82,6 +94,7 @@ export default function StockReturnsScreen() {
         setSourceId('');
         setQty({});
         setPhotos({});
+        setIssues({});
         setReason('');
         setNote('');
         try {
@@ -132,7 +145,7 @@ export default function StockReturnsScreen() {
                 sourceReturnId: kind === 'from_return' ? sourceId : undefined,
                 reason,
                 note,
-                items: chosen.map(([productId, quantity]) => ({ productId, quantity: Number(quantity), photos: photos[productId] || [] })),
+                items: chosen.map(([productId, quantity]) => ({ productId, quantity: Number(quantity), photos: photos[productId] || [], issue: issues[productId] || undefined })),
             });
             toast.success('Return sent to the admin for approval');
             setTab('mine');
@@ -197,7 +210,7 @@ export default function StockReturnsScreen() {
                     {r.items.map((i) => (
                         <div key={i._id || i.productId} className="px-3 py-2 text-xs space-y-1.5">
                             <div className="flex justify-between gap-2">
-                                <span className="font-bold text-slate-800">{i.name} <span className="font-semibold text-slate-400">({i.condition})</span></span>
+                                <span className="font-bold text-slate-800">{i.name} <span className="font-semibold text-slate-400">({issueLabel(i.issue) || i.condition})</span></span>
                                 <span className="font-black text-slate-900 tabular-nums">{i.quantity} {i.unit}</span>
                             </div>
                             {i.vendorDecision && (
@@ -366,6 +379,11 @@ export default function StockReturnsScreen() {
                                                 </div>
                                                 {Number(qty[l.productId]) > 0 && (
                                                     <div className="basis-full flex items-center gap-2 flex-wrap">
+                                                        <select value={issues[l.productId] || ''} onChange={(e) => setIssues((x) => ({ ...x, [l.productId]: e.target.value }))}
+                                                            className="h-12 px-2 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700">
+                                                            <option value="">What's wrong?</option>
+                                                            {ISSUES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
+                                                        </select>
                                                         {(photos[l.productId] || []).map((u) => (
                                                             <span key={u} className="relative">
                                                                 <img src={u} alt="" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />

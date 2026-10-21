@@ -35,6 +35,7 @@ const label = (r) => REASONS[r] || r;
 const keptQty = (i) => (i.vendorDecision ? Number(i.acceptedQuantity) || 0 : Number(i.quantity) || 0);
 const valueOf = (items) => round2((items || []).reduce((s, i) => s + (Number(i.price) || 0) * keptQty(i), 0));
 const PHOTO_URL = /^https:\/\/res\.cloudinary\.com\//;
+const ITEM_ISSUES = ["rotten", "overripe", "small_size", "dried", "damaged", "other"];
 const listOf = (items) => (items || []).map((i) => `${i.name} ${i.quantity} ${i.unit}`).join(", ");
 
 /** Damaged/rejected quantity of each item of a received delivery that can still be returned. */
@@ -196,6 +197,7 @@ export const createStockReturn = async (req, res) => {
                 productId: String(i.productId || ""),
                 quantity: round2(i.quantity),
                 photos: (Array.isArray(i.photos) ? i.photos : []).filter((u) => typeof u === "string" && PHOTO_URL.test(u)).slice(0, 3),
+                issue: ITEM_ISSUES.includes(i.issue) ? i.issue : null,
             }))
             .filter((i) => isId(i.productId) && i.quantity > 0);
 
@@ -264,7 +266,10 @@ export const createStockReturn = async (req, res) => {
             }
         }
 
-        items = items.map((i) => ({ ...i, photos: asked.find((a) => a.productId === String(i.productId))?.photos || [] }));
+        items = items.map((i) => {
+            const a = asked.find((x) => x.productId === String(i.productId));
+            return { ...i, photos: a?.photos || [], issue: a?.issue || null };
+        });
         const ret = await StockReturn.create({ ...doc, items, suggested });
         const msg = `${req.franchise.franchiseName} wants to return ${listOf(items)} (${label(reason)}).`;
         emitToAdmin("stock_return_update", { returnId: ret._id, status: "requested", message: msg });
