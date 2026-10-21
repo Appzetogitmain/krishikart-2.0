@@ -24,14 +24,17 @@ import FilterBar from '../components/tables/FilterBar';
 import DataGrid from '../components/tables/DataGrid';
 import VendorBackBar from '../components/navigation/VendorBackBar';
 import api from '@/lib/axios';
+import { keepPage, peekPage } from '../lib/pageCache';
+
+const QUOTED = ['quoted', 'negotiating', 'approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed', 'rejected'];
 
 export default function QuotationHistoryScreen() {
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(!peekPage('assignments'));
     const [activeTab, setActiveTab] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState('list');
-    const [procurementRequests, setProcurementRequests] = useState([]);
+    const [procurementRequests, setProcurementRequests] = useState(() => (peekPage('assignments') || []).filter(req => QUOTED.includes(req.status)));
     
     const tabs = ['All', 'Quoted', 'Approved', 'Rejected'];
 
@@ -41,7 +44,7 @@ export default function QuotationHistoryScreen() {
                 const response = await api.get('/procurement/vendor/my-assignments');
                 if (response.data.success) {
                     // Filter for requests that have at least been quoted
-                    const quotedOnly = response.data.results.filter(req => 
+                    const quotedOnly = keepPage('assignments', response.data.results).filter(req => 
                         ['quoted', 'negotiating', 'approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed', 'rejected'].includes(req.status)
                     );
                     setProcurementRequests(quotedOnly);

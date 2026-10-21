@@ -3,21 +3,21 @@ import { motion } from 'framer-motion';
 import { AlertCircle, Info, RefreshCw, Archive, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/axios';
+import { keepPage, peekPage } from '../lib/pageCache';
 import { cn } from '@/lib/utils';
 import VendorBackBar from '../components/navigation/VendorBackBar';
 import DataGrid from '../components/tables/DataGrid';
 
 export default function RejectionReportsScreen() {
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [rejections, setRejections] = useState([]);
+    const [loading, setLoading] = useState(!peekPage('rejected'));
+    const [rejections, setRejections] = useState(() => peekPage('rejected') || []);
 
     const load = async () => {
-        setLoading(true);
         try {
             const res = await api.get('/procurement/vendor/rejected-stock');
             if (res.data.success) {
-                setRejections(res.data.results || res.data.result || []);
+                setRejections(keepPage('rejected', res.data.results || res.data.result || []));
             }
         } catch (e) {
             console.error(e);

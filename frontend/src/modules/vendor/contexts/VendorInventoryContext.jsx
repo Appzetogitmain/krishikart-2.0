@@ -10,8 +10,8 @@ export const VendorInventoryProvider = ({ children }) => {
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Spinner only for the first load; later refreshes keep the list on screen
     const fetchInventory = async () => {
-        setLoading(true);
         try {
             const response = await api.get('/vendor/inventory');
             if (response.data.success) {

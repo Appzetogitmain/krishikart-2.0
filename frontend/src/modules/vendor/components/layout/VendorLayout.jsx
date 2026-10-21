@@ -96,24 +96,22 @@ function VendorLayoutInner() {
 
             <div className="flex-1 flex flex-col min-w-0 lg:ml-72 pb-20 lg:pb-10">
                 <main className="flex-1 overflow-x-hidden px-4 py-5 md:p-8 lg:p-8">
-                    <AnimatePresence mode="wait" initial={false}>
-                        <motion.div
-                            key={location.pathname}
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -15 }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
-                            className="h-full max-w-7xl mx-auto"
-                        >
-                            <Suspense fallback={
-                                <div className="h-full w-full flex items-center justify-center p-20">
-                                    <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin" />
-                                </div>
-                            }>
-                                <Outlet />
-                            </Suspense>
-                        </motion.div>
-                    </AnimatePresence>
+                    {/* Quick fade-in only: waiting for the old page to animate out made every tab switch feel like a reload */}
+                    <motion.div
+                        key={location.pathname}
+                        initial={{ opacity: 0.6 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.12 }}
+                        className="h-full max-w-7xl mx-auto"
+                    >
+                        <Suspense fallback={
+                            <div className="h-full w-full flex items-center justify-center p-20">
+                                <div className="w-12 h-12 border-4 border-slate-900 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        }>
+                            <Outlet />
+                        </Suspense>
+                    </motion.div>
                 </main>
             </div>
 

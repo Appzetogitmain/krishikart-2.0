@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { useVendorLanguage } from '../contexts/VendorLanguageContext';
 import { VendorDesktopHeader, VendorMobileTopBar, formatDay } from '../components/layout/VendorPageHeader';
 import { franchiseNameOf, loadOf, loadText, unitLabel } from '../lib/packing';
+import { keepPage, peekPage } from '../lib/pageCache';
 
 const OPEN = ['approved', 'preparing'];
 
@@ -149,8 +150,9 @@ export default function PackingScreen() {
     const { t, locale } = useVendorLanguage();
     const isDesktop = useIsDesktop();
 
-    const [requests, setRequests] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const onlyActive = (all) => (all || []).filter((r) => [...OPEN, 'ready_for_pickup'].includes(r.status));
+    const [requests, setRequests] = useState(() => onlyActive(peekPage('assignments')));
+    const [isLoading, setIsLoading] = useState(!peekPage('assignments'));
     const [search, setSearch] = useState('');
     const [selectedKey, setSelectedKey] = useState(null);
     const [mode, setMode] = useState('view'); // view | edit | check | done
@@ -164,8 +166,7 @@ export default function PackingScreen() {
     const load = useCallback(async () => {
         try {
             const res = await api.get('/procurement/vendor/my-assignments');
-            const all = res.data?.results || [];
-            setRequests(all.filter((r) => [...OPEN, 'ready_for_pickup'].includes(r.status)));
+            setRequests(onlyActive(keepPage('assignments', res.data?.results || [])));
         } catch (error) {
             if (error.response?.status !== 401) toast.error(error.response?.data?.message || t('Could not load orders'));
         } finally {

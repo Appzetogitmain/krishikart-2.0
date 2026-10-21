@@ -24,11 +24,12 @@ import DataGrid from '../components/tables/DataGrid';
 import VendorBackBar from '../components/navigation/VendorBackBar';
 
 import api from '@/lib/axios';
+import { keepPage, peekPage } from '../lib/pageCache';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
 
 export default function OrdersScreen() {
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(!peekPage('assignments'));
     const [activeTab, setActiveTab] = useState('New');
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
@@ -49,17 +50,19 @@ export default function OrdersScreen() {
             deadline: o.deadline || new Date(Date.now() + 3600000).toISOString()
         })); */
 
-    const [procurementRequests, setProcurementRequests] = useState([]);
+    const [procurementRequests, setProcurementRequests] = useState(() => peekPage('assignments') || []);
     const { newAssignmentData, statusAlertData } = useVendorAuth();
 
     const fetchAssignments = async () => {
         try {
             const response = await api.get('/procurement/vendor/my-assignments');
             if (response.data.success) {
-                setProcurementRequests(response.data.results);
+                setProcurementRequests(keepPage('assignments', response.data.results));
             }
         } catch (error) {
             console.error("Failed to fetch vendor assignments", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -103,11 +106,6 @@ export default function OrdersScreen() {
 
     // const allOrders = [...mappedProcurementRequests, ...liveVendorOrders, ...mockOrders.filter(m => !liveVendorOrders.find(l => l.id === m.id))];
     const allOrders = mappedProcurementRequests;
-
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 600);
-        return () => clearTimeout(timer);
-    }, []);
 
     const filteredOrders = allOrders.filter(order => {
         const statusMap = {

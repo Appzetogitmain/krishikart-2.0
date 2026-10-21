@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import DocumentUploadCard from '../components/DocumentUploadCard';
 import VendorBackBar from '../components/navigation/VendorBackBar';
 import api from '../../../lib/axios';
+import { keepPage, peekPage } from '../lib/pageCache';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
 import { PORTAL_LANGUAGES, useVendorLanguage } from '../contexts/VendorLanguageContext';
 import LanguagePickerModal from '../components/modals/LanguagePickerModal';
@@ -391,8 +392,8 @@ export default function ProfileScreen() {
         }
     };
 
-    const [vendor, setVendor] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [vendor, setVendor] = useState(() => peekPage('profile') || null);
+    const [loading, setLoading] = useState(!peekPage('profile'));
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isLanguageOpen, setIsLanguageOpen] = useState(false);
@@ -406,7 +407,7 @@ export default function ProfileScreen() {
     const fetchVendorProfile = async () => {
         try {
             const { data } = await api.get('/vendor/me');
-            setVendor(data.result);
+            setVendor(keepPage('profile', data.result));
         } catch (error) {
             console.error('Failed to fetch profile:', error);
             if (error.response?.status === 401) {

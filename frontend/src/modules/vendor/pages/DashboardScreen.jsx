@@ -20,15 +20,17 @@ import { cn } from '@/lib/utils';
 import MetricCard from '../components/cards/MetricCard';
 import DataGrid from '../components/tables/DataGrid';
 import api from '@/lib/axios';
+import { keepPage, peekPage } from '../lib/pageCache';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
 import { describeLoad } from '@/lib/dispatchLoad';
 
 export default function DashboardScreen() {
     const navigate = useNavigate();
     const { vendor, isAuthenticated, newAssignmentData, statusAlertData } = useVendorAuth();
-    const [isLoading, setIsLoading] = useState(true);
-    const [activeDispatches, setActiveDispatches] = useState([]);
-    const [dashboardStats, setDashboardStats] = useState({
+    const cached = peekPage('dashboard');
+    const [isLoading, setIsLoading] = useState(!cached);
+    const [activeDispatches, setActiveDispatches] = useState(cached?.activeDispatches || []);
+    const [dashboardStats, setDashboardStats] = useState(cached?.stats || {
         activeOps: 0,
         pendingSettlement: 0,
         totalTurnover: 0,
@@ -64,9 +66,11 @@ export default function DashboardScreen() {
 
             if (dispatchRes.status === 'fulfilled' && dispatchRes.value.data.success) {
                 setActiveDispatches(dispatchRes.value.data.results || []);
+                keepPage('dashboard', { ...peekPage('dashboard'), activeDispatches: dispatchRes.value.data.results || [] });
             }
             if (statsRes.status === 'fulfilled' && statsRes.value.data.success) {
                 setDashboardStats(statsRes.value.data.result || statsRes.value.data.results || {});
+                keepPage('dashboard', { ...peekPage('dashboard'), stats: statsRes.value.data.result || statsRes.value.data.results || {} });
             }
 
             const failed = [dispatchRes, statsRes].filter(r => r.status === 'rejected');

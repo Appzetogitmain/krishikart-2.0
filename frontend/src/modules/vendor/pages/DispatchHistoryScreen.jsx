@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { useVendorLanguage } from '../contexts/VendorLanguageContext';
 import { VendorDesktopHeader, VendorMobileTopBar, formatDay, formatTime } from '../components/layout/VendorPageHeader';
 import { franchiseNameOf, loadOf, loadText, rateOf, rupees, sentQty, shortId, unitLabel } from '../lib/packing';
+import { keepPage, peekPage } from '../lib/pageCache';
 
 const HISTORY_STATUSES = ['ready_for_pickup', 'picked_up', 'completed', 'rejected'];
 
@@ -288,8 +289,8 @@ function OrderDetail({ order, onBack, onPickedUp, busy, asModal }) {
 
 export default function DispatchHistoryScreen() {
     const { t, locale } = useVendorLanguage();
-    const [orders, setOrders] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [orders, setOrders] = useState(() => (peekPage('assignments') || []).filter((o) => HISTORY_STATUSES.includes(o.status)));
+    const [isLoading, setIsLoading] = useState(!peekPage('assignments'));
     const [search, setSearch] = useState('');
     const [filters, setFilters] = useState(DEFAULT_FILTERS);
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -301,7 +302,7 @@ export default function DispatchHistoryScreen() {
     const load = async () => {
         try {
             const res = await api.get('/procurement/vendor/my-assignments');
-            setOrders((res.data?.results || []).filter((o) => HISTORY_STATUSES.includes(o.status)));
+            setOrders(keepPage('assignments', res.data?.results || []).filter((o) => HISTORY_STATUSES.includes(o.status)));
         } catch (error) {
             if (error.response?.status !== 401) toast.error(error.response?.data?.message || t('Could not load dispatch history'));
         } finally {

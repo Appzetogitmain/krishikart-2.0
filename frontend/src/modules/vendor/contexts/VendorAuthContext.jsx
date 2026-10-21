@@ -4,6 +4,7 @@ import { getSocket, joinVendorRoom } from '@/lib/socket';
 import { useFCM } from '@/hooks/useFCM';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { toast } from 'sonner';
+import { clearPageCache } from '../lib/pageCache';
 
 
 const VendorAuthContext = createContext();
@@ -109,12 +110,14 @@ export function VendorAuthProvider({ children }) {
     }, [vendor]);
 
     const loginSuccess = (data, token) => {
+        clearPageCache();
         setVendor(data);
         localStorage.setItem('vendorToken', token);
         localStorage.setItem('vendorData', JSON.stringify(data));
     };
 
     const logout = () => {
+        clearPageCache();
         setVendor(null);
         localStorage.removeItem('vendorToken');
         localStorage.removeItem('vendorData');

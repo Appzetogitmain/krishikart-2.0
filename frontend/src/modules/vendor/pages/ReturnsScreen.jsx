@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Undo2, Loader2, RefreshCw, CheckCircle2, PackageX } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
+import { keepPage, peekPage } from '../lib/pageCache';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket';
 
@@ -22,15 +23,14 @@ const when = (d) => (d && !isNaN(new Date(d).getTime()) ? new Date(d).toLocaleSt
 
 /** Vendor: goods franchises are returning (approved by the admin). */
 export default function ReturnsScreen() {
-    const [rows, setRows] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [rows, setRows] = useState(() => peekPage('returns') || []);
+    const [loading, setLoading] = useState(!peekPage('returns'));
     const [busyId, setBusyId] = useState(null);
 
     const load = useCallback(async () => {
         try {
-            setLoading(true);
             const res = await api.get('/stock-returns/vendor');
-            setRows(res.data?.results || []);
+            setRows(keepPage('returns', res.data?.results || []));
         } catch (error) {
             toast.error(error.response?.data?.message || 'Could not load returns');
         } finally {
