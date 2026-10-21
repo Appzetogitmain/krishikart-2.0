@@ -1,712 +1,665 @@
-import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import api from '@/lib/axios';
-import {
-    Package,
-    ArrowRight,
-    CheckCircle2,
-    Truck,
-    ChevronRight,
-    IndianRupee,
-    Scale,
-    ShieldCheck,
-    AlertCircle,
-    Loader2,
-    FileText,
-    Target,
-    Activity
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import {
+    ArrowLeft,
+    Boxes,
+    CalendarDays,
+    Check,
+    CheckCircle2,
+    ChevronRight,
+    History,
+    Loader2,
+    Minus,
+    Package,
+    Pencil,
+    Plus,
+    Search,
+    Store,
+    StickyNote,
+    Truck,
+    X,
+} from 'lucide-react';
+import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
-import { useOrders } from '@/modules/user/contexts/OrderContext';
-import DocumentViewer from '../components/documents/DocumentViewer';
-import VendorBackBar from '../components/navigation/VendorBackBar';
 import { toast } from 'sonner';
+import { useVendorLanguage } from '../contexts/VendorLanguageContext';
+import { VendorDesktopHeader, VendorMobileTopBar, formatDay } from '../components/layout/VendorPageHeader';
+import { franchiseNameOf, loadOf, loadText, unitLabel } from '../lib/packing';
+
+const OPEN = ['approved', 'preparing'];
+
+const STATUS_STYLE = {
+    pending: { label: 'Pending', className: 'bg-amber-50 text-amber-700' },
+    packing: { label: 'Packing', className: 'bg-green-100 text-green-800' },
+    ready: { label: 'Ready', className: 'bg-green-100 text-green-800' },
+};
+
+// Quantity the vendor has already saved for an item; before any edit it is the ordered amount
+function savedQty(request, item) {
+    const edited = request.status === 'preparing' && request.items.some((i) => Number(i.dispatchedQuantity) > 0);
+    return edited ? Number(item.dispatchedQuantity) || 0 : Number(item.quantity) || 0;
+}
+
+function useIsDesktop() {
+    const query = '(min-width: 1024px)';
+    const [match, setMatch] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+    useEffect(() => {
+        const mq = window.matchMedia(query);
+        const on = () => setMatch(mq.matches);
+        mq.addEventListener('change', on);
+        return () => mq.removeEventListener('change', on);
+    }, []);
+    return match;
+}
+
+/** One franchise's work for today: the open requests (or, when everything is packed, the ones waiting for pickup). */
+function buildGroups(requests) {
+    const byFranchise = new Map();
+    for (const r of requests) {
+        const f = r.franchiseId || {};
+        const key = String(f._id || r.franchiseId || r._id);
+        if (!byFranchise.has(key)) byFranchise.set(key, { key, franchise: f, open: [], ready: [] });
+        const g = byFranchise.get(key);
+        if (OPEN.includes(r.status)) g.open.push(r);
+        else if (r.status === 'ready_for_pickup') g.ready.push(r);
+    }
+    const groups = [];
+    for (const g of byFranchise.values()) {
+        const working = g.open.length ? g.open : g.ready;
+        if (!working.length) continue;
+        const rows = [];
+        working.forEach((r) => r.items.forEach((item) => rows.push({
+            key: `${r._id}:${item.productId}`,
+            requestId: r._id,
+            item,
+            unit: item.unit, // loadOf() reads the unit off each row
+            ordered: Number(item.quantity) || 0,
+            saved: g.open.length ? savedQty(r, item) : (Number(item.dispatchedQuantity) || Number(item.quantity) || 0),
+        })));
+        const status = !g.open.length ? 'ready' : g.open.some((r) => r.status === 'preparing') ? 'packing' : 'pending';
+        groups.push({ ...g, rows, status, readOnly: !g.open.length });
+    }
+    const order = { packing: 0, pending: 1, ready: 2 };
+    return groups.sort((a, b) => order[a.status] - order[b.status] || franchiseNameOf(a.franchise).localeCompare(franchiseNameOf(b.franchise)));
+}
+
+function ItemThumb({ src, size = 'md' }) {
+    const box = size === 'lg' ? 'w-14 h-14' : size === 'sm' ? 'w-9 h-9' : 'w-12 h-12';
+    return src ? (
+        <img src={src} alt="" className={cn(box, 'object-contain shrink-0')} loading="lazy" />
+    ) : (
+        <div className={cn(box, 'rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0')}>
+            <Package size={20} />
+        </div>
+    );
+}
+
+function ItemName({ name, className }) {
+    const { t } = useVendorLanguage();
+    const local = t(name);
+    return (
+        <div className={cn('min-w-0', className)}>
+            <p className="text-lg font-semibold text-slate-900 leading-snug break-words">{local}</p>
+            {local !== name && <p className="text-xs text-slate-500 truncate">{name}</p>}
+        </div>
+    );
+}
+
+function StatusPill({ status, className }) {
+    const { t } = useVendorLanguage();
+    const s = STATUS_STYLE[status];
+    return <span className={cn('inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap', s.className, className)}>{t(s.label)}</span>;
+}
+
+function Stepper({ value, max, unit, onChange }) {
+    const { t } = useVendorLanguage();
+    const step = 1;
+    const set = (v) => onChange(Math.min(max, Math.max(0, Math.round(v * 100) / 100)));
+    return (
+        <div className="flex items-center gap-1.5">
+            <button type="button" onClick={() => set(value - step)} disabled={value <= 0} aria-label="Less"
+                className="w-9 lg:w-10 h-12 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-800 disabled:opacity-30">
+                <Minus size={20} />
+            </button>
+            <label className="w-16 lg:w-[72px] h-12 rounded-xl border border-slate-200 bg-white flex flex-col items-center justify-center">
+                <input
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    max={max}
+                    step="any"
+                    value={value}
+                    onChange={(e) => set(parseFloat(e.target.value) || 0)}
+                    className="w-full text-center text-lg font-bold text-slate-900 leading-none bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-[11px] text-slate-500 leading-none mt-0.5">{t(unitLabel(unit))}</span>
+            </label>
+            <button type="button" onClick={() => set(value + step)} disabled={value >= max} aria-label="More"
+                className="w-9 lg:w-10 h-12 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-800 disabled:opacity-30">
+                <Plus size={20} />
+            </button>
+        </div>
+    );
+}
 
 export default function PackingScreen() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const orderId = searchParams.get('order');
-    const [isDispatching, setIsDispatching] = useState(false);
-    const [checkedItems, setCheckedItems] = useState({});
-    const [step, setStep] = useState(1); // 1: Packing, 2: Weight, 3: Dispatch, 4: Success
-    const [isDocOpen, setIsDocOpen] = useState(false);
-    const { orders: contextOrders, updateOrderStatus } = useOrders();
+    const focusRequest = searchParams.get('order');
+    const { t, locale } = useVendorLanguage();
+    const isDesktop = useIsDesktop();
 
+    const [requests, setRequests] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [orders, setOrders] = useState([]);
+    const [search, setSearch] = useState('');
+    const [selectedKey, setSelectedKey] = useState(null);
+    const [mode, setMode] = useState('view'); // view | edit | check | done
+    const [editRow, setEditRow] = useState(null); // desktop: one row being edited
+    const [draft, setDraft] = useState({});
+    const [checked, setChecked] = useState({});
+    const [note, setNote] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [sentSummary, setSentSummary] = useState(null);
 
+    const load = useCallback(async () => {
+        try {
+            const res = await api.get('/procurement/vendor/my-assignments');
+            const all = res.data?.results || [];
+            setRequests(all.filter((r) => [...OPEN, 'ready_for_pickup'].includes(r.status)));
+        } catch (error) {
+            if (error.response?.status !== 401) toast.error(error.response?.data?.message || t('Could not load orders'));
+        } finally {
+            setIsLoading(false);
+        }
+    }, [t]);
+
+    useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const groups = useMemo(() => buildGroups(requests), [requests]);
+
+    // Opened from an order link (?order=<requestId>): show that franchise
     useEffect(() => {
-        const fetchOrder = async () => {
-            try {
-                // Fetch active dispatch orders to find current one
-                const response = await api.get('/procurement/vendor/active-dispatch');
-                if (response.data.success) {
-                    setOrders(response.data.results);
-                }
-            } catch (error) {
-                console.error("Failed to fetch order", error);
-            } finally {
-                setIsLoading(false);
+        if (!focusRequest || selectedKey) return;
+        const g = groups.find((x) => x.rows.some((r) => String(r.requestId) === focusRequest));
+        if (g) setSelectedKey(g.key);
+    }, [focusRequest, groups, selectedKey]);
+
+    const activeKey = selectedKey ?? (isDesktop ? groups[0]?.key : null);
+    const group = groups.find((g) => g.key === activeKey) || null;
+
+    // Fresh draft whenever another franchise is opened or the data reloads
+    useEffect(() => {
+        if (!group) return;
+        setDraft(Object.fromEntries(group.rows.map((r) => [r.key, r.saved])));
+        setChecked(Object.fromEntries(group.rows.map((r) => [r.key, r.saved > 0])));
+        setEditRow(null);
+        setNote('');
+    }, [group?.key, requests]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const filteredGroups = groups.filter((g) => franchiseNameOf(g.franchise).toLowerCase().includes(search.trim().toLowerCase()));
+
+    const qtyOf = (row) => Number(draft[row.key] ?? row.saved) || 0;
+    const groupLoad = (g, useDraft = false) => loadOf(g.rows, useDraft ? (it) => qtyOf(it) : (it) => it.saved);
+    const dirty = !!group && group.rows.some((r) => qtyOf(r) !== r.saved);
+
+    const openGroup = (key) => { setSelectedKey(key); setMode('view'); setSentSummary(null); };
+    const closeGroup = () => { setSelectedKey(null); setMode('view'); };
+
+    const cancelEdit = () => {
+        if (group) setDraft(Object.fromEntries(group.rows.map((r) => [r.key, r.saved])));
+        setEditRow(null);
+        setMode('view');
+    };
+
+    // Save edited quantities: the request moves to "preparing" (Packing) and keeps the amounts
+    const saveEdits = async () => {
+        if (!group || group.readOnly) return;
+        setBusy(true);
+        try {
+            for (const r of group.open) {
+                const itemUpdates = group.rows.filter((row) => row.requestId === r._id)
+                    .map((row) => ({ productId: row.item.productId, dispatchedQuantity: qtyOf(row) }));
+                await api.put(`/procurement/vendor/${r._id}/status`, { status: 'preparing', itemUpdates });
             }
-        };
-        fetchOrder();
-    }, [orderId]);
-
-    const order = useMemo(() => {
-        // 1. Try to find the specific order by ID from URL
-        if (orderId) {
-            const foundOrder = orders.find(o => o._id === orderId);
-            if (foundOrder) return formatOrder(foundOrder);
+            toast.success(t('List saved'));
+            setEditRow(null);
+            setMode('view');
+            await load();
+        } catch (error) {
+            toast.error(error.response?.data?.message || t('Could not save. Please try again.'));
+        } finally {
+            setBusy(false);
         }
+    };
 
-        // 2. If no ID or ID not found, take the first order from active dispatches list
-        if (orders.length > 0) {
-            return formatOrder(orders[0]);
+    const startCheck = () => {
+        if (!group) return;
+        if (!group.rows.some((r) => qtyOf(r) > 0)) {
+            toast.error(t('Every item is at 0. Edit the list first.'));
+            return;
         }
+        setChecked(Object.fromEntries(group.rows.map((r) => [r.key, qtyOf(r) > 0])));
+        setEditRow(null);
+        setMode('check');
+    };
 
-        // 3. No fallback to mock data to avoid confusion
-        return null;
-    }, [orderId, orders]);
+    const sendRows = group ? group.rows.filter((r) => checked[r.key] && qtyOf(r) > 0) : [];
 
-    function formatOrder(foundOrder) {
-        return {
-            id: foundOrder._id,
-            franchiseName: foundOrder.franchiseId?.franchiseName || foundOrder.franchiseId?.shopName || foundOrder.franchiseId?.ownerName || 'Franchise',
-            franchiseLocation: [foundOrder.franchiseId?.area, foundOrder.franchiseId?.city].filter(Boolean).join(', ') || foundOrder.franchiseId?.address || '',
-            items: foundOrder.items.map(i => ({
-                productId: i.productId,
-                name: i.name,
-                quantity: i.quantity || i.qty || 0,
-                unit: i.unit || 'units',
-                price: i.price || 0,
-                quotedPrice: i.quotedPrice || 0,
-                image: i.image
-            })),
-            status: foundOrder.status
-        };
+    // Send for delivery: each request goes to "ready for pickup"; unticked items stay in the list for later
+    const sendForDelivery = async () => {
+        if (!group || !sendRows.length) return;
+        setBusy(true);
+        try {
+            for (const r of group.open) {
+                const rows = group.rows.filter((row) => row.requestId === r._id);
+                const itemUpdates = rows.map((row) => ({
+                    productId: row.item.productId,
+                    dispatchedQuantity: checked[row.key] ? qtyOf(row) : 0,
+                }));
+                if (!itemUpdates.some((u) => u.dispatchedQuantity > 0)) continue;
+                const weight = loadOf(rows.filter((row) => checked[row.key]), (row) => qtyOf(row)).kg;
+                await api.put(`/procurement/vendor/${r._id}/status`, { status: 'ready_for_pickup', weight, itemUpdates, note });
+            }
+            setSentSummary({
+                name: franchiseNameOf(group.franchise),
+                count: sendRows.length,
+                load: loadText(loadOf(sendRows, (row) => qtyOf(row)), t),
+            });
+            setMode('done');
+            await load();
+        } catch (error) {
+            toast.error(error.response?.data?.message || t('Could not send. Please try again.'));
+            await load();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const markPickedUp = async () => {
+        if (!group) return;
+        setBusy(true);
+        try {
+            for (const r of group.ready) {
+                await api.put(`/procurement/vendor/${r._id}/status`, { status: 'picked_up' });
+            }
+            toast.success(t('Marked as picked up'));
+            closeGroup();
+            await load();
+        } catch (error) {
+            toast.error(error.response?.data?.message || t('Could not update. Please try again.'));
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const today = formatDay(new Date(), locale);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-[60vh]">
+                <Loader2 className="animate-spin text-green-700" size={40} />
+            </div>
+        );
     }
 
-    const [itemQuantities, setItemQuantities] = useState({});
+    /* ---------- pieces ---------- */
 
-    useEffect(() => {
-        if (order && order.items) {
-            const initChecked = {};
-            const initQtys = {};
-            order.items.forEach(item => {
-                const id = item.productId || item.name; // Use productId as primary key
-                initChecked[id] = false;
-                initQtys[id] = item.quantity;
-            });
-            setCheckedItems(initChecked);
-            setItemQuantities(initQtys);
-        }
-    }, [order]);
+    const listPanel = (
+        <div className="lg:bg-white lg:rounded-3xl lg:border lg:border-slate-100 lg:p-5">
+            <h2 className="hidden lg:block text-xl font-bold text-slate-900 mb-4">
+                {t("Today's Orders")} <span className="font-semibold text-slate-700">({groups.length} {t('franchises')})</span>
+            </h2>
+            <div className="hidden lg:flex items-center gap-3 h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 mb-4">
+                <Search size={20} className="text-slate-400" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search franchise...')}
+                    className="flex-1 bg-transparent outline-none text-base text-slate-900 placeholder:text-slate-400" />
+            </div>
 
-    const handleToggleCheck = (id) => {
-        setCheckedItems(prev => ({
-            ...prev,
-            [id]: !prev[id]
-        }));
-    };
-
-    // Enable calibration as soon as at least one item is checked
-    const isPackingComplete = order?.items && Object.values(checkedItems).some(v => v === true);
-
-    const [actualWeight, setActualWeight] = useState(0);
-    const [isWeightEdited, setIsWeightEdited] = useState(false);
-
-    // What is being sent. Items sold by weight (kg, g, ...) add up to a total weight in KG. Items
-    // sold by count (pcs, bundle, dozen, ...) can't be turned into weight, so they are totalled
-    // in their own unit and shown as a quantity instead of KG.
-    const weightSummary = useMemo(() => {
-        const KG_FACTORS = { kg: 1, kgs: 1, g: 0.001, gm: 0.001, gms: 0.001, gram: 0.001, grams: 0.001, quintal: 100, q: 100, ton: 1000, tonne: 1000 };
-        let kg = 0;
-        let hasWeighed = false;
-        const countLines = [];
-        const counts = {};
-        (order?.items || []).forEach(item => {
-            const id = item.productId || item.name;
-            if (!checkedItems[id]) return;
-            const qty = Number(itemQuantities[id]) || 0;
-            const unit = String(item.unit || 'pcs').trim();
-            const factor = KG_FACTORS[unit.toLowerCase()];
-            if (factor) {
-                hasWeighed = true;
-                kg += qty * factor;
-            } else {
-                countLines.push({ name: item.name, qty, unit });
-                const key = unit.toLowerCase();
-                counts[key] = { unit, qty: (counts[key]?.qty || 0) + qty };
-            }
-        });
-        const countTotals = Object.values(counts);
-        const countText = countTotals.map(c => `${c.qty} ${c.unit}`).join(' + ');
-        return { kg: +kg.toFixed(2), hasWeighed, hasCounted: countTotals.length > 0, countLines, countTotals, countText };
-    }, [order, checkedItems, itemQuantities]);
-
-    // Text for "how much is being sent": 12 KG, 200 pcs, or 12 KG + 200 pcs
-    const dispatchTotalText = [
-        weightSummary.hasWeighed ? `${actualWeight} KG` : null,
-        weightSummary.hasCounted ? weightSummary.countText : null,
-    ].filter(Boolean).join(' + ') || '0';
-
-    // Keep the weight in sync with the packed quantities until the vendor types their own value
-    useEffect(() => {
-        if (!isWeightEdited) setActualWeight(weightSummary.kg);
-    }, [weightSummary.kg, isWeightEdited]);
-
-    // Weight is needed only when something sold by weight is being sent; it must be above zero
-    const isWeightValid = !weightSummary.hasWeighed || (Number.isFinite(actualWeight) && actualWeight > 0);
-
-    // Every ticked item needs a quantity to send: more than 0 and not more than was requested
-    const quantityProblem = (order?.items || []).map((item) => {
-        const id = item.productId || item.name;
-        if (!checkedItems[id]) return null;
-        const qty = Number(itemQuantities[id]);
-        if (!Number.isFinite(qty) || qty <= 0) return `Enter how many ${item.unit} of ${item.name} you are sending`;
-        if (qty > Number(item.quantity)) return `${item.name}: you can send at most ${item.quantity} ${item.unit} (what was requested)`;
-        return null;
-    }).find(Boolean) || null;
-
-    const goToStep = (target) => {
-        if (target === step || step === 4) return;
-        if (target < step) {
-            setStep(target);
-            return;
-        }
-        if (!isPackingComplete) {
-            toast.error('Tick at least one item you are sending to continue');
-            return;
-        }
-        if (quantityProblem) {
-            toast.error(quantityProblem);
-            setStep(1);
-            return;
-        }
-        if (target === 3 && !isWeightValid) {
-            toast.error('Please enter the total weight (more than 0 KG) to continue');
-            setStep(2);
-            return;
-        }
-        setStep(target);
-    };
-
-    const handleFinalDispatch = async () => {
-        if (!order || !order.id) {
-            toast.error("No active order selected for dispatch");
-            return;
-        }
-        if (quantityProblem) {
-            toast.error(quantityProblem);
-            setStep(1);
-            return;
-        }
-        if (!isWeightValid) {
-            toast.error("Please enter the total weight (more than 0 KG) to continue");
-            setStep(2);
-            return;
-        }
-
-        setIsDispatching(true);
-        try {
-            // Prepare item updates for partial fulfilment
-            // ONLY items that are "checked" in the UI will have their quantities sent.
-            const itemUpdates = order.items.map(item => {
-                const id = item.productId || item.name;
-                return {
-                    productId: item.productId,
-                    dispatchedQuantity: checkedItems[id] ? (itemQuantities[id] || 0) : 0
-                };
-            });
-
-            // Update status on backend
-            // Status: 'ready_for_pickup' implies vendor has finished and goods are ready
-            const response = await api.put(`/procurement/vendor/${order.id}/status`, {
-                status: 'ready_for_pickup',
-                weight: weightSummary.hasWeighed ? actualWeight : 0,
-                itemUpdates
-            });
-
-            if (response.data.success) {
-                setStep(4);
-            } else {
-                toast.error(response.data.message || "Could not confirm the dispatch. Please try again.");
-            }
-        } catch (error) {
-            console.error("Finalization error", error);
-            toast.error(error.response?.data?.message || "Could not confirm the dispatch. Please try again.");
-        } finally {
-            setIsDispatching(false);
-        }
-    };
-
-    if (isLoading) return (
-        <div className="flex items-center justify-center h-[60vh]">
-            <Loader2 className="animate-spin text-primary" size={40} />
-        </div>
-    );
-
-    if (!order && !isLoading) return (
-        <div className="text-center py-20">
-            <h2 className="text-xl font-black text-slate-900">No orders waiting for dispatch</h2>
-            <p className="text-sm text-slate-500 mt-2">Orders appear here after the admin approves your quotation.</p>
-            <button onClick={() => navigate('/vendor/orders')} className="text-primary font-bold mt-4">Back to Orders</button>
-        </div>
-    );
-
-    return (
-        <div className="space-y-6 pb-20 max-w-2xl mx-auto">
-            {step < 4 && (
-                <header className="space-y-4 px-1">
-                    <div className="flex items-center gap-4">
-                        <VendorBackBar fallbackPath="/vendor/orders" className="shrink-0" />
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                                <span className="opacity-60">Order #{order.id?.slice(-8).toUpperCase()}</span>
-                                <ChevronRight size={10} className="shrink-0 opacity-40" />
-                                <span className="text-primary">Packing</span>
-                            </div>
-                            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none mt-1">Pack & Dispatch</h1>
-                        </div>
-                    </div>
-                </header>
-            )}
-
-            {/* Stepper info */}
-            {step < 4 && (
-                <div className="flex gap-3 px-1">
-                    {[1, 2, 3].map(i => (
-                        <button
-                            key={i}
-                            type="button"
-                            onClick={() => goToStep(i)}
-                            className="flex-1 text-left cursor-pointer group"
-                        >
-                            <div className={cn(
-                                "h-1.5 rounded-full transition-all duration-500",
-                                step >= i ? "bg-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.1)]" : "bg-slate-100 group-hover:bg-slate-200"
-                            )} />
-                            <p className={cn(
-                                "text-[10px] font-black uppercase tracking-widest text-center mt-3",
-                                step === i ? "text-slate-900" : "text-slate-400 group-hover:text-slate-600"
-                            )}>
-                                {i === 1 ? '1. Check Items' : i === 2 ? (weightSummary.hasWeighed ? '2. Weight' : '2. Quantity') : '3. Confirm Dispatch'}
-                            </p>
-                        </button>
-                    ))}
+            {!filteredGroups.length && (
+                <div className="text-center py-14 px-4">
+                    <Truck size={44} className="mx-auto text-slate-300 mb-3" />
+                    <p className="text-lg font-semibold text-slate-800">{t('Nothing to pack right now')}</p>
+                    <p className="text-base text-slate-500 mt-1">{t('Orders appear here after the admin approves your quotation.')}</p>
                 </div>
             )}
 
-            <AnimatePresence mode="wait">
-                {step === 1 && (
-                    <motion.div
-                        key="step1"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-6"
-                    >
-                        <div className="bg-white p-6 md:p-8 rounded-[40px] border border-slate-100 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.05)] space-y-8 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-50" />
-                            
-                            <div className="flex items-center justify-between relative">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200">
-                                        <Target size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Check Items</h3>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tick each item you are sending</p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[11px] font-black text-slate-900 tabular-nums">{Object.values(checkedItems).filter(Boolean).length}/{order.items.length}</span>
-                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mt-0.5">Checked</span>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                                {order.items.map((item, idx) => {
-                                    const id = item.productId || item.name;
-                                    const isChecked = checkedItems[id];
-                                    return (
-                                        <motion.div
-                                            key={idx}
-                                            layout
-                                            className={cn(
-                                                "relative flex flex-col p-4 rounded-[28px] border-2 transition-all duration-300",
-                                                isChecked
-                                                    ? "bg-emerald-50/50 border-emerald-100 shadow-lg shadow-emerald-500/5"
-                                                    : "bg-white border-slate-50 hover:border-slate-100 hover:bg-slate-50/30"
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div
-                                                    onClick={() => handleToggleCheck(id)}
-                                                    className={cn(
-                                                        "w-12 h-12 rounded-2xl overflow-hidden border-2 transition-all cursor-pointer shadow-sm shrink-0",
-                                                        isChecked ? "border-emerald-200" : "border-slate-100"
-                                                    )}
-                                                >
-                                                    <img src={item.image} className={cn("w-full h-full object-cover transition-all duration-500", !isChecked && "grayscale scale-110 opacity-60")} alt="" />
-                                                </div>
-                                                
-                                                <div className="flex-1 min-w-0" onClick={() => handleToggleCheck(id)}>
-                                                    <span className={cn(
-                                                        "font-black text-[15px] tracking-tight block truncate transition-colors",
-                                                        isChecked ? "text-emerald-950" : "text-slate-700"
-                                                    )}>
-                                                        {item.name}
-                                                    </span>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.quantity} {item.unit} Req.</span>
-                                                    </div>
-                                                </div>
-
-                                                <div
-                                                    onClick={() => handleToggleCheck(id)}
-                                                    className={cn(
-                                                        "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer",
-                                                        isChecked 
-                                                            ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200 scale-110" 
-                                                            : "bg-white border-slate-100 text-transparent"
-                                                    )}
-                                                >
-                                                    <CheckCircle2 size={16} strokeWidth={3} />
-                                                </div>
-                                            </div>
-
-                                            <AnimatePresence>
-                                                {isChecked && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        className="overflow-hidden"
-                                                    >
-                                                        <div className="pt-4 mt-4 border-t border-emerald-100/50 flex items-center justify-between">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">Quantity to send</span>
-                                                            </div>
-                                                            <div className="flex items-center bg-white border-2 border-emerald-100 rounded-2xl px-3 py-1.5 shadow-sm">
-                                                                <span className="text-[10px] font-black text-emerald-400 mr-2 uppercase">Send</span>
-                                                                <input
-                                                                    type="number"
-                                                                    value={itemQuantities[id] || ''}
-                                                                    onChange={(e) => setItemQuantities(prev => ({ ...prev, [id]: Number(e.target.value) }))}
-                                                                    className="w-14 bg-transparent text-sm font-black text-emerald-700 outline-none tabular-nums text-right"
-                                                                />
-                                                                <span className="text-[10px] font-black text-emerald-300 ml-1 uppercase">{item.unit}</span>
-                                                            </div>
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </motion.div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
+            <div className="space-y-0 lg:space-y-3">
+                {filteredGroups.map((g, idx) => {
+                    const active = g.key === activeKey;
+                    const l = groupLoad(g);
+                    const greenIcon = g.status !== 'pending';
+                    return (
                         <button
-                            onClick={() => goToStep(2)}
+                            key={g.key}
+                            type="button"
+                            onClick={() => openGroup(g.key)}
                             className={cn(
-                                "w-full bg-slate-900 text-white py-5 rounded-[28px] font-black text-[13px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] active:scale-[0.98] transition-all group",
-                                !isPackingComplete && "opacity-40"
+                                'w-full flex items-center gap-3.5 text-left px-3 py-4 lg:px-4 border-b border-slate-100 lg:border lg:rounded-2xl transition-colors',
+                                active ? 'bg-green-50 border border-green-300 rounded-2xl lg:border-green-300' : 'lg:border-slate-100 hover:bg-slate-50'
                             )}
                         >
-                            {weightSummary.hasWeighed || !weightSummary.hasCounted ? 'Next: Enter Weight' : 'Next: Check Quantity'}
-                            <ChevronRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
+                            <span className={cn('hidden lg:flex w-9 h-9 rounded-full items-center justify-center text-base font-bold shrink-0',
+                                active ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-700')}>{idx + 1}</span>
+                            <span className={cn('lg:hidden w-14 h-14 rounded-full flex items-center justify-center shrink-0',
+                                greenIcon ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-800')}>
+                                <Store size={26} />
+                            </span>
+                            <span className="flex-1 min-w-0">
+                                <span className="block text-xl font-bold text-slate-900 truncate">{franchiseNameOf(g.franchise)}</span>
+                                <span className="block text-base text-slate-500 mt-0.5">
+                                    {g.rows.length} {t('items')} <span className="mx-1.5">•</span> {loadText(l, t)}
+                                </span>
+                            </span>
+                            <StatusPill status={g.status} />
+                            <ChevronRight size={22} className="text-slate-500 shrink-0" />
                         </button>
-                        {!isPackingComplete && (
-                            <p className="text-center text-[11px] font-semibold text-slate-400">Tick the items you are sending to continue.</p>
-                        )}
-                        {isPackingComplete && quantityProblem && (
-                            <p className="text-center text-[11px] font-semibold text-rose-600">{quantityProblem}</p>
-                        )}
-                    </motion.div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
+    const franchiseHeader = group && (
+        <div className="flex items-center gap-4 lg:bg-green-50 lg:rounded-2xl lg:p-5">
+            <div className="w-16 h-16 rounded-full bg-green-100 lg:bg-white/70 text-green-700 flex items-center justify-center shrink-0">
+                <Store size={30} />
+            </div>
+            <div className="flex-1 min-w-0">
+                <h2 className="text-2xl font-bold text-slate-900 truncate">{franchiseNameOf(group.franchise)}</h2>
+                <p className="text-base text-slate-500 mt-0.5">
+                    {group.rows.length} {t('items')} <span className="mx-1.5">•</span> {t('Total')} {loadText(groupLoad(group, true), t)}
+                </p>
+                {[group.franchise?.area, group.franchise?.city].filter(Boolean).length > 0 && (
+                    <p className="text-sm text-slate-400 truncate">{[group.franchise?.area, group.franchise?.city].filter(Boolean).join(', ')}</p>
                 )}
+            </div>
+            <StatusPill status={group.status} className="hidden lg:inline-flex text-base px-4 py-2" />
+        </div>
+    );
 
-                {step === 2 && (
-                    <motion.div
-                        key="step2"
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className="space-y-6"
-                    >
-                        <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.05)] space-y-8 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -ml-16 -mt-16 opacity-50" />
-                            
-                            <div className="flex items-center gap-4 relative">
-                                <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
-                                    <Scale size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">{weightSummary.hasWeighed ? 'Total Weight' : 'Total Quantity'}</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{weightSummary.hasWeighed ? 'Weight of the goods you are sending' : 'Number of items you are sending'}</p>
-                                </div>
-                            </div>
+    const backBar = (title) => (
+        <div className="lg:hidden flex items-center gap-3 mb-4">
+            <button type="button" onClick={mode === 'view' ? closeGroup : cancelEdit} className="w-11 h-11 -ml-2 flex items-center justify-center text-slate-900" aria-label="Back">
+                <ArrowLeft size={28} />
+            </button>
+            {title && <h1 className="flex-1 text-center text-2xl font-bold text-slate-900 pr-9">{title}</h1>}
+        </div>
+    );
 
-                            <div className="space-y-8 relative">
-                                {weightSummary.hasWeighed && (
-                                    <div className="p-10 bg-slate-50 rounded-[40px] border border-slate-100 text-center transition-all hover:bg-white hover:shadow-2xl hover:shadow-slate-100/50">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total weight (edit if your scale shows a different value)</label>
-                                        <div className="flex items-center justify-center gap-3 mt-6">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={Number.isFinite(actualWeight) ? actualWeight : ''}
-                                                onChange={(e) => {
-                                                    setIsWeightEdited(true);
-                                                    setActualWeight(e.target.value === '' ? NaN : parseFloat(e.target.value));
-                                                }}
-                                                step="0.01"
-                                                className="bg-transparent border-none p-0 outline-none text-6xl font-black text-slate-900 w-48 text-right tabular-nums focus:text-blue-600 transition-colors"
-                                            />
-                                            <span className="text-2xl font-black text-slate-300 uppercase mt-5">KG</span>
-                                        </div>
-                                        <div className="mt-8 flex flex-col items-center gap-3">
-                                            <p className="text-[11px] font-semibold text-slate-500">
-                                                Calculated from packed quantities: <span className="font-black text-slate-900">{weightSummary.kg} KG</span>
-                                            </p>
-                                            {isWeightEdited && actualWeight !== weightSummary.kg && (
-                                                <button
-                                                    onClick={() => { setIsWeightEdited(false); setActualWeight(weightSummary.kg); }}
-                                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
-                                                >
-                                                    <Activity size={14} />
-                                                    Use calculated weight
-                                                </button>
-                                            )}
-                                            {!isWeightValid && (
-                                                <p className="text-[11px] font-bold text-rose-600">Enter the total weight (more than 0 KG) to continue.</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
+    const tableHead = (cols) => (
+        <div className="grid items-center gap-2.5 lg:gap-3 px-2 lg:px-4 h-12 rounded-xl bg-slate-100 text-base font-semibold text-slate-600" style={{ gridTemplateColumns: cols }}>
+            <span>#</span>
+            <span>{t('Item')}</span>
+            <span>{t('Quantity')}</span>
+            <span className="hidden lg:block">{group && !group.readOnly ? t('Action') : ''}</span>
+        </div>
+    );
 
-                                {weightSummary.hasCounted && (
-                                    <div className="p-8 bg-slate-50 rounded-[40px] border border-slate-100 text-center">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-                                            {weightSummary.hasWeighed ? 'Items counted by number (no weight)' : 'Total quantity you are sending'}
-                                        </label>
-                                        <div className="mt-5 flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2">
-                                            {weightSummary.countTotals.map((c) => (
-                                                <div key={c.unit} className="flex items-baseline gap-2">
-                                                    <span className="text-6xl font-black text-slate-900 tabular-nums">{c.qty}</span>
-                                                    <span className="text-2xl font-black text-slate-300 uppercase">{c.unit}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <ul className="mt-6 space-y-1.5 max-w-sm mx-auto text-left">
-                                            {weightSummary.countLines.map((l, i) => (
-                                                <li key={i} className="flex items-center justify-between gap-3 text-[12px] font-semibold text-slate-600">
-                                                    <span className="truncate">{l.name}</span>
-                                                    <span className="font-black text-slate-900 tabular-nums shrink-0">{l.qty} {l.unit}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <p className="mt-4 text-[11px] font-semibold text-slate-400">Taken from the quantities you set in step 1. Go back to change them.</p>
-                                    </div>
-                                )}
+    const COLS = isDesktop ? '32px minmax(0,1fr) 172px 104px' : '20px minmax(0,1fr) auto';
 
-                                <div className="flex items-start gap-4 p-6 bg-slate-900 text-white rounded-[32px] shadow-2xl relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl -mr-12 -mt-12 transition-all group-hover:bg-emerald-500/30" />
-                                    <ShieldCheck size={24} className="text-emerald-400 shrink-0 mt-0.5" />
-                                    <div className="relative">
-                                        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-400 mb-1">Good to know</p>
-                                        <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-tight">This is printed on the dispatch invoice and stays fixed once you confirm.</p>
-                                    </div>
-                                </div>
-                            </div>
+    const itemsTable = group && (
+        <div>
+            {tableHead(COLS)}
+            <div className="divide-y divide-slate-100">
+                {group.rows.map((row, i) => {
+                    const editing = !group.readOnly && (mode === 'edit' || editRow === row.key);
+                    return (
+                        <div key={row.key} className="grid items-center gap-2.5 lg:gap-3 px-2 lg:px-4 py-3" style={{ gridTemplateColumns: COLS }}>
+                            <span className="text-lg text-slate-700">{i + 1}</span>
+                            <span className="flex items-center gap-3 min-w-0">
+                                <ItemThumb src={row.item.image} size={editing && !isDesktop ? 'md' : 'lg'} />
+                                <ItemName name={row.item.name} />
+                            </span>
+                            {editing ? (
+                                <Stepper value={qtyOf(row)} max={row.ordered} unit={row.item.unit}
+                                    onChange={(v) => setDraft((d) => ({ ...d, [row.key]: v }))} />
+                            ) : (
+                                <span className={cn('text-lg font-semibold whitespace-nowrap', qtyOf(row) === 0 ? 'text-red-600' : 'text-slate-900')}>
+                                    {qtyOf(row)} {t(unitLabel(row.item.unit))}
+                                    {qtyOf(row) < row.ordered && (
+                                        <span className="block text-xs font-medium text-slate-500">{t('Ordered')}: {row.ordered}</span>
+                                    )}
+                                </span>
+                            )}
+                            {isDesktop && !group.readOnly && (
+                                <span>
+                                    {mode !== 'edit' && (
+                                        <button type="button" onClick={() => setEditRow(editRow === row.key ? null : row.key)}
+                                            className={cn('inline-flex items-center gap-2 h-11 px-4 rounded-xl border text-base font-semibold',
+                                                editRow === row.key ? 'border-green-600 bg-green-50 text-green-800' : 'border-slate-200 bg-slate-50 text-slate-800')}>
+                                            {editRow === row.key ? <Check size={18} /> : <Pencil size={18} />}
+                                            {editRow === row.key ? t('Done') : t('Edit')}
+                                        </button>
+                                    )}
+                                </span>
+                            )}
                         </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
 
-                        <div className="flex gap-4">
-                            <button onClick={() => setStep(1)} className="flex-1 bg-white border border-slate-100 py-5 rounded-[28px] font-black text-[12px] uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 hover:border-slate-300 transition-all active:scale-95">Back</button>
-                            <button onClick={() => goToStep(3)} className="flex-[2] bg-slate-900 text-white py-5 rounded-[28px] font-black text-[12px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] active:scale-[0.98] transition-all group">
-                                Next: Review
-                                <Truck size={18} className="group-hover:translate-x-2 transition-transform" />
+    const totalsCard = group && (
+        <div className="flex items-center rounded-2xl bg-green-50 px-5 py-4 mt-3">
+            <Boxes size={34} className="text-green-700 shrink-0" />
+            <div className="flex-1 pl-4 border-r border-green-200">
+                <p className="text-sm text-slate-600">{t('Total quantity')}</p>
+                <p className="text-xl font-bold text-green-800">{loadText(groupLoad(group, true), t)}</p>
+            </div>
+            <div className="flex-1 pl-6">
+                <p className="text-sm text-slate-600">{t('Total items')}</p>
+                <p className="text-2xl font-bold text-green-800">{group.rows.length}</p>
+            </div>
+        </div>
+    );
+
+    const bigGreen = 'flex items-center justify-center gap-3 h-16 rounded-2xl bg-green-700 text-white text-lg font-bold shadow-lg shadow-green-700/20 disabled:opacity-50 active:scale-[0.99] transition-transform';
+
+    const viewMode = group && (
+        <>
+            {backBar(null)}
+            {franchiseHeader}
+
+            <div className="flex items-center justify-between gap-3 my-5 lg:my-4">
+                <span className="flex items-center gap-2 text-lg text-slate-800">
+                    <CalendarDays size={22} className="text-slate-600" /> {today}
+                </span>
+                {!group.readOnly && (
+                    <button type="button" onClick={() => { setEditRow(null); setMode('edit'); }}
+                        className="inline-flex items-center gap-2 h-12 px-4 rounded-xl border-2 border-slate-800 text-base font-bold text-slate-900">
+                        <Pencil size={18} /> {t('Edit List')}
+                    </button>
+                )}
+            </div>
+
+            {group.readOnly && (
+                <div className="flex items-center gap-4 rounded-2xl bg-green-50 px-5 py-4 mb-4">
+                    <Truck size={36} className="text-green-700 shrink-0" />
+                    <div>
+                        <p className="text-lg font-bold text-slate-900">{t('Goods are ready for delivery')}</p>
+                        <p className="text-base text-slate-600">{t('Waiting for the delivery partner to pick up.')}</p>
+                    </div>
+                </div>
+            )}
+
+            {itemsTable}
+            <div className="lg:hidden">{totalsCard}</div>
+
+            <div className="sticky bottom-[76px] lg:static mt-5 flex flex-col lg:flex-row gap-3 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent lg:bg-none pt-2">
+                {group.readOnly ? (
+                    <button type="button" onClick={markPickedUp} disabled={busy} className={cn(bigGreen, 'w-full lg:flex-1')}>
+                        {busy ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={24} />} {t('Picked up by delivery partner')}
+                    </button>
+                ) : (
+                    <>
+                        {isDesktop && (
+                            <button type="button" onClick={saveEdits} disabled={!dirty || busy}
+                                className="flex items-center justify-center gap-3 h-16 px-8 rounded-2xl border-2 border-green-200 bg-green-50 text-lg font-bold text-green-800 disabled:opacity-50 whitespace-nowrap lg:px-6">
+                                {busy ? <Loader2 className="animate-spin" /> : <Boxes size={24} />} {t('Save Changes')}
                             </button>
-                        </div>
-                    </motion.div>
+                        )}
+                        <button type="button" onClick={startCheck} disabled={busy} className={cn(bigGreen, 'w-full lg:flex-1')}>
+                            <Truck size={26} /> {t('Goods are ready for delivery')} <ChevronRight size={22} />
+                        </button>
+                    </>
                 )}
+            </div>
+        </>
+    );
 
-                {step === 3 && (
-                    <motion.div
-                        key="step3"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white p-10 rounded-[60px] border border-slate-100 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.1)] text-center space-y-10 relative overflow-hidden"
-                    >
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-50" />
-                        
-                        <div className="w-28 h-28 bg-slate-900 text-white rounded-[40px] flex items-center justify-center mx-auto rotate-12 shadow-[0_20px_40px_rgba(0,0,0,0.2)] group hover:rotate-0 transition-transform relative">
-                            <Truck size={56} className="animate-pulse" />
-                            <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-primary rounded-2xl flex items-center justify-center border-4 border-white">
-                                <ShieldCheck size={18} />
-                            </div>
-                        </div>
- 
-                        <div className="relative">
-                            <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase leading-tight">Confirm Dispatch?</h3>
-                            <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-4 px-6 leading-relaxed">These goods will be marked as ready for pickup for <span className="text-slate-900">{order.franchiseName}</span>. You can't change the items after confirming.</p>
-                        </div>
- 
-                        <div className="bg-slate-50/80 backdrop-blur-sm p-8 rounded-[40px] space-y-5 border border-slate-100 relative">
-                            <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
-                                <span className="text-slate-400">{weightSummary.hasWeighed ? (weightSummary.hasCounted ? 'Weight & Quantity' : 'Total Weight') : 'Total Quantity'}</span>
-                                <span className="text-slate-950 tabular-nums font-black text-sm">{dispatchTotalText}</span>
-                            </div>
-                            <div className="w-full h-px bg-slate-200/50" />
-                            <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-widest">
-                                <span className="text-slate-400">Invoice</span>
-                                <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                                    <ShieldCheck size={14} />
-                                    <span>AUTO-GENERATED</span>
-                                </div>
-                            </div>
-                        </div>
- 
-                        <div className="space-y-4 pt-4">
-                            <button
-                                onClick={handleFinalDispatch}
-                                disabled={isDispatching}
-                                className="w-full bg-primary text-white py-6 rounded-[32px] font-black text-[13px] uppercase tracking-[0.3em] flex items-center justify-center gap-4 shadow-[0_25px_60px_-15px_rgba(22,163,74,0.4)] active:scale-[0.98] transition-all disabled:opacity-50"
-                            >
-                                {isDispatching ? <Loader2 size={24} className="animate-spin" /> : <>Confirm Dispatch <ArrowRight size={22} /></>}
-                            </button>
-                            <button onClick={() => setStep(2)} className="w-full text-[10px] font-black text-slate-300 uppercase tracking-[0.4em] hover:text-slate-900 transition-colors py-2">Back to Weight</button>
-                        </div>
-                    </motion.div>
+    const editMode = group && (
+        <>
+            <div className="lg:hidden relative text-center mb-4">
+                <button type="button" onClick={cancelEdit} className="absolute left-0 top-1 w-11 h-11 -ml-2 flex items-center justify-center" aria-label="Back">
+                    <ArrowLeft size={28} />
+                </button>
+                <button type="button" onClick={cancelEdit} className="absolute right-0 top-1 w-11 h-11 -mr-2 flex items-center justify-center" aria-label="Close">
+                    <X size={26} />
+                </button>
+                <h1 className="text-2xl font-bold text-slate-900 pt-2">{t('Edit List')}</h1>
+                <p className="text-base text-slate-500 mt-1 flex items-center justify-center gap-1.5">
+                    <Store size={16} /> {franchiseNameOf(group.franchise)} <span className="mx-1">•</span> {today}
+                </p>
+            </div>
+            <div className="hidden lg:block mb-4">{franchiseHeader}</div>
+            <p className="text-sm text-slate-500 mb-3">{t('You can send less than ordered, but not more.')}</p>
+            {itemsTable}
+            <div className="sticky bottom-[76px] lg:static mt-5 grid grid-cols-2 gap-3 bg-slate-50 lg:bg-transparent pt-2">
+                <button type="button" onClick={cancelEdit} disabled={busy}
+                    className="flex items-center justify-center gap-2 h-16 rounded-2xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-800">
+                    <X size={22} /> {t('Cancel')}
+                </button>
+                <button type="button" onClick={saveEdits} disabled={busy} className={bigGreen}>
+                    {busy ? <Loader2 className="animate-spin" /> : null} {t('Save')}
+                </button>
+            </div>
+        </>
+    );
+
+    const checkMode = group && (
+        <>
+            {backBar(null)}
+            {franchiseHeader}
+            <div className="flex items-center gap-4 rounded-2xl bg-green-50 px-5 py-4 my-5">
+                <Truck size={40} className="text-green-700 shrink-0" />
+                <div>
+                    <p className="text-xl font-bold text-slate-900">{t('Goods are ready for delivery')}</p>
+                    <p className="text-base text-slate-600">{t('Tick what you are sending, then send this order for delivery.')}</p>
+                </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+                {group.rows.map((row) => {
+                    const q = qtyOf(row);
+                    const on = !!checked[row.key] && q > 0;
+                    return (
+                        <label key={row.key} className={cn('flex items-center gap-4 px-2 py-3', q === 0 && 'opacity-50')}>
+                            <input type="checkbox" className="sr-only" checked={on} disabled={q === 0}
+                                onChange={() => setChecked((c) => ({ ...c, [row.key]: !c[row.key] }))} />
+                            <span className={cn('w-8 h-8 rounded-lg flex items-center justify-center border-2 shrink-0',
+                                on ? 'bg-green-600 border-green-600 text-white' : 'border-slate-300 bg-white')}>
+                                {on && <Check size={20} strokeWidth={3} />}
+                            </span>
+                            <ItemThumb src={row.item.image} size="lg" />
+                            <ItemName name={row.item.name} className="flex-1" />
+                            <span className="text-lg font-semibold text-slate-900 whitespace-nowrap">{q} {t(unitLabel(row.item.unit))}</span>
+                        </label>
+                    );
+                })}
+            </div>
+            {group.rows.some((r) => !checked[r.key] && qtyOf(r) > 0) && (
+                <p className="text-sm text-amber-700 bg-amber-50 rounded-xl px-4 py-3 mt-3">
+                    {t('Unticked items will stay in your list to send later.')}
+                </p>
+            )}
+
+            <label className="block mt-5">
+                <span className="flex items-center gap-2 text-lg text-slate-700 mb-2">
+                    <StickyNote size={20} /> {t('Any note (optional)')}
+                </span>
+                <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder={t('e.g. Packing is complete')}
+                    className="w-full h-14 px-4 rounded-2xl border border-slate-200 bg-white text-lg outline-none focus:border-green-600" />
+            </label>
+
+            <div className="sticky bottom-[76px] lg:static mt-5 flex flex-col lg:flex-row gap-3 bg-slate-50 lg:bg-transparent pt-2">
+                {isDesktop && (
+                    <button type="button" onClick={() => setMode('view')} disabled={busy}
+                        className="h-16 px-8 rounded-2xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-800">
+                        {t('Back')}
+                    </button>
                 )}
+                <button type="button" onClick={sendForDelivery} disabled={busy || !sendRows.length} className={cn(bigGreen, 'w-full lg:flex-1')}>
+                    {busy ? <Loader2 className="animate-spin" /> : <Truck size={26} />} {t('Send for delivery')} <ChevronRight size={22} />
+                </button>
+            </div>
+        </>
+    );
 
-                {step === 4 && (
-                    <motion.div
-                        key="step4"
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="space-y-6 max-w-xl mx-auto"
-                    >
-                        <div className="flex justify-start px-2">
-                            <VendorBackBar fallbackPath="/vendor/orders" />
-                        </div>
-                        <div className="bg-white p-10 md:p-12 rounded-[60px] border border-slate-100 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] text-center space-y-12 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-60" />
-                            
-                            <div className="relative">
-                                <motion.div 
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1, rotate: 360 }}
-                                    transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                                    className="w-28 h-28 bg-emerald-600 text-white rounded-[40px] flex items-center justify-center mx-auto shadow-2xl shadow-emerald-200"
-                                >
-                                    <CheckCircle2 size={56} strokeWidth={2.5} />
-                                </motion.div>
+    const doneMode = sentSummary && (
+        <div className="text-center py-12 px-4">
+            <div className="w-24 h-24 rounded-full bg-green-100 text-green-700 flex items-center justify-center mx-auto mb-5">
+                <CheckCircle2 size={56} />
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900">{t('Sent for delivery')}</h2>
+            <p className="text-xl text-slate-700 mt-3">{sentSummary.name}</p>
+            <p className="text-lg text-slate-500 mt-1">{sentSummary.count} {t('items')} <span className="mx-1.5">•</span> {sentSummary.load}</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+                <button type="button" onClick={closeGroup} className={cn(bigGreen, 'px-8')}>
+                    <ArrowLeft size={22} /> {t('Back to list')}
+                </button>
+                <button type="button" onClick={() => navigate('/vendor/dispatch-history')}
+                    className="flex items-center justify-center gap-2 h-16 px-8 rounded-2xl border-2 border-slate-300 bg-white text-lg font-bold text-slate-800">
+                    <History size={22} /> {t('Dispatch History')}
+                </button>
+            </div>
+        </div>
+    );
+
+    const detail = mode === 'done' ? doneMode : !group ? null : mode === 'edit' ? editMode : mode === 'check' ? checkMode : viewMode;
+
+    /* ---------- page ---------- */
+
+    return (
+        <div className="pb-24 lg:pb-6">
+            <VendorDesktopHeader icon={Truck} title={t('Pack & Dispatch')} subtitle={t('Select a franchise, check items, pack and mark ready for delivery.')} />
+
+            {/* Mobile: list first, then one franchise at a time */}
+            <div className="lg:hidden">
+                {!selectedKey && mode !== 'done' ? (
+                    <>
+                        <VendorMobileTopBar />
+                        <h1 className="text-3xl font-bold text-slate-900">{t('Pack & Dispatch')}</h1>
+                        <p className="text-lg text-slate-600 mt-1">{t('Franchises you are preparing goods for today')}</p>
+                        <span className="inline-flex items-center gap-2 h-11 px-4 mt-4 mb-3 rounded-full bg-slate-100 text-base text-slate-800">
+                            <CalendarDays size={20} /> {today} ({t('Today')})
+                        </span>
+                        {groups.length > 4 && (
+                            <div className="flex items-center gap-3 h-12 px-4 rounded-xl border border-slate-200 bg-white mb-3">
+                                <Search size={20} className="text-slate-400" />
+                                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search franchise...')}
+                                    className="flex-1 bg-transparent outline-none text-base" />
                             </div>
- 
-                            <div className="space-y-4 relative">
-                                <div className="space-y-3">
-                                    <h3 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase leading-tight">Dispatch Confirmed</h3>
-                                    <p className="text-slate-400 text-[11px] font-black uppercase tracking-[0.4em] px-4">Reference: <span className="text-slate-900">KK-IX-{order.id?.slice(-8).toUpperCase()}</span></p>
-                                </div>
-                                {orders.find(o => o._id === order.id)?.invoice && (
-                                    <div className="bg-emerald-50/50 py-2.5 px-6 rounded-2xl inline-flex items-center gap-3 border border-emerald-100/50">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest">Invoice Generated: {orders.find(o => o._id === order.id).invoice.invoiceNumber}</p>
-                                    </div>
-                                )}
-                            </div>
- 
-                            <div className="bg-slate-50/80 backdrop-blur-sm p-8 rounded-[48px] border border-slate-100 text-left space-y-8 relative shadow-sm">
-                                <div className="space-y-5">
-                                    <div className="flex items-center justify-between border-b border-slate-200/50 pb-3">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Items Sent</p>
-                                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{order.items.filter(item => checkedItems[item.productId || item.name]).length} items</p>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {order.items.filter(item => checkedItems[item.productId || item.name]).map((item, idx) => (
-                                            <div key={idx} className="flex justify-between items-center group">
-                                                <span className="text-[12px] font-black text-slate-600 uppercase tracking-tight group-hover:text-slate-900 transition-colors">{item.name}</span>
-                                                <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
-                                                    <span className="text-slate-400 text-[10px] font-black">SENT</span>
-                                                    <span className="text-slate-900 tabular-nums font-black text-[11px]">{itemQuantities[item.productId || item.name] || 0} {item.unit}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
- 
-                                <div className="space-y-4 pt-2">
-                                    <div className="flex justify-between items-center border-t border-slate-200/50 pt-5">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{weightSummary.hasWeighed ? (weightSummary.hasCounted ? 'Weight & Quantity' : 'Total Weight') : 'Total Quantity'}</span>
-                                        <span className="text-2xl font-black text-slate-950 tabular-nums">{dispatchTotalText}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Franchise</span>
-                                        <span className="text-[13px] font-black text-slate-900 uppercase tracking-tight">{order.franchiseName}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center pt-2">
-                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Status</span>
-                                        <div className="flex items-center gap-2.5 px-4 py-1.5 bg-emerald-100/50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-200/50 shadow-sm shadow-emerald-100/20">
-                                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.8)]" />
-                                            In Transit
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
- 
-                            <div className="space-y-5 pt-4">
-                                <button
-                                    onClick={() => setIsDocOpen(true)}
-                                    className="w-full bg-slate-50 text-slate-700 py-6 rounded-[32px] font-black text-[13px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 border border-slate-100 hover:bg-white hover:shadow-[0_20px_40px_rgba(0,0,0,0.05)] transition-all active:scale-[0.98] group"
-                                >
-                                    <div className="w-10 h-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
-                                        <FileText size={20} />
-                                    </div>
-                                    View Digital Invoice
-                                </button>
-                                <div className="flex gap-4">
-                                    <button
-                                        onClick={() => navigate('/vendor/dashboard')}
-                                        className="flex-1 bg-slate-900 text-white py-6 rounded-[32px] font-black text-[12px] uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all hover:bg-slate-800"
-                                    >
-                                        Dashboard
-                                    </button>
-                                    <button
-                                        onClick={() => navigate('/vendor/dispatch-history')}
-                                        className="flex-1 bg-white border-2 border-slate-100 text-slate-900 py-6 rounded-[32px] font-black text-[12px] uppercase tracking-[0.2em] active:scale-[0.98] transition-all hover:border-slate-200"
-                                    >
-                                        History
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                        )}
+                        {listPanel}
+                    </>
+                ) : (
+                    detail
                 )}
-            </AnimatePresence>
+            </div>
 
-            <DocumentViewer
-                isOpen={isDocOpen}
-                onClose={() => setIsDocOpen(false)}
-                type="INVOICE"
-                data={{
-                    invoiceNumber: orders.find(o => o._id === order.id)?.invoice?.invoiceNumber || `KK-INV-${order.id?.slice(-6).toUpperCase()}`,
-                    invoiceDate: orders.find(o => o._id === order.id)?.invoice?.invoiceDate || new Date(),
-                    items: order.items
-                        .filter(i => checkedItems[i.productId || i.name])
-                        .map(i => ({
-                            ...i,
-                            quantity: itemQuantities[i.productId || i.name] || i.quantity
-                        })),
-                    totalWeight: weightSummary.hasWeighed ? actualWeight : 0,
-                    franchise: order.franchiseName,
-                    destNode: order.franchiseLocation,
-                    vendor: JSON.parse(localStorage.getItem('vendorData'))?.shopName || 'Kisaankart Partner'
-                }}
-            />
+            {/* Desktop: list on the left, the selected franchise on the right */}
+            <div className="hidden lg:grid grid-cols-[minmax(340px,400px)_minmax(0,1fr)] gap-5 items-start">
+                {listPanel}
+                <div className="bg-white rounded-3xl border border-slate-100 p-5 min-h-[400px]">
+                    {detail || (
+                        <div className="h-full flex flex-col items-center justify-center text-center py-24 text-slate-500">
+                            <Store size={48} className="text-slate-300 mb-3" />
+                            <p className="text-lg">{t('Select a franchise to see its items')}</p>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }

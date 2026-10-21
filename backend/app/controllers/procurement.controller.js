@@ -267,74 +267,69 @@ export const vendorUpdateStatus = async (req, res) => {
             return handleResponse(res, 400, "Only orders that are ready for pickup can be marked as picked up");
         }
 
+        // Can't send more than was ordered, or a negative amount
+        if (Array.isArray(itemUpdates)) {
+            for (const u of itemUpdates) {
+                const item = request.items.find(i => i.productId?.toString() === u.productId?.toString());
+                if (!item || u.dispatchedQuantity === undefined) continue;
+                const qty = Number(u.dispatchedQuantity);
+                if (!Number.isFinite(qty) || qty < 0) {
+                    return handleResponse(res, 400, `${item.name}: quantity cannot be negative.`);
+                }
+                if (qty > Number(item.quantity || 0)) {
+                    return handleResponse(res, 400, `${item.name}: only ${item.quantity} ${item.unit || ""} was ordered, so you cannot send ${qty}.`);
+                }
+            }
+        }
+
+        if (typeof req.body.note === 'string') {
+            request.dispatchNote = req.body.note.trim().slice(0, 500);
+        }
+
         // Update items if provided
         if (itemUpdates && Array.isArray(itemUpdates)) {
-            const residualItems = [];
-            const dispatchedItems = [];
+            const updateFor = (item) => itemUpdates.find(u => u.productId?.toString() === item.productId?.toString());
 
-            request.items.forEach(item => {
-                const update = itemUpdates.find(u => u.productId?.toString() === item.productId?.toString());
-                if (update) {
-                    const dispatchedQty = update.dispatchedQuantity || 0;
-                    const shortageToCover = Number(item.shortageQty || 0);
-                    const isCovered = dispatchedQty >= shortageToCover;
-
-                    const requestedQty = item.quantity;
-
+            if (status === 'ready_for_pickup') {
+                // Sending: this request keeps what goes now; whatever isn't sent moves to a new request for later
+                if (!request.items.some(item => Number(updateFor(item)?.dispatchedQuantity) > 0)) {
+                    return handleResponse(res, 400, "Select at least one item to send.");
+                }
+                const residualItems = [];
+                request.items.forEach(item => {
+                    const requestedQty = Number(item.quantity) || 0;
+                    const dispatchedQty = Number(updateFor(item)?.dispatchedQuantity) || 0;
                     if (dispatchedQty > 0) {
-                        // Item is being sent (fully or partially)
-                        const remainingQty = requestedQty - dispatchedQty;
-
-                        // Current request gets the dispatched part
                         item.quantity = dispatchedQty;
                         item.dispatchedQuantity = dispatchedQty;
-                        dispatchedItems.push(item);
-
-                        // If partial, remaining goes to residual
-                        if (remainingQty > 0) {
-                            residualItems.push({
-                                ...item.toObject(),
-                                _id: undefined, // Let mongoose generate a new ID for the sub-document
-                                quantity: remainingQty,
-                                dispatchedQuantity: 0
-                            });
+                        if (requestedQty - dispatchedQty > 0) {
+                            residualItems.push({ ...item.toObject(), _id: undefined, quantity: requestedQty - dispatchedQty, dispatchedQuantity: 0 });
                         }
                     } else {
-                        // Not sent at all
-                        residualItems.push({
-                            ...item.toObject(),
-                            _id: undefined,
-                            dispatchedQuantity: 0
-                        });
+                        // Not sent now (unticked, 0, or not in the list)
+                        item.dispatchedQuantity = 0;
+                        residualItems.push({ ...item.toObject(), _id: undefined, quantity: requestedQty, dispatchedQuantity: 0 });
                     }
-                } else {
-                    // Not in updates? Treat as residual
-                    residualItems.push({
-                        ...item.toObject(),
-                        _id: undefined,
-                        dispatchedQuantity: 0
-                    });
-                }
-            });
-
-            // If we have residual items and we are moving to ready_for_pickup, split the request
-            if (residualItems.length > 0 && status === 'ready_for_pickup') {
-                const newRequest = new ProcurementRequest({
-                    franchiseId: request.franchiseId,
-                    items: residualItems,
-                    status: 'approved', // Keep it approved so it shows in Active Dispatch
-                    assignedVendorId: request.assignedVendorId,
-                    adminId: request.adminId,
-                    orderId: request.orderId,
-                    totalEstimatedAmount: residualItems.reduce((acc, i) => acc + ((i.price || 0) * (i.quantity || 0)), 0),
-                    totalQuotedAmount: residualItems.reduce((acc, i) => acc + ((i.quotedPrice || i.price || 0) * (i.quantity || 0)), 0)
                 });
-                await newRequest.save();
+
+                if (residualItems.length > 0) {
+                    const newRequest = new ProcurementRequest({
+                        franchiseId: request.franchiseId,
+                        items: residualItems,
+                        status: 'approved', // Keep it approved so it shows in Active Dispatch
+                        assignedVendorId: request.assignedVendorId,
+                        adminId: request.adminId,
+                        orderId: request.orderId,
+                        totalEstimatedAmount: residualItems.reduce((acc, i) => acc + ((i.price || 0) * (i.quantity || 0)), 0),
+                        totalQuotedAmount: residualItems.reduce((acc, i) => acc + ((i.quotedPrice || i.price || 0) * (i.quantity || 0)), 0)
+                    });
+                    await newRequest.save();
+                }
 
                 // Lock current request items to only what was dispatched
                 request.items = request.items.filter(i => (i.dispatchedQuantity || 0) > 0);
-            } else if (status !== 'ready_for_pickup') {
-                // For non-dispatch statuses (like 'preparing'), just update quantities without splitting
+            } else {
+                // Packing (e.g. 'preparing'): remember the amounts to send; the ordered quantity stays as it is
                 itemUpdates.forEach(update => {
                     const item = request.items.find(i => i.productId?.toString() === update.productId?.toString());
                     if (item) {
@@ -355,6 +350,7 @@ export const vendorUpdateStatus = async (req, res) => {
 
         // If dispatching/marking as ready_for_pickup, generate a mock invoice
         if (status === 'ready_for_pickup') {
+            request.dispatchedAt = new Date();
             try {
                 const invCount = await ProcurementRequest.countDocuments({ "invoice.invoiceNumber": { $exists: true } });
                 request.invoice = {

@@ -137,6 +137,8 @@ const procurementRequestSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    dispatchNote: { type: String, default: "" }, // vendor's note when sending the goods
+    dispatchedAt: Date, // when the vendor marked the goods ready for delivery
     invoice: {
         invoiceNumber: String,
         invoiceDate: Date,

@@ -10,6 +10,8 @@ import admin from "../services/firebaseAdmin.js";
 import crypto from "crypto";
 import Category from "../models/category.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
+import { PORTAL_LANGUAGES } from "../utils/portalLanguages.js";
+import { translateTexts } from "../utils/translate.js";
 
 /* 🔐 TOKEN */
 const generateToken = (id) =>
@@ -274,6 +276,29 @@ export const verifyVendorOTP = async (req, res) => {
 export const getVendorMe = async (req, res) => {
     const vendor = await Vendor.findById(req.vendor._id).populate("servedCategories requestedCategories", "name image");
     return handleResponse(res, 200, "Vendor profile", vendor);
+};
+
+/* ================= LANGUAGE ================= */
+export const setVendorLanguage = async (req, res) => {
+    const { language } = req.body || {};
+    if (!PORTAL_LANGUAGES.includes(language)) return handleResponse(res, 400, "Unsupported language");
+    const vendor = await Vendor.findByIdAndUpdate(req.vendor._id, { preferredLanguage: language }, { returnDocument: "after" });
+    if (!vendor) return handleResponse(res, 404, "Vendor not found");
+    return handleResponse(res, 200, "Language saved", { preferredLanguage: vendor.preferredLanguage });
+};
+
+/* ================= TRANSLATE (portal text) ================= */
+export const translatePortalText = async (req, res) => {
+    try {
+        const { texts, lang } = req.body || {};
+        if (!Array.isArray(texts)) return handleResponse(res, 400, "texts must be a list");
+        if (!PORTAL_LANGUAGES.includes(lang)) return handleResponse(res, 400, "Unsupported language");
+        const translations = await translateTexts(texts, lang);
+        return handleResponse(res, 200, "Translated", { lang, translations });
+    } catch (error) {
+        console.error("Translate error:", error);
+        return handleResponse(res, 500, "Translation failed");
+    }
 };
 
 /* ================= UPDATE VENDOR ================= */

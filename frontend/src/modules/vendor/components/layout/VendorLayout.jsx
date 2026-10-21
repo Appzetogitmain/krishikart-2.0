@@ -6,8 +6,26 @@ import { Suspense, useState } from 'react';
 import NewAssignmentAlert from '../modals/NewAssignmentAlert';
 import VendorStatusAlert from '../modals/VendorStatusAlert';
 import { useVendorAuth } from '../../contexts/VendorAuthContext';
+import { VendorLanguageProvider, useVendorLanguage } from '../../contexts/VendorLanguageContext';
+import LanguagePickerModal from '../modals/LanguagePickerModal';
+
+// Inter has no Indian scripts; fall back to fonts every phone/PC already has for them
+const PORTAL_FONT = { fontFamily: "'Inter', 'Noto Sans', 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', system-ui, sans-serif" };
 
 export default function VendorLayout() {
+    return (
+        <VendorLanguageProvider>
+            <VendorLayoutInner />
+        </VendorLanguageProvider>
+    );
+}
+
+function FirstLoginLanguage() {
+    const { needsChoice } = useVendorLanguage();
+    return <LanguagePickerModal open={needsChoice} />;
+}
+
+function VendorLayoutInner() {
     const { 
         isAlertOpen, 
         setIsAlertOpen, 
@@ -70,14 +88,14 @@ export default function VendorLayout() {
     const hideNav = location.pathname.includes('/orders/');
 
     return (
-        <div className="flex min-h-screen bg-slate-50/50 text-slate-900 font-sans selection:bg-slate-900 selection:text-white">
+        <div className="flex min-h-screen bg-slate-50/50 text-slate-900 font-sans selection:bg-slate-900 selection:text-white" style={PORTAL_FONT}>
             {/* Desktop Sidebar (Only visible on lg screens) */}
             <div className="hidden lg:block lg:w-72 fixed inset-y-0 left-0 z-50">
                 <Sidebar />
             </div>
 
             <div className="flex-1 flex flex-col min-w-0 lg:ml-72 pb-20 lg:pb-10">
-                <main className="flex-1 overflow-x-hidden p-6 md:p-10 lg:p-12">
+                <main className="flex-1 overflow-x-hidden px-4 py-5 md:p-8 lg:p-8">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={location.pathname}
@@ -85,7 +103,7 @@ export default function VendorLayout() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -15 }}
                             transition={{ duration: 0.3, ease: "easeOut" }}
-                            className="h-full max-w-6xl mx-auto"
+                            className="h-full max-w-7xl mx-auto"
                         >
                             <Suspense fallback={
                                 <div className="h-full w-full flex items-center justify-center p-20">
@@ -107,6 +125,8 @@ export default function VendorLayout() {
                 onClose={() => setIsAlertOpen(false)}
                 data={newAssignmentData}
             />
+
+            <FirstLoginLanguage />
 
             <VendorStatusAlert 
                 isOpen={isStatusAlertOpen}

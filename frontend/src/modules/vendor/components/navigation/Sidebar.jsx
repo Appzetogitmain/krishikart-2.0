@@ -1,27 +1,27 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Sprout } from 'lucide-react';
+import { Leaf, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useVendorAuth } from '../../contexts/VendorAuthContext';
+import { useVendorLanguage } from '../../contexts/VendorLanguageContext';
 import { vendorNavItems, isVendorNavActive } from './vendorNavConfig';
 
 export default function Sidebar() {
     const { logout } = useVendorAuth();
+    const { t } = useVendorLanguage();
     const navigate = useNavigate();
     const location = useLocation();
 
     return (
-        <div className="h-full bg-white border-r border-slate-100 flex flex-col p-6">
-            <div className="flex items-center gap-3 px-2 mb-10">
-                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                    <Sprout size={24} />
-                </div>
+        <div className="h-full bg-white border-r border-slate-100 flex flex-col px-4 py-6">
+            <div className="flex items-center gap-3 px-3 mb-8">
+                <Leaf size={44} className="text-green-600 fill-green-600 shrink-0" strokeWidth={1.5} />
                 <div>
-                    <h2 className="text-lg font-black tracking-tight leading-none text-slate-900">Vendor Portal</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Fresh Marketplace</p>
+                    <h2 className="text-2xl font-bold tracking-tight leading-none text-slate-900">Vendor Portal</h2>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-[0.15em] mt-1.5">KisaanKart</p>
                 </div>
             </div>
 
-            <nav className="flex-1 space-y-2">
+            <nav className="flex-1 space-y-1.5 overflow-y-auto">
                 {vendorNavItems.map((item) => {
                     const isActive = isVendorNavActive(location.pathname, item.path);
                     return (
@@ -29,26 +29,26 @@ export default function Sidebar() {
                             key={item.id}
                             onClick={() => navigate(item.path)}
                             className={cn(
-                                "w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group",
+                                "w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-colors text-left",
                                 isActive
-                                    ? "bg-primary text-white shadow-lg shadow-primary/20"
-                                    : "text-slate-500 hover:bg-slate-50"
+                                    ? "bg-green-700 text-white shadow-md shadow-green-700/20"
+                                    : "text-slate-700 hover:bg-slate-50"
                             )}
                         >
-                            <item.icon size={20} className={cn("transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-400")} />
-                            <span className="text-sm font-black tracking-tight">{item.label}</span>
+                            <item.icon size={22} className={isActive ? "text-white" : "text-slate-500"} />
+                            <span className="text-base font-semibold">{t(item.label)}</span>
                         </button>
                     );
                 })}
             </nav>
 
-            <div className="pt-6 border-t border-slate-50">
+            <div className="pt-4 border-t border-slate-100">
                 <button
                     onClick={logout}
-                    className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all group"
+                    className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                 >
-                    <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
-                    <span className="text-sm font-black tracking-tight">Log Out</span>
+                    <LogOut size={22} />
+                    <span className="text-base font-semibold">{t('Log Out')}</span>
                 </button>
             </div>
         </div>

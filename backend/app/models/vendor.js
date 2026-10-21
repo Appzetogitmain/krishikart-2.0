@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { PORTAL_LANGUAGES } from "../utils/portalLanguages.js";
 
 const vendorSchema = new mongoose.Schema(
   {
@@ -112,6 +113,13 @@ const vendorSchema = new mongoose.Schema(
     fcmTokens: {
       type: [String],
       default: []
+    },
+
+    // Language the vendor picked on first login (null = not chosen yet)
+    preferredLanguage: {
+      type: String,
+      enum: [...PORTAL_LANGUAGES, null],
+      default: null,
     }
   },
   { timestamps: true }

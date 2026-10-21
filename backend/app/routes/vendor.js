@@ -5,6 +5,8 @@ import {
     sendVendorOTP,
     verifyVendorOTP,
     getVendorMe,
+    setVendorLanguage,
+    translatePortalText,
     updateVendorProfile,
     forgotVendorPassword,
     resetVendorPassword,
@@ -34,6 +36,8 @@ router.post("/login", loginVendor);
 router.post("/send-otp", sendVendorOTP);
 router.post("/verify-otp", verifyVendorOTP);
 router.get("/me", protectVendor, getVendorMe);
+router.put("/language", protectVendor, setVendorLanguage);
+router.post("/translate", protectVendor, translatePortalText);
 
 router.put("/update", protectVendor, upload.fields([
     { name: "profilePicture", maxCount: 1 },

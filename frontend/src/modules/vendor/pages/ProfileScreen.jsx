@@ -28,6 +28,8 @@ import DocumentUploadCard from '../components/DocumentUploadCard';
 import VendorBackBar from '../components/navigation/VendorBackBar';
 import api from '../../../lib/axios';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
+import { PORTAL_LANGUAGES, useVendorLanguage } from '../contexts/VendorLanguageContext';
+import LanguagePickerModal from '../components/modals/LanguagePickerModal';
 
 const SettingItem = ({ icon: Icon, label, value, color, onClick }) => (
     <button
@@ -393,6 +395,8 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+    const { lang } = useVendorLanguage();
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -566,6 +570,8 @@ export default function ProfileScreen() {
                     </div>
                     <SettingItem icon={User} label="Profile Details" value="Edit Personal Info" color="blue" onClick={() => setIsEditModalOpen(true)} />
                     <SettingItem icon={Shield} label="Security" value="Change Password" color="slate" onClick={() => setIsPasswordModalOpen(true)} />
+                    <SettingItem icon={Globe} label="Language / भाषा" value={PORTAL_LANGUAGES.find((l) => l.code === lang)?.name || 'English'} color="blue" onClick={() => setIsLanguageOpen(true)} />
+                    <LanguagePickerModal open={isLanguageOpen} closable onClose={() => setIsLanguageOpen(false)} />
                     <SettingItem icon={HelpCircle} label="Help & Support" value="FAQs & Help" color="purple" onClick={() => navigate('/vendor/help-support')} />
                     {/* <SettingItem icon={Globe} label="Marketplace Engine" value="Global Store Visibility" color="primary" onClick={() => navigate('/vendor/preview')} /> */}
                 </section>

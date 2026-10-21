@@ -1,0 +1,129 @@
+import translate from "google-translate-api-x";
+import TranslationCache from "../models/translationCache.js";
+import { PORTAL_LANGUAGES } from "./portalLanguages.js";
+
+const MAX_TEXTS = 200;
+const MAX_LENGTH = 500;
+const BATCH = 50;
+const memory = new Map(); // `${lang}\u0000${text}` -> translated
+
+const key = (lang, text) => `${lang}\u0000${text}`;
+
+// Portal words where Google's literal choice reads wrong to vendors (e.g. "Quotations" -> उद्धरण);
+// these use the everyday words from the client's screens. Everything else goes to Google.
+const GLOSSARY = {
+    hi: {
+        "Home": "होम",
+        "Dashboard": "डैशबोर्ड",
+        "Pack & Dispatch": "पैक & डिस्पैच",
+        "Quotes": "कोटेशन",
+        "My Quotations": "मेरे कोटेशन",
+        "Dispatch History": "डिस्पैच हिस्ट्री",
+        "More": "और",
+        "Pending": "तैयार करना है",
+        "Packing": "पैकिंग चालू",
+        "Ready": "तैयार है",
+        "Dispatched": "डिस्पैच हो चुका",
+        "Packed": "पैक किया गया",
+        "Cancelled": "रद्द हुआ",
+        "Received": "फ्रेंचाइज़ी को मिला",
+        "Edit List": "लिस्ट एडिट करें",
+        "Goods are ready for delivery": "सामान डिलीवरी के लिए तैयार है",
+        "Send for delivery": "डिलीवरी के लिए भेजें",
+        "Sent for delivery": "डिलीवरी के लिए भेज दिया",
+        "Franchises you are preparing goods for today": "आज जिन फ्रेंचाइज़ी के लिए माल तैयार करना है",
+        "All orders you have packed and dispatched.": "जितने भी ऑर्डर पैक और डिस्पैच हो चुके हैं।",
+        "items": "आइटम",
+        "Item": "सामान",
+        "Quantity": "मात्रा",
+        "Total items": "कुल आइटम",
+        "Total Items": "कुल आइटम",
+        "Total Orders": "कुल ऑर्डर",
+        "Total quantity": "कुल मात्रा",
+        "Total Quantity": "कुल मात्रा",
+        "Total Value": "कुल वैल्यू",
+        "Order Details": "ऑर्डर डिटेल",
+        "Order ID": "ऑर्डर ID",
+        "Franchise": "फ्रेंचाइज़",
+        "All Franchises": "सभी फ्रेंचाइज़",
+        "pcs": "पीस",
+        "Filter": "फ़िल्टर करें",
+        "Reset": "रीसेट",
+        "Apply": "लागू करें",
+        "Save": "सेव करें",
+        "Cancel": "कैंसल करें",
+        "Edit": "एडिट",
+        "Done": "हो गया",
+        "Save Changes": "बदलाव सेव करें",
+        "Ordered": "ऑर्डर था",
+        "Vendor": "वेंडर",
+        "Today's Orders": "आज के ऑर्डर",
+        "franchises": "फ्रेंचाइज़ी",
+        "Manage Orders": "ऑर्डर मैनेज करें",
+        "Inventory": "स्टॉक",
+        "Reports": "रिपोर्ट",
+        "Rejected Stock": "रिजेक्टेड स्टॉक",
+        "Returns": "रिटर्न",
+        "Account Settings": "अकाउंट सेटिंग",
+        "Help & Support": "मदद और सपोर्ट",
+        "Log Out": "लॉग आउट",
+        "Action": "एक्शन",
+        "View": "देखें",
+        "Different items": "अलग-अलग सामान",
+    },
+};
+
+// Kept as-is in every language: vendors read "KG" off the scale
+const KEEP = new Set(["KG"]);
+
+/**
+ * Translate English texts into `lang`. Returns { [text]: translated }.
+ * Cached in memory and in Mongo; if Google can't be reached the original text is returned (and not cached).
+ */
+export async function translateTexts(texts, lang) {
+    const unique = [...new Set((texts || [])
+        .filter((t) => typeof t === "string")
+        .map((t) => t.trim())
+        .filter((t) => t && t.length <= MAX_LENGTH))].slice(0, MAX_TEXTS);
+    const out = {};
+    if (lang === "en" || !PORTAL_LANGUAGES.includes(lang)) {
+        unique.forEach((t) => { out[t] = t; });
+        return out;
+    }
+
+    let missing = unique.filter((t) => {
+        const hit = KEEP.has(t) ? t : GLOSSARY[lang]?.[t] ?? memory.get(key(lang, t));
+        if (hit !== undefined) out[t] = hit;
+        return hit === undefined;
+    });
+
+    if (missing.length) {
+        const saved = await TranslationCache.find({ lang, text: { $in: missing } }).lean();
+        for (const s of saved) {
+            out[s.text] = s.translated;
+            memory.set(key(lang, s.text), s.translated);
+        }
+        missing = missing.filter((t) => out[t] === undefined);
+    }
+
+    for (let i = 0; i < missing.length; i += BATCH) {
+        const chunk = missing.slice(i, i + BATCH);
+        try {
+            const res = await translate(chunk, { from: "en", to: lang, forceBatch: true });
+            const docs = [];
+            chunk.forEach((t, j) => {
+                const translated = res[j]?.text;
+                if (!translated) return;
+                out[t] = translated;
+                memory.set(key(lang, t), translated);
+                docs.push({ updateOne: { filter: { lang, text: t }, update: { $set: { translated } }, upsert: true } });
+            });
+            if (docs.length) await TranslationCache.bulkWrite(docs, { ordered: false });
+        } catch (err) {
+            console.error("[translate] Google Translate failed:", err.message);
+        }
+    }
+
+    unique.forEach((t) => { if (out[t] === undefined) out[t] = t; });
+    return out;
+}
