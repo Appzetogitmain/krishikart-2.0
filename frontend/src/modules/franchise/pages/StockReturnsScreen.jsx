@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Undo2, Loader2, RefreshCw, Plus, Send, CheckCircle2, XCircle, Search, PackageX } from 'lucide-react';
+import { Undo2, Loader2, RefreshCw, Plus, Send, CheckCircle2, XCircle, Search, PackageX, Camera, X } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,8 @@ export default function StockReturnsScreen() {
     const [kind, setKind] = useState(null);
     const [sourceId, setSourceId] = useState('');
     const [qty, setQty] = useState({});
+    const [photos, setPhotos] = useState({}); // productId -> [photo urls] (proof of damage, up to 3)
+    const [uploading, setUploading] = useState(null);
     const [reason, setReason] = useState('');
     const [note, setNote] = useState('');
     const [stockSearch, setStockSearch] = useState('');
@@ -79,6 +81,7 @@ export default function StockReturnsScreen() {
         setKind(null);
         setSourceId('');
         setQty({});
+        setPhotos({});
         setReason('');
         setNote('');
         try {
@@ -129,7 +132,7 @@ export default function StockReturnsScreen() {
                 sourceReturnId: kind === 'from_return' ? sourceId : undefined,
                 reason,
                 note,
-                items: chosen.map(([productId, quantity]) => ({ productId, quantity: Number(quantity) })),
+                items: chosen.map(([productId, quantity]) => ({ productId, quantity: Number(quantity), photos: photos[productId] || [] })),
             });
             toast.success('Return sent to the admin for approval');
             setTab('mine');
@@ -138,6 +141,25 @@ export default function StockReturnsScreen() {
             toast.error(error.response?.data?.message || 'Could not create the return');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    // Photos of the damaged goods, so the vendor can see what is coming back
+    const addPhotos = async (productId, fileList) => {
+        const have = photos[productId] || [];
+        const files = [...(fileList || [])].slice(0, 3 - have.length);
+        if (!files.length) { toast.error('Up to 3 photos per item'); return; }
+        const form = new FormData();
+        files.forEach((f) => form.append('photos', f));
+        setUploading(productId);
+        try {
+            const res = await api.post('/stock-returns/franchise/photos', form, { headers: { 'Content-Type': null } });
+            const urls = res.data?.result?.urls || [];
+            setPhotos((p) => ({ ...p, [productId]: [...(p[productId] || []), ...urls].slice(0, 3) }));
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not upload the photo');
+        } finally {
+            setUploading(null);
         }
     };
 
@@ -173,9 +195,19 @@ export default function StockReturnsScreen() {
                 </div>
                 <div className="rounded-lg border border-slate-100 divide-y divide-slate-100">
                     {r.items.map((i) => (
-                        <div key={i._id || i.productId} className="px-3 py-2 flex justify-between text-xs">
-                            <span className="font-bold text-slate-800">{i.name} <span className="font-semibold text-slate-400">({i.condition})</span></span>
-                            <span className="font-black text-slate-900 tabular-nums">{i.quantity} {i.unit}</span>
+                        <div key={i._id || i.productId} className="px-3 py-2 text-xs space-y-1.5">
+                            <div className="flex justify-between gap-2">
+                                <span className="font-bold text-slate-800">{i.name} <span className="font-semibold text-slate-400">({i.condition})</span></span>
+                                <span className="font-black text-slate-900 tabular-nums">{i.quantity} {i.unit}</span>
+                            </div>
+                            {i.vendorDecision && (
+                                <p className={cn('font-bold', i.vendorDecision === 'rejected' ? 'text-rose-600' : 'text-emerald-600')}>
+                                    {i.vendorDecision === 'rejected' ? 'Vendor rejected' : Number(i.acceptedQuantity) < Number(i.quantity) ? `Vendor accepted ${i.acceptedQuantity} ${i.unit}` : 'Vendor accepted'}
+                                </p>
+                            )}
+                            {i.photos?.length > 0 && (
+                                <div className="flex gap-1.5">{i.photos.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" className="w-10 h-10 rounded object-cover border border-slate-200" /></a>)}</div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -311,7 +343,7 @@ export default function StockReturnsScreen() {
                                     )}
                                     <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-80 overflow-y-auto">
                                         {lines.map((l) => (
-                                            <div key={l.productId} className="px-3 py-2 flex items-center justify-between gap-3">
+                                            <div key={l.productId} className="px-3 py-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                                                 <div className="min-w-0">
                                                     <p className="text-xs font-bold text-slate-800 truncate">{l.name}</p>
                                                     <p className="text-[10px] text-slate-400">{l.hint} • rate {money(l.price)}/{l.unit}</p>
@@ -332,6 +364,24 @@ export default function StockReturnsScreen() {
                                                     />
                                                     <span className="text-[10px] text-slate-500 w-16">/ {l.max} {l.unit}</span>
                                                 </div>
+                                                {Number(qty[l.productId]) > 0 && (
+                                                    <div className="basis-full flex items-center gap-2 flex-wrap">
+                                                        {(photos[l.productId] || []).map((u) => (
+                                                            <span key={u} className="relative">
+                                                                <img src={u} alt="" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
+                                                                <button type="button" onClick={() => setPhotos((p) => ({ ...p, [l.productId]: p[l.productId].filter((x) => x !== u) }))}
+                                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center" aria-label="Remove photo"><X size={12} /></button>
+                                                            </span>
+                                                        ))}
+                                                        {(photos[l.productId] || []).length < 3 && (
+                                                            <label className={cn('h-12 px-3 rounded-lg border border-dashed border-slate-300 text-[11px] font-bold text-slate-600 flex items-center gap-1.5 cursor-pointer', uploading === l.productId && 'opacity-50 pointer-events-none')}>
+                                                                {uploading === l.productId ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />} Add photo
+                                                                <input type="file" accept="image/*" capture="environment" multiple className="hidden"
+                                                                    onChange={(e) => { addPhotos(l.productId, e.target.files); e.target.value = ''; }} />
+                                                            </label>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                         {lines.length === 0 && <p className="p-4 text-xs text-slate-400 text-center">No items</p>}

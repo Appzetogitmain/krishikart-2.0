@@ -148,15 +148,30 @@ export default function StockReturnsScreen() {
                             </div>
                             <div className="border border-slate-100 rounded-sm divide-y divide-slate-100">
                                 {r.items.map((i) => (
-                                    <div key={i._id} className="px-3 py-1.5 flex justify-between text-[11px]">
-                                        <span className="font-bold text-slate-700">{i.name} <span className="text-slate-400 font-semibold">({i.condition}{i.fromStock ? ', from stock' : ''})</span></span>
-                                        <span className="font-black tabular-nums">{i.quantity} {i.unit} × {money(i.price)}</span>
+                                    <div key={i._id} className="px-3 py-1.5 text-[11px] space-y-1">
+                                        <div className="flex justify-between gap-2">
+                                            <span className="font-bold text-slate-700">{i.name} <span className="text-slate-400 font-semibold">({i.condition}{i.fromStock ? ', from stock' : ''})</span></span>
+                                            <span className="font-black tabular-nums">{i.quantity} {i.unit} × {money(i.price)}</span>
+                                        </div>
+                                        {i.vendorDecision && (
+                                            <p className={i.vendorDecision === 'rejected' ? 'font-bold text-rose-600' : 'font-bold text-emerald-600'}>
+                                                {i.vendorDecision === 'rejected' ? 'Vendor rejected' : Number(i.acceptedQuantity) < Number(i.quantity) ? `Vendor accepted ${i.acceptedQuantity} of ${i.quantity} ${i.unit}` : 'Vendor accepted'}
+                                            </p>
+                                        )}
+                                        {i.photos?.length > 0 && (
+                                            <div className="flex gap-1.5">{i.photos.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" className="w-10 h-10 rounded-sm object-cover border border-slate-200" /></a>)}</div>
+                                        )}
                                     </div>
                                 ))}
                                 <div className="px-3 py-1.5 flex justify-between text-[11px] font-black bg-slate-50"><span>Value</span><span>{money(valueOf(r.items))}</span></div>
                             </div>
                             {r.status === 'requested' && suggestedName(r) && <p className="text-[11px] text-slate-500">Came from: <b>{suggestedName(r)}</b></p>}
                             {r.adminNote && <p className="text-[11px] text-slate-500">Admin note: {r.adminNote}</p>}
+                            {r.vendorOutcome && r.vendorOutcome !== 'accepted' && (
+                                <p className="text-[11px] font-bold text-rose-600">
+                                    {r.vendorOutcome === 'rejected' ? 'Vendor rejected this return' : 'Vendor accepted only part of this return'}{r.receivedNote ? ` — "${r.receivedNote}"` : ''}
+                                </p>
+                            )}
                             {r.creditNote?.number && <p className="text-[11px] font-bold text-emerald-600">Credit note {r.creditNote.number}: {money(r.creditNote.amount)} • received {when(r.receivedAt)}</p>}
                             {r.status === 'requested' && (
                                 <button onClick={() => openDecide(r)} className="w-full h-9 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-sm">Review & decide</button>

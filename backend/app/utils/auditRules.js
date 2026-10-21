@@ -532,6 +532,18 @@ export const AUDIT_RULES = [
         target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Returned stock received by vendor", severity: "important",
     },
     {
+        m: "PUT", p: "/stock-returns/vendor/:id/review", module: "Stock Returns", action: "return.vendor_review", kind: "update",
+        target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Vendor checked returned stock", severity: "important",
+        details: (ctx) => {
+            const items = Array.isArray(B(ctx, "items")) ? B(ctx, "items") : [];
+            return [
+                { label: "Accepted", value: String(items.filter((i) => i?.decision === "accepted").length) },
+                { label: "Rejected", value: String(items.filter((i) => i?.decision === "rejected").length) },
+                { label: "Note", value: short(B(ctx, "note")) },
+            ];
+        },
+    },
+    {
         m: "PUT", p: "/stock-returns/franchise/:id/cancel", module: "Stock Returns", action: "return.cancel", kind: "update",
         target: { type: "Stock return", id: (ctx) => P(ctx, "id"), snap: S.stockReturnSnap }, title: "Stock return cancelled by store",
     },

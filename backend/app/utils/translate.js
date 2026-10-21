@@ -96,6 +96,36 @@ const GLOSSARY = {
         "Go to Dispatch": "डिस्पैच पर जाएं",
         "Recent Quotations": "हाल के कोटेशन",
         "View All": "सभी देखें",
+        "Returns": "रिटर्न",
+        "Goods franchises are sending back to you": "फ्रेंचाइज़ी से वापस आने वाले सामान की सूची",
+        "Return details": "रिटर्न डिटेल",
+        "Reason for return": "वापसी का कारण",
+        "Item list": "आइटम सूची",
+        "Accept": "स्वीकार",
+        "Reject": "रिजेक्ट",
+        "Accepted": "स्वीकार किया",
+        "Partly accepted": "कुछ स्वीकार",
+        "Rejected": "रिजेक्ट हुआ",
+        "On the way": "रास्ते में",
+        "Accept selected": "चयनित रिटर्न स्वीकार करें",
+        "Item photo": "आइटम की फोटो",
+        "Accept this item": "यह आइटम स्वीकार करें",
+        "Reject this item": "यह आइटम रिजेक्ट करें",
+        "Quantity you accept": "स्वीकार की गई मात्रा",
+        "Review return": "रिटर्न समीक्षा करें",
+        "Selected items": "चयनित आइटम",
+        "Confirm return": "रिटर्न स्वीकार करें",
+        "Reject return": "रिटर्न रिजेक्ट करें",
+        "Return accepted": "रिटर्न स्वीकृत हो गया",
+        "Return partly accepted": "रिटर्न कुछ हद तक स्वीकृत",
+        "Return rejected": "रिटर्न रिजेक्ट हो गया",
+        "Credit note": "क्रेडिट नोट",
+        "OK": "ठीक है",
+        "Damaged": "खराब",
+        "Good": "अच्छा",
+        "Damaged / spoiled": "खराब / सड़ा हुआ",
+        "Note (optional)": "नोट (वैकल्पिक)",
+        "Damaged goods": "खराब सामान",
     },
 };
 
@@ -117,7 +147,19 @@ export async function translateTexts(texts, lang) {
         return out;
     }
 
+    // "3 KG", "5 KG + 20 bundle": translate only the words around KG, so KG stays as on the scale
+    const withKg = unique.filter((t) => t !== "KG" && /\bKG\b/.test(t));
+    if (withKg.length) {
+        const parts = withKg.map((t) => t.split(/(\bKG\b)/));
+        const words = parts.flat().filter((s) => s !== "KG" && /[A-Za-z]/.test(s)).map((s) => s.trim());
+        const done = words.length ? await translateTexts(words, lang) : {};
+        withKg.forEach((t, k) => {
+            out[t] = parts[k].map((s) => (s === "KG" || !/[A-Za-z]/.test(s) ? s : s.replace(s.trim(), done[s.trim()] ?? s.trim()))).join("");
+        });
+    }
+
     let missing = unique.filter((t) => {
+        if (out[t] !== undefined) return false; // done above (KG texts)
         const hit = KEEP.has(t) ? t : GLOSSARY[lang]?.[t] ?? memory.get(key(lang, t));
         if (hit !== undefined) out[t] = hit;
         return hit === undefined;

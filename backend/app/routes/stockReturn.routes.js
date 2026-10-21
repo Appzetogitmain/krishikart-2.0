@@ -8,6 +8,8 @@ import {
     motherReceiveStockReturn,
     getVendorStockReturns,
     vendorReceiveStockReturn,
+    vendorReviewStockReturn,
+    uploadReturnPhotos,
     adminListStockReturns,
     adminReturnDestinations,
     adminApproveStockReturn,
@@ -16,6 +18,7 @@ import {
 import { protectFranchise, requireFranchiseAccountVerified } from "../middlewares/franchise.auth.js";
 import { protectMasterAdmin, requireAnyPermission } from "../middlewares/masteradmin.auth.js";
 import { protectVendor } from "../middlewares/vendor.auth.js";
+import upload from "../middlewares/upload.js";
 
 const router = express.Router();
 const franchise = [protectFranchise, requireFranchiseAccountVerified];
@@ -25,6 +28,7 @@ const admin = [protectMasterAdmin, requireAnyPermission("assignment", "vendor-re
 router.get("/franchise/options", ...franchise, getReturnOptions);
 router.get("/franchise", ...franchise, getMyStockReturns);
 router.post("/franchise", ...franchise, createStockReturn);
+router.post("/franchise/photos", ...franchise, upload.array("photos", 3), uploadReturnPhotos);
 router.put("/franchise/:id/cancel", ...franchise, cancelStockReturn);
 router.put("/franchise/:id/sent", ...franchise, markStockReturnSent);
 router.put("/franchise/:id/received", ...franchise, motherReceiveStockReturn);
@@ -32,6 +36,7 @@ router.put("/franchise/:id/received", ...franchise, motherReceiveStockReturn);
 // Vendor
 router.get("/vendor", protectVendor, getVendorStockReturns);
 router.put("/vendor/:id/received", protectVendor, vendorReceiveStockReturn);
+router.put("/vendor/:id/review", protectVendor, vendorReviewStockReturn);
 
 // Admin
 router.get("/admin", ...admin, adminListStockReturns);

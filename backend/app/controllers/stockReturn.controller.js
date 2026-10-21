@@ -11,6 +11,7 @@ import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { takeStock, addStock, addStockWithCost } from "../utils/stock.js";
 import { scopeOf } from "../utils/adminScope.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 /*
  * Stock returns go back the way the goods came: franchise -> vendor, franchise -> mother franchise,
@@ -30,7 +31,10 @@ const isId = (id) => mongoose.Types.ObjectId.isValid(String(id || ""));
 const refOf = (id) => `#${String(id).slice(-6).toUpperCase()}`;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const label = (r) => REASONS[r] || r;
-const valueOf = (items) => round2((items || []).reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 0), 0));
+// Quantity the receiver took back: what the vendor accepted, or everything when nobody checked item by item
+const keptQty = (i) => (i.vendorDecision ? Number(i.acceptedQuantity) || 0 : Number(i.quantity) || 0);
+const valueOf = (items) => round2((items || []).reduce((s, i) => s + (Number(i.price) || 0) * keptQty(i), 0));
+const PHOTO_URL = /^https:\/\/res\.cloudinary\.com\//;
 const listOf = (items) => (items || []).map((i) => `${i.name} ${i.quantity} ${i.unit}`).join(", ");
 
 /** Damaged/rejected quantity of each item of a received delivery that can still be returned. */
@@ -188,7 +192,11 @@ export const createStockReturn = async (req, res) => {
         const { kind, procurementRequestId, sourceReturnId, reason } = req.body || {};
         const note = String(req.body?.note || "").trim().slice(0, 500);
         const asked = (Array.isArray(req.body?.items) ? req.body.items : [])
-            .map((i) => ({ productId: String(i.productId || ""), quantity: round2(i.quantity) }))
+            .map((i) => ({
+                productId: String(i.productId || ""),
+                quantity: round2(i.quantity),
+                photos: (Array.isArray(i.photos) ? i.photos : []).filter((u) => typeof u === "string" && PHOTO_URL.test(u)).slice(0, 3),
+            }))
             .filter((i) => isId(i.productId) && i.quantity > 0);
 
         if (!["from_delivery", "from_stock", "from_return"].includes(kind)) return handleResponse(res, 400, "Choose what you are returning");
@@ -256,6 +264,7 @@ export const createStockReturn = async (req, res) => {
             }
         }
 
+        items = items.map((i) => ({ ...i, photos: asked.find((a) => a.productId === String(i.productId))?.photos || [] }));
         const ret = await StockReturn.create({ ...doc, items, suggested });
         const msg = `${req.franchise.franchiseName} wants to return ${listOf(items)} (${label(reason)}).`;
         emitToAdmin("stock_return_update", { returnId: ret._id, status: "requested", message: msg });
@@ -348,27 +357,43 @@ export const markStockReturnSent = async (req, res) => {
 
 /** Receiver confirms: credit note raised; a mother franchise gets good items back into its stock. */
 const confirmReceived = async (ret, receiverName, note) => {
-    const count = await StockReturn.countDocuments({ "creditNote.number": { $regex: /^RTN-/ } });
-    const credit = {
-        number: `RTN-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`,
-        amount: valueOf(ret.items),
-        at: new Date(),
-    };
+    const rejected = ret.items.filter((i) => i.vendorDecision === "rejected");
+    const anyKept = ret.items.some((i) => keptQty(i) > 0);
+    // No credit note when the vendor rejected everything
+    let credit = { number: "", amount: 0, at: null };
+    if (anyKept) {
+        const count = await StockReturn.countDocuments({ "creditNote.number": { $regex: /^RTN-/ } });
+        credit = {
+            number: `RTN-${new Date().getFullYear()}-${String(count + 1).padStart(4, "0")}`,
+            amount: valueOf(ret.items),
+            at: new Date(),
+        };
+    }
     await StockReturn.updateOne({ _id: ret._id }, { $set: { creditNote: credit, receivedNote: note } });
     ret.creditNote = credit;
 
     if (ret.destination.type === "mother_franchise") {
         for (const i of ret.items) if (i.condition === "good") await addStockWithCost(ret.destination.franchiseId, i.productId, i.quantity, i.price);
     }
-    const body = `${receiverName} received your return ${refOf(ret._id)}. Credit note ${credit.number} for ₹${credit.amount}.`;
-    notifyFranchise(ret.fromFranchiseId, "Return received", body, { returnId: ret._id });
+
+    const parts = [];
+    if (anyKept) parts.push(`${receiverName} accepted your return ${refOf(ret._id)}. Credit note ${credit.number} for ₹${credit.amount}.`);
+    else parts.push(`${receiverName} rejected your return ${refOf(ret._id)}.`);
+    const short = ret.items.filter((i) => i.vendorDecision === "accepted" && keptQty(i) < Number(i.quantity));
+    if (short.length) parts.push(`Accepted less: ${short.map((i) => `${i.name} ${keptQty(i)} of ${i.quantity} ${i.unit}`).join(", ")}.`);
+    if (rejected.length) parts.push(`Rejected: ${listOf(rejected)}.`);
+    if (note && (rejected.length || short.length)) parts.push(`Vendor's note: ${note}`);
+    const body = parts.join(" ");
+    const title = !anyKept ? "Return rejected by vendor" : rejected.length || short.length ? "Return partly accepted" : "Return received";
+
+    notifyFranchise(ret.fromFranchiseId, title, body, { returnId: ret._id });
     emitToAdmin("stock_return_update", { returnId: ret._id, status: "received", message: body });
     await createAdminNotification({
         type: "stock_return_received",
-        title: "Return received",
+        title,
         message: body,
         link: "/masteradmin/stock-returns",
-        meta: { returnId: String(ret._id), creditNote: credit.number, amount: credit.amount },
+        meta: { returnId: String(ret._id), creditNote: credit.number, amount: credit.amount, outcome: ret.vendorOutcome || "accepted" },
     });
 };
 
@@ -398,6 +423,11 @@ export const getVendorStockReturns = async (req, res) => {
     try {
         const rows = await populateReturn(StockReturn.find({ "destination.vendorId": req.vendor._id, status: { $in: ["approved", "sent", "received"] } }))
             .sort({ createdAt: -1 }).limit(200).lean();
+        // Product pictures for the vendor's list (photos the franchise took are on each item)
+        const ids = [...new Set(rows.flatMap((r) => r.items.map((i) => String(i.productId))))].filter(isId);
+        const products = await Product.find({ _id: { $in: ids } }).select("primaryImage images").lean();
+        const imageOf = new Map(products.map((p) => [String(p._id), p.primaryImage || p.images?.[0] || ""]));
+        for (const r of rows) for (const i of r.items) i.image = imageOf.get(String(i.productId)) || "";
         return handleResponse(res, 200, "Returns", rows);
     } catch (err) {
         console.error("getVendorStockReturns error:", err);
@@ -421,6 +451,76 @@ export const vendorReceiveStockReturn = async (req, res) => {
     } catch (err) {
         console.error("vendorReceiveStockReturn error:", err);
         return handleResponse(res, 500, "Server error");
+    }
+};
+
+/**
+ * PUT /stock-returns/vendor/:id/review  { items: [{ itemId, decision: "accepted"|"rejected", quantity }], note }
+ * The vendor checks each item: accept it (all of it or less) or reject it. The credit note covers
+ * only what was accepted; rejections need a note so the admin and franchise know why.
+ */
+export const vendorReviewStockReturn = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isId(id)) return handleResponse(res, 404, "Return not found");
+        const note = String(req.body?.note || "").trim().slice(0, 300);
+        const decisions = Array.isArray(req.body?.items) ? req.body.items : [];
+
+        const ret = await StockReturn.findOne({ _id: id, "destination.type": "vendor", "destination.vendorId": req.vendor._id });
+        if (!ret) return handleResponse(res, 404, "Return not found");
+        if (ret.status === "approved") return handleResponse(res, 400, "The franchise has not handed these goods over yet");
+        if (ret.status !== "sent") return handleResponse(res, 400, "This return was already checked");
+
+        const items = ret.items.map((i) => i.toObject());
+        for (const item of items) {
+            const d = decisions.find((x) => String(x.itemId) === String(item._id));
+            if (!d || !["accepted", "rejected"].includes(d.decision)) {
+                return handleResponse(res, 400, `${item.name}: choose accept or reject`);
+            }
+            if (d.decision === "accepted") {
+                const q = d.quantity === undefined ? Number(item.quantity) : round2(d.quantity);
+                if (!(q > 0)) return handleResponse(res, 400, `${item.name}: enter how much you are accepting, or reject it`);
+                if (q > Number(item.quantity)) return handleResponse(res, 400, `${item.name}: only ${item.quantity} ${item.unit || ""} was returned`);
+                item.vendorDecision = "accepted";
+                item.acceptedQuantity = q;
+            } else {
+                item.vendorDecision = "rejected";
+                item.acceptedQuantity = 0;
+            }
+        }
+        const anyRejected = items.some((i) => i.vendorDecision === "rejected");
+        const allFull = items.every((i) => i.vendorDecision === "accepted" && i.acceptedQuantity === Number(i.quantity));
+        const noneKept = items.every((i) => !(i.acceptedQuantity > 0));
+        if ((anyRejected || !allFull) && !note) return handleResponse(res, 400, "Please write a short note on why you are rejecting or accepting less");
+        const outcome = allFull ? "accepted" : noneKept ? "rejected" : "partial";
+
+        // Only one check per return, even if the button is pressed twice
+        const updated = await StockReturn.findOneAndUpdate(
+            { _id: ret._id, status: "sent" },
+            { $set: { status: "received", receivedAt: new Date(), items, vendorOutcome: outcome } },
+            { returnDocument: "after" },
+        );
+        if (!updated) return handleResponse(res, 400, "This return was already checked");
+        await confirmReceived(updated, req.vendor.fullName || "The vendor", note);
+        const fresh = await populateReturn(StockReturn.findById(ret._id)).lean();
+        return handleResponse(res, 200, outcome === "rejected" ? "Return rejected" : "Return accepted", fresh);
+    } catch (err) {
+        console.error("vendorReviewStockReturn error:", err);
+        return handleResponse(res, 500, "Server error");
+    }
+};
+
+/** POST /stock-returns/franchise/photos (multipart "photos", up to 3 images) -> { urls } */
+export const uploadReturnPhotos = async (req, res) => {
+    try {
+        const files = (req.files || []).filter((f) => /^image\//.test(f.mimetype));
+        if (!files.length) return handleResponse(res, 400, "Add a photo (image file)");
+        if (files.some((f) => f.size > 8 * 1024 * 1024)) return handleResponse(res, 400, "Each photo must be under 8 MB");
+        const urls = await Promise.all(files.slice(0, 3).map((f) => uploadToCloudinary(f.buffer, "stock-returns")));
+        return handleResponse(res, 200, "Photos uploaded", { urls });
+    } catch (err) {
+        console.error("uploadReturnPhotos error:", err);
+        return handleResponse(res, 500, "Could not upload the photo");
     }
 };
 

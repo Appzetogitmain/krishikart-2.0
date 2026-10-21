@@ -31,8 +31,14 @@ const stockReturnSchema = new mongoose.Schema(
         price: { type: Number, default: 0 }, // rate the franchise paid; used for the credit note
         condition: { type: String, enum: ["good", "damaged"], default: "damaged" },
         fromStock: { type: Boolean, default: false }, // leaves the franchise's stock when sent
+        photos: { type: [String], default: [] }, // franchise's photos of the goods (up to 3)
+        // Vendor's check when the goods arrive: accept (all or part) or reject this item
+        vendorDecision: { type: String, enum: ["accepted", "rejected", null], default: null },
+        acceptedQuantity: { type: Number, default: null },
       },
     ],
+    // Summary of the vendor's check: everything accepted, part of it, or all rejected
+    vendorOutcome: { type: String, enum: ["accepted", "partial", "rejected", null], default: null },
 
     // Supplier the goods came from (suggested destination)
     suggested: {
