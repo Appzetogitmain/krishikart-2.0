@@ -68,20 +68,42 @@ function buildGroups(requests) {
     for (const g of byFranchise.values()) {
         const working = g.open.length ? g.open : g.ready;
         if (!working.length) continue;
-        const rows = [];
-        working.forEach((r) => r.items.forEach((item) => rows.push({
-            key: `${r._id}:${item.productId}`,
-            requestId: r._id,
-            item,
-            unit: item.unit, // loadOf() reads the unit off each row
-            ordered: Number(item.quantity) || 0,
-            saved: g.open.length ? savedQty(r, item) : (Number(item.dispatchedQuantity) || Number(item.quantity) || 0),
-        })));
+        // One row per product: the same item ordered by several hotels is packed as one total
+        const byProduct = new Map();
+        [...working].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)).forEach((r) => r.items.forEach((item) => {
+            const key = `${item.productId}|${String(item.unit || '').toLowerCase()}`;
+            if (!byProduct.has(key)) byProduct.set(key, { key, item, unit: item.unit, ordered: 0, saved: 0, parts: [] });
+            const row = byProduct.get(key);
+            const ordered = Number(item.quantity) || 0;
+            const saved = g.open.length ? savedQty(r, item) : (Number(item.dispatchedQuantity) || ordered);
+            row.parts.push({ requestId: r._id, productId: item.productId, ordered, saved });
+            row.ordered = Math.round((row.ordered + ordered) * 100) / 100;
+            row.saved = Math.round((row.saved + saved) * 100) / 100;
+            if (!row.item.image && item.image) row.item = { ...row.item, image: item.image };
+        }));
+        const rows = [...byProduct.values()];
         const status = !g.open.length ? 'ready' : g.open.some((r) => r.status === 'preparing') ? 'packing' : 'pending';
         groups.push({ ...g, rows, status, readOnly: !g.open.length });
     }
     const order = { packing: 0, pending: 1, ready: 2 };
     return groups.sort((a, b) => order[a.status] - order[b.status] || franchiseNameOf(a.franchise).localeCompare(franchiseNameOf(b.franchise)));
+}
+
+/** Spread a product's total over its orders, oldest first (none gets more than it ordered). */
+function shareOut(row, qty) {
+    let left = Math.max(0, Number(qty) || 0);
+    return row.parts.map((p) => {
+        const give = Math.min(p.ordered, Math.round(left * 100) / 100);
+        left -= give;
+        return { ...p, qty: give };
+    });
+}
+
+/** itemUpdates for one request from every row's quantity. */
+function updatesFor(rows, requestId, qtyOf) {
+    return rows.flatMap((row) => shareOut(row, qtyOf(row))
+        .filter((p) => p.requestId === requestId)
+        .map((p) => ({ productId: p.productId, dispatchedQuantity: p.qty })));
 }
 
 function ItemThumb({ src, size = 'md' }) {
@@ -181,7 +203,7 @@ export default function PackingScreen() {
     // Opened from an order link (?order=<requestId>): show that franchise
     useEffect(() => {
         if (!focusRequest || selectedKey) return;
-        const g = groups.find((x) => x.rows.some((r) => String(r.requestId) === focusRequest));
+        const g = groups.find((x) => x.rows.some((r) => r.parts.some((p) => String(p.requestId) === focusRequest)));
         if (g) setSelectedKey(g.key);
     }, [focusRequest, groups, selectedKey]);
 
@@ -218,8 +240,7 @@ export default function PackingScreen() {
         setBusy(true);
         try {
             for (const r of group.open) {
-                const itemUpdates = group.rows.filter((row) => row.requestId === r._id)
-                    .map((row) => ({ productId: row.item.productId, dispatchedQuantity: qtyOf(row) }));
+                const itemUpdates = updatesFor(group.rows, r._id, qtyOf);
                 await api.put(`/procurement/vendor/${r._id}/status`, { status: 'preparing', itemUpdates });
             }
             toast.success(t('List saved'));
@@ -251,14 +272,12 @@ export default function PackingScreen() {
         if (!group || !sendRows.length) return;
         setBusy(true);
         try {
+            const sendQty = (row) => (checked[row.key] ? qtyOf(row) : 0);
             for (const r of group.open) {
-                const rows = group.rows.filter((row) => row.requestId === r._id);
-                const itemUpdates = rows.map((row) => ({
-                    productId: row.item.productId,
-                    dispatchedQuantity: checked[row.key] ? qtyOf(row) : 0,
-                }));
+                const itemUpdates = updatesFor(group.rows, r._id, sendQty);
                 if (!itemUpdates.some((u) => u.dispatchedQuantity > 0)) continue;
-                const weight = loadOf(rows.filter((row) => checked[row.key]), (row) => qtyOf(row)).kg;
+                const units = Object.fromEntries(group.rows.flatMap((row) => row.parts.map((p) => [String(p.productId), row.unit])));
+                const weight = loadOf(itemUpdates.map((u) => ({ unit: units[String(u.productId)], qty: u.dispatchedQuantity })), (u) => u.qty).kg;
                 await api.put(`/procurement/vendor/${r._id}/status`, { status: 'ready_for_pickup', weight, itemUpdates, note });
             }
             setSentSummary({
@@ -320,7 +339,7 @@ export default function PackingScreen() {
                 <div className="text-center py-14 px-4">
                     <Truck size={44} className="mx-auto text-slate-300 mb-3" />
                     <p className="text-lg font-semibold text-slate-800">{t('Nothing to pack right now')}</p>
-                    <p className="text-base text-slate-500 mt-1">{t('Orders appear here after the admin approves your quotation.')}</p>
+                    <p className="text-base text-slate-500 mt-1">{t('Orders appear here when the admin gives you a franchise order.')}</p>
                 </div>
             )}
 
@@ -409,7 +428,10 @@ export default function PackingScreen() {
                             <span className="text-lg text-slate-700">{i + 1}</span>
                             <span className="flex items-center gap-3 min-w-0">
                                 <ItemThumb src={row.item.image} size={editing && !isDesktop ? 'md' : 'lg'} />
-                                <ItemName name={row.item.name} />
+                                <span className="min-w-0">
+                                    <ItemName name={row.item.name} />
+                                    {row.parts.length > 1 && <span className="block text-xs font-medium text-green-700">{t('Total of')} {row.parts.length} {t('orders')}</span>}
+                                </span>
                             </span>
                             {editing ? (
                                 <Stepper value={qtyOf(row)} max={row.ordered} unit={row.item.unit}

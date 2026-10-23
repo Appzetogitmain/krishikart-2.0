@@ -112,3 +112,52 @@ export const toggleProductAvailability = async (req, res) => {
         return handleResponse(res, 500, "Internal server error");
     }
 };
+
+/**
+ * @desc Set the vendor's own rates. Body: { rates: [{ productId, rate }] } (rate per product unit, 0 = no rate)
+ * @route PUT /vendor/inventory/rates
+ * @access Private (Vendor)
+ */
+export const updateVendorRates = async (req, res) => {
+    try {
+        const vendorId = req.vendor._id;
+        const rates = Array.isArray(req.body?.rates) ? req.body.rates : [];
+        if (!rates.length) {
+            return handleResponse(res, 400, "Enter at least one rate");
+        }
+        if (rates.length > 500) {
+            return handleResponse(res, 400, "Too many rates in one go");
+        }
+        for (const r of rates) {
+            const rate = Number(r?.rate);
+            if (!r?.productId || !Number.isFinite(rate) || rate < 0 || rate > 1000000) {
+                return handleResponse(res, 400, "Rate must be a number of 0 or more");
+            }
+        }
+
+        const inventory = await syncInventoryToAssignedProducts(vendorId);
+        if (!inventory) {
+            return handleResponse(res, 404, "Vendor not found");
+        }
+        const doc = await VendorInventory.findOne({ vendorId });
+        const now = new Date();
+        let changed = 0;
+        for (const r of rates) {
+            const row = doc.items.find((i) => String(i.productId) === String(r.productId));
+            if (!row) {
+                return handleResponse(res, 403, "This product is not assigned to your account");
+            }
+            const rate = Math.round(Number(r.rate) * 100) / 100;
+            if (Number(row.rate || 0) !== rate) {
+                row.rate = rate;
+                row.rateUpdatedAt = now;
+                changed += 1;
+            }
+        }
+        if (changed) await doc.save();
+        return handleResponse(res, 200, changed ? "Rates saved" : "No change", { changed });
+    } catch (err) {
+        console.error("Update Vendor Rates Error:", err);
+        return handleResponse(res, 500, "Internal server error");
+    }
+};

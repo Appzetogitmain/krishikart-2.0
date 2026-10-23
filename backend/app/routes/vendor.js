@@ -18,7 +18,8 @@ import {
 import {
     getVendorInventory,
     updateVendorStock,
-    toggleProductAvailability
+    toggleProductAvailability,
+    updateVendorRates
 } from "../controllers/vendor.inventory.controller.js";
 import { protectVendor } from "../middlewares/vendor.auth.js";
 import upload from "../middlewares/upload.js";
@@ -57,5 +58,6 @@ router.delete("/delete-account", protectVendor, deleteVendorAccount);
 router.get("/inventory", protectVendor, getVendorInventory);
 router.put("/inventory/stock", protectVendor, updateVendorStock);
 router.put("/inventory/toggle-availability", protectVendor, toggleProductAvailability);
+router.put("/inventory/rates", protectVendor, updateVendorRates);
 
 export default router;

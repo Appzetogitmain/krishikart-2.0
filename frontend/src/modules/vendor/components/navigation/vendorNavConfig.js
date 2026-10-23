@@ -1,6 +1,5 @@
 import {
     LayoutDashboard,
-    Package,
     ClipboardList,
     Truck,
     History,
@@ -8,7 +7,8 @@ import {
     HelpCircle,
     FileText,
     Archive,
-    Undo2
+    Undo2,
+    Tags
 } from 'lucide-react';
 
 /**
@@ -18,7 +18,7 @@ import {
 export const vendorNavItems = [
     { id: 'dashboard', path: '/vendor/dashboard', icon: LayoutDashboard, label: 'Dashboard', shortLabel: 'Home' },
     { id: 'orders', path: '/vendor/orders', icon: ClipboardList, label: 'Manage Orders', shortLabel: 'Orders' },
-    { id: 'inventory', path: '/vendor/inventory', icon: Package, label: 'Inventory', shortLabel: 'Stock' },
+    { id: 'inventory', path: '/vendor/inventory', icon: Tags, label: 'My Rates', shortLabel: 'Rates' },
     { id: 'dispatch', path: '/vendor/dispatch', icon: Truck, label: 'Pack & Dispatch', shortLabel: 'Pack & Dispatch' },
     { id: 'quotations', path: '/vendor/quotations', icon: FileText, label: 'My Quotations', shortLabel: 'Quotes' },
     { id: 'history', path: '/vendor/dispatch-history', icon: History, label: 'Dispatch History', shortLabel: 'Dispatch History' },

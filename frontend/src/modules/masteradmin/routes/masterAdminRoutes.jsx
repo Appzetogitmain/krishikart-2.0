@@ -22,6 +22,7 @@ const CityRates = lazy(() => import("../pages/CityRatesScreen"));
 const TeamManagement = lazy(() => import("../pages/TeamManagementScreen"));
 const Orders = lazy(() => import("../pages/OrdersScreen"));
 const VendorAssignment = lazy(() => import("../pages/VendorAssignmentScreen"));
+const ProcurementBoard = lazy(() => import("../pages/ProcurementBoardScreen"));
 const FranchiseManagement = lazy(
   () => import("../pages/FranchiseManagementScreen"),
 );
@@ -195,7 +196,8 @@ export const masterAdminRoutes = (
         <Route
           path="assignment"
           element={<PermissionRoute permissionKey="assignment" />}>
-          <Route index element={<VendorAssignment />} />
+          <Route index element={<ProcurementBoard />} />
+          <Route path="requests" element={<VendorAssignment />} />
         </Route>
         <Route
           path="stock-returns"

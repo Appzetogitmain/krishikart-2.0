@@ -21,6 +21,13 @@ const vendorInventorySchema = new mongoose.Schema({
                 type: Boolean,
                 default: true
             },
+            // The vendor's own selling rate (per product unit). The admin assigns franchise orders at this rate.
+            rate: {
+                type: Number,
+                default: 0,
+                min: 0,
+            },
+            rateUpdatedAt: Date,
             lastUpdated: {
                 type: Date,
                 default: Date.now,

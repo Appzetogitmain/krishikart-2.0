@@ -51,6 +51,8 @@ export async function syncInventoryToAssignedProducts(vendorId) {
                 productId: prev.productId,
                 currentStock: prev.currentStock ?? 0,
                 available: prev.available !== false,
+                rate: prev.rate || 0,
+                rateUpdatedAt: prev.rateUpdatedAt,
                 lastUpdated: prev.lastUpdated || new Date(),
             };
         }

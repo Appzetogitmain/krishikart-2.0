@@ -25,6 +25,8 @@ export const VendorInventoryProvider = ({ children }) => {
                         category: item.productId?.category?.name || 'General',
                         quantity: item.currentStock,
                         available: item.available,
+                        rate: Number(item.rate) || 0, // the vendor's own rate
+                        rateUpdatedAt: item.rateUpdatedAt || null,
                         price: item.productId?.price,
                         image: item.productId?.primaryImage || (item.productId?.images?.[0]) || '',
                         unit: item.productId?.unit || 'kg'
@@ -77,12 +79,25 @@ export const VendorInventoryProvider = ({ children }) => {
         }
     };
 
+    // rates: [{ productId, rate }]
+    const saveRates = async (rates) => {
+        try {
+            await api.put("/vendor/inventory/rates", { rates });
+            await fetchInventory();
+            return true;
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Could not save rates");
+            return false;
+        }
+    };
+
     return (
         <VendorInventoryContext.Provider value={{
             inventory,
             loading,
             updateStock,
             toggleAvailability,
+            saveRates,
             refreshInventory: fetchInventory
         }}>
             {children}

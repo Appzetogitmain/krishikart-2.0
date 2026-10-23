@@ -25,6 +25,7 @@ import {
     dispatchSupplyRequest,
     declineSupplyRequest,
 } from "../controllers/motherSupply.controller.js";
+import { getProcurementBoard, assignProductToVendor } from "../controllers/procurementBoard.controller.js";
 import {
     protectFranchise,
     requireFranchiseAccountVerified,
@@ -87,6 +88,8 @@ router.post("/vendor/:requestId/offer/decline", protectVendor, vendorDeclineOffe
 router.put("/vendor/:requestId/status", protectVendor, vendorUpdateStatus);
 
 // Admin Routes (Assign/View)
+router.get("/admin/board", protectMasterAdmin, requireAnyPermission("assignment"), getProcurementBoard);
+router.post("/admin/board/assign", protectMasterAdmin, requireAnyPermission("assignment"), assignProductToVendor);
 router.get("/admin/all", protectMasterAdmin, requireAnyPermission("assignment", "quotations"), getAllProcurementRequests);
 router.get("/admin/reports", protectMasterAdmin, requireAnyPermission("vendor-reports"), getVendorReports);
 router.get("/admin/rejected-stock", protectMasterAdmin, requireAnyPermission("vendor-reports"), getRejectedStockReport);

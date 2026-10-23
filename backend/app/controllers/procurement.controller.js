@@ -14,6 +14,7 @@ import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
 import { takeStockUpTo, addStock, addStockWithCost } from "../utils/stock.js";
 import { vendorReturnCredits } from "./stockReturn.controller.js";
+import { priceAtVendorRates, orderCustomers } from "./procurementBoard.controller.js";
 
 /* ---------- Rate bargaining between admin and vendor ---------- */
 
@@ -597,8 +598,14 @@ export const adminUpdateProcurementRequest = async (req, res) => {
                     totalQuotedAmount: (itemToSplit.quotedPrice || itemToSplit.price || 0) * itemToSplit.quantity,
                     status: status || 'assigned',
                     assignedVendorId: vendorId,
-                    adminId: adminId
+                    adminId: adminId,
+                    splitFrom: request.splitFrom || request._id,
+                    assignedAt: new Date()
                 });
+                // Priced from the vendor's own rate list: no quotation round when the vendor has a rate
+                if ((status || "assigned") === "assigned" && vendorId) {
+                    await priceAtVendorRates(newRequest, vendorId, { adminName: req.masteradmin?.fullName || "Admin" });
+                }
                 await newRequest.save();
                 requestToAssign = newRequest;
                 console.log(`Splitted request ${requestId}. New Request ${newRequest._id} Assigned Vendor: ${newRequest.assignedVendorId}`);
@@ -614,6 +621,11 @@ export const adminUpdateProcurementRequest = async (req, res) => {
             if (effectiveStatus) request.status = effectiveStatus;
             if (vendorId) request.assignedVendorId = vendorId;
             if (adminId) request.adminId = adminId;
+            // Priced from the vendor's own rate list: no quotation round when the vendor has a rate
+            if (status === "assigned" && vendorId) {
+                request.assignedAt = new Date();
+                await priceAtVendorRates(request, vendorId, { adminName: req.masteradmin?.fullName || "Admin" });
+            }
             if (status === "approved") {
                 request.awaitingFrom = sentOffer ? "vendor" : null;
                 recordOffer(request, {
@@ -802,6 +814,18 @@ export const getMyProcurementRequests = async (req, res) => {
                     }
                 }
             }
+        }
+
+        // Which vendor has each request, and which hotel/customer order it is for
+        const vendorIds = [...new Set(requests.map(r => r.assignedVendorId).filter(id => id && mongoose.Types.ObjectId.isValid(String(id))).map(String))];
+        const [vendorDocs, customers] = await Promise.all([
+            vendorIds.length ? Vendor.find({ _id: { $in: vendorIds } }).select("fullName").lean() : [],
+            orderCustomers(requests.map(r => r.orderId)),
+        ]);
+        const vendorName = Object.fromEntries(vendorDocs.map(v => [String(v._id), v.fullName || "Vendor"]));
+        for (const request of requests) {
+            request.vendorName = request.assignedVendorId ? vendorName[String(request.assignedVendorId)] || "" : "";
+            request.customerName = request.orderId ? customers[String(request.orderId)] || "" : "";
         }
 
         return handleResponse(res, 200, "My procurement requests fetched", requests);
@@ -1323,8 +1347,11 @@ export const createProcurementFromOrder = async (req, res) => {
             status: "assigned",
             assignedVendorId: vendorId,
             adminId: adminId,
-            orderId: orderId
+            orderId: orderId,
+            assignedAt: new Date()
         });
+        // Priced from the vendor's own rate list: no quotation round when the vendor has a rate
+        await priceAtVendorRates(procurementRequest, vendorId, { adminName: req.masteradmin?.fullName || "Admin" });
 
         await procurementRequest.save();
 

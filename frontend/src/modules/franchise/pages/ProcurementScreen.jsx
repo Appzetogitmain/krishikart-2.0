@@ -29,6 +29,63 @@ import { useProcurement } from '../contexts/ProcurementContext';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import { toast } from 'sonner';
 
+const STATUS_LABEL = {
+    pending_assignment: 'Waiting for vendor',
+    assigned: 'Vendor assigned',
+    quoted: 'Vendor assigned',
+    negotiating: 'Vendor assigned',
+    approved: 'Vendor packing soon',
+    preparing: 'Vendor packing',
+    ready_for_pickup: 'Ready for pickup',
+    picked_up: 'On the way',
+    completed: 'Received',
+    rejected: 'Rejected',
+};
+const OPEN_STATUSES = ['pending_assignment', 'assigned', 'quoted', 'negotiating', 'approved', 'preparing', 'ready_for_pickup', 'picked_up'];
+
+/** All open requests added up product-wise, with which vendor has how much (each request stays listed below). */
+function OpenOrdersSummary({ requests }) {
+    const rows = new Map();
+    for (const r of requests) {
+        if (!r || !OPEN_STATUSES.includes(r.status)) continue;
+        for (const item of r.items || []) {
+            const key = `${item.productId}|${String(item.unit || '').toLowerCase()}`;
+            if (!rows.has(key)) rows.set(key, { key, name: item.name, unit: item.unit, qty: 0, orders: 0, by: new Map() });
+            const row = rows.get(key);
+            const qty = Number(item.quantity) || 0;
+            row.qty += qty;
+            row.orders += 1;
+            const who = r.supplierFranchiseId?.franchiseName || r.vendorName || 'Not assigned yet';
+            row.by.set(who, (row.by.get(who) || 0) + qty);
+        }
+    }
+    const list = [...rows.values()].sort((a, b) => b.qty - a.qty);
+    if (!list.length) return null;
+    const fmt = (n) => Math.round(n * 100) / 100;
+    return (
+        <div className="bg-white border border-emerald-200 p-4 rounded-sm">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Open orders — product-wise total</h3>
+            <p className="text-[10px] font-bold text-slate-400 mb-3">Same products from all your open requests added up. Each request is listed below.</p>
+            <div className="grid grid-cols-12 gap-2 pb-2 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="col-span-4">Item</div>
+                <div className="col-span-3 text-right">Total</div>
+                <div className="col-span-5">Vendor</div>
+            </div>
+            <div className="divide-y divide-slate-100">
+                {list.map((row) => (
+                    <div key={row.key} className="grid grid-cols-12 gap-2 py-1.5 text-[11px] font-bold text-slate-700">
+                        <div className="col-span-4">{row.name}<span className="block text-[10px] text-slate-400 font-semibold">{row.orders} request{row.orders > 1 ? 's' : ''}</span></div>
+                        <div className="col-span-3 text-right font-black tabular-nums text-slate-900">{fmt(row.qty)} <span className="uppercase">{row.unit}</span></div>
+                        <div className="col-span-5 text-[10px] text-slate-500">
+                            {[...row.by.entries()].map(([who, q]) => <div key={who}>{who}: {fmt(q)}</div>)}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 export default function ProcurementScreen() {
     const navigate = useNavigate();
     const { franchise } = useFranchiseAuth();
@@ -379,7 +436,9 @@ export default function ProcurementScreen() {
                                     <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
                                 </div>
                             ) : procurementRequests && procurementRequests.length > 0 ? (
-                                procurementRequests.map((request, reqIdx) => {
+                                <>
+                                <OpenOrdersSummary requests={procurementRequests} />
+                                {procurementRequests.map((request, reqIdx) => {
                                     if (!request) return null;
                                     const reqId = request._id || request.id || '';
                                     return (
@@ -391,8 +450,12 @@ export default function ProcurementScreen() {
                                                 <p className="text-[10px] font-bold text-slate-500 mt-1">
                                                     {request.supplierFranchiseId?.franchiseName
                                                         ? `From mother franchise: ${request.supplierFranchiseId.franchiseName}`
-                                                        : request.source === 'mother_franchise' ? 'From a mother franchise (admin is choosing)' : 'From a vendor'}
+                                                        : request.source === 'mother_franchise' ? 'From a mother franchise (admin is choosing)'
+                                                            : request.vendorName ? `Vendor: ${request.vendorName}` : 'From a vendor (admin is choosing)'}
                                                 </p>
+                                                {request.customerName && (
+                                                    <p className="text-[10px] font-bold text-slate-500">For: {request.customerName}</p>
+                                                )}
                                                 {request.status === 'pending_assignment' && request.lastDecline?.reason && (
                                                     <p className="text-[10px] font-bold text-amber-600 mt-0.5">Previous supplier: {request.lastDecline.reason}</p>
                                                 )}
@@ -404,7 +467,7 @@ export default function ProcurementScreen() {
                                                         request.status === 'completed' ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
                                                             "bg-slate-50 text-slate-400 border-slate-200"
                                             )}>
-                                                {(request.status || 'unknown').replace(/_/g, ' ')}
+                                                {STATUS_LABEL[request.status] || (request.status || 'unknown').replace(/_/g, ' ')}
                                             </span>
                                         </div>
                                         <div className="bg-slate-50 border border-slate-100 rounded-sm p-3">
@@ -424,7 +487,8 @@ export default function ProcurementScreen() {
                                             </div>
                                         </div>
                                     </div>
-                                )})
+                                )})}
+                                </>
                             ) : (
                                 <div className="text-center py-20">
                                     <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">

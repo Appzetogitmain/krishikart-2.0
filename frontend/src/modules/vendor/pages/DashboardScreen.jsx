@@ -10,6 +10,7 @@ import {
     Loader2,
     Package,
     PackageCheck,
+    Tags,
     Truck,
     Undo2,
 } from 'lucide-react';
@@ -17,6 +18,7 @@ import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
 import { useVendorLanguage } from '../contexts/VendorLanguageContext';
+import { useVendorInventory } from '../contexts/VendorInventoryContext';
 import { VendorDesktopHeader, VendorMobileTopBar, formatDay, formatTime } from '../components/layout/VendorPageHeader';
 import { keepPage, peekPage } from '../lib/pageCache';
 import { franchiseNameOf, loadOf, loadText, rupees, shortId } from '../lib/packing';
@@ -32,6 +34,7 @@ export default function DashboardScreen() {
     const navigate = useNavigate();
     const { vendor, newAssignmentData, statusAlertData } = useVendorAuth();
     const { t, locale } = useVendorLanguage();
+    const { inventory } = useVendorInventory();
     const [requests, setRequests] = useState(() => peekPage('assignments') || []);
     const [stats, setStats] = useState(() => peekPage('dashboard')?.stats || null);
     const [returns, setReturns] = useState(() => peekPage('returns') || []);
@@ -70,9 +73,13 @@ export default function DashboardScreen() {
             ready: n(READY),
             done: n(DONE),
             returns: returns.filter((r) => r.status === 'sent').length,
+            // Franchises with goods to pack, and the total weight to pack
+            franchises: new Set(requests.filter((r) => TO_PACK.includes(r.status)).map((r) => String(r.franchiseId?._id || r.franchiseId))).size,
+            load: loadOf(requests.filter((r) => TO_PACK.includes(r.status)).flatMap((r) => r.items || []), (i) => i.quantity),
         };
     }, [requests, returns]);
 
+    const noRate = inventory.filter((i) => !(Number(i.rate) > 0)).length;
     const recent = useMemo(() => [...requests].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)).slice(0, 6), [requests]);
     const firstName = String(vendor?.fullName || '').trim().split(/\s+/)[0] || '';
 
@@ -81,18 +88,19 @@ export default function DashboardScreen() {
     }
 
     const tiles = [
-        { label: 'New requests', sub: 'Enter your rates', value: count.rates + count.reply, icon: ClipboardList, tone: 'bg-blue-50', iconTone: 'bg-blue-100 text-blue-700', go: '/vendor/orders' },
-        { label: 'To pack', sub: 'Pack & Dispatch', value: count.pack, icon: Package, tone: 'bg-amber-50', iconTone: 'bg-amber-100 text-amber-600', go: '/vendor/dispatch' },
+        { label: "Today's Orders", sub: 'franchises', value: count.franchises, icon: ClipboardList, tone: 'bg-blue-50', iconTone: 'bg-blue-100 text-blue-700', go: '/vendor/orders' },
+        { label: 'To pack', sub: 'Pack & Dispatch', value: loadText(count.load, t), icon: Package, tone: 'bg-amber-50', iconTone: 'bg-amber-100 text-amber-600', go: '/vendor/dispatch' },
         { label: 'Ready for pickup', sub: 'Waiting for delivery', value: count.ready, icon: PackageCheck, tone: 'bg-green-50', iconTone: 'bg-green-100 text-green-700', go: '/vendor/dispatch' },
         { label: 'Payment pending', sub: 'To be paid to you', value: rupees(stats?.pendingSettlement), icon: IndianRupee, tone: 'bg-violet-50', iconTone: 'bg-violet-100 text-violet-700', go: '/vendor/reports' },
     ];
 
     const actions = [
-        { label: 'New orders', hint: count.reply ? `${count.reply} admin offer to reply` : 'Enter rates for new requests', icon: ClipboardList, go: '/vendor/orders', badge: count.rates + count.reply },
+        { label: 'New orders', hint: 'Franchise-wise total of all orders', icon: ClipboardList, go: '/vendor/orders', badge: count.franchises },
         { label: 'Pack & Dispatch', hint: "Pack today's goods and send for delivery", icon: Truck, go: '/vendor/dispatch', badge: count.pack },
+        { label: 'My Rates', hint: noRate ? `${noRate} products have no rate` : 'Set your own rates', icon: Tags, go: '/vendor/inventory', badge: noRate },
         { label: 'Returns', hint: 'Check goods franchises sent back', icon: Undo2, go: '/vendor/returns', badge: count.returns },
         { label: 'Dispatch History', hint: 'Orders you have dispatched', icon: History, go: '/vendor/dispatch-history', badge: 0 },
-        { label: 'My Quotations', hint: 'Your rates and the final prices', icon: FileText, go: '/vendor/quotations', badge: 0 },
+        ...(count.rates + count.reply ? [{ label: 'Old requests waiting for your rate', hint: 'Enter rates for new requests', icon: FileText, go: '/vendor/orders', badge: count.rates + count.reply }] : []),
     ];
 
     const recentList = (

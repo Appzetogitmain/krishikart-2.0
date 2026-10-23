@@ -149,8 +149,20 @@ const procurementRequestSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Order',
         default: null
-    }
+    },
+    // The franchise request this one was split from when the admin gave its products to different vendors
+    splitFrom: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ProcurementRequest",
+        default: null,
+    },
+    assignedAt: { type: Date, default: null }, // when the current vendor was given this request
+    // "rate_list": priced from the vendor's own rates when the admin assigned it (no quotation round)
+    pricing: { type: String, enum: ["quote", "rate_list"], default: "quote" },
 }, { timestamps: true });
+
+procurementRequestSchema.index({ assignedVendorId: 1, status: 1 });
+procurementRequestSchema.index({ status: 1, createdAt: -1 });
 
 const ProcurementRequest = mongoose.model("ProcurementRequest", procurementRequestSchema);
 
