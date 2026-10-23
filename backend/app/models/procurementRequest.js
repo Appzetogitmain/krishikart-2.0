@@ -24,6 +24,11 @@ const procurementRequestSchema = new mongoose.Schema({
                 type: Number, // Original price quoted by vendor
                 default: 0
             },
+            // Item-wise rate negotiation on the vendor's daily quotation sheet (per unit):
+            // open = vendor hasn't sent a rate, sent = waiting for admin, countered = admin offered adminPrice, final = agreed
+            adminPrice: { type: Number, default: 0 },
+            rateStatus: { type: String, enum: ["open", "sent", "countered", "final"] },
+            finalAt: Date,
             image: String,
             dispatchedQuantity: {
                 type: Number,
@@ -158,7 +163,7 @@ const procurementRequestSchema = new mongoose.Schema({
     },
     assignedAt: { type: Date, default: null }, // when the current vendor was given this request
     // "rate_list": priced from the vendor's own rates when the admin assigned it (no quotation round)
-    pricing: { type: String, enum: ["quote", "rate_list"], default: "quote" },
+    pricing: { type: String, enum: ["quote", "rate_list", "negotiated"], default: "quote" },
 }, { timestamps: true });
 
 procurementRequestSchema.index({ assignedVendorId: 1, status: 1 });

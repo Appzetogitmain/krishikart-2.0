@@ -14,7 +14,8 @@ import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
 import { takeStockUpTo, addStock, addStockWithCost } from "../utils/stock.js";
 import { vendorReturnCredits } from "./stockReturn.controller.js";
-import { priceAtVendorRates, orderCustomers } from "./procurementBoard.controller.js";
+import { orderCustomers } from "./procurementBoard.controller.js";
+import { enterNegotiation } from "../utils/rateNegotiation.js";
 
 /* ---------- Rate bargaining between admin and vendor ---------- */
 
@@ -58,6 +59,9 @@ const adminChangedOffer = (request, editedItems) =>
         const qtyChanged = e.quantity !== undefined && Number(e.quantity) !== Number(reqItem.quantity || 0);
         return priceChanged || qtyChanged;
     });
+
+/** The old per-request quotation screens edit prices directly: let the request status speak for its items again. */
+const toLegacyRates = (request) => request.items.forEach((i) => { i.rateStatus = undefined; i.adminPrice = 0; i.finalAt = undefined; });
 
 const notifyVendor = (vendorId, { event = "procurement_update", requestId, status, title, body }) => {
     if (!vendorId) return;
@@ -212,6 +216,7 @@ export const vendorSubmitQuotation = async (req, res) => {
         request.status = 'quoted';
         request.awaitingFrom = 'admin';
         recordOffer(request, { by: "vendor", byName: req.vendor.fullName, action: isCounter ? "counter" : "quote", note: req.body?.note });
+        toLegacyRates(request);
         await request.save();
 
         await notifyAdmin(request, isCounter
@@ -602,9 +607,9 @@ export const adminUpdateProcurementRequest = async (req, res) => {
                     splitFrom: request.splitFrom || request._id,
                     assignedAt: new Date()
                 });
-                // Priced from the vendor's own rate list: no quotation round when the vendor has a rate
+                // Goes on the vendor's quotation sheet (or straight to packing if its rate was agreed today)
                 if ((status || "assigned") === "assigned" && vendorId) {
-                    await priceAtVendorRates(newRequest, vendorId, { adminName: req.masteradmin?.fullName || "Admin" });
+                    await enterNegotiation(newRequest, vendorId);
                 }
                 await newRequest.save();
                 requestToAssign = newRequest;
@@ -621,10 +626,9 @@ export const adminUpdateProcurementRequest = async (req, res) => {
             if (effectiveStatus) request.status = effectiveStatus;
             if (vendorId) request.assignedVendorId = vendorId;
             if (adminId) request.adminId = adminId;
-            // Priced from the vendor's own rate list: no quotation round when the vendor has a rate
+            // Goes on the vendor's quotation sheet (or straight to packing if its rates were agreed today)
             if (status === "assigned" && vendorId) {
-                request.assignedAt = new Date();
-                await priceAtVendorRates(request, vendorId, { adminName: req.masteradmin?.fullName || "Admin" });
+                await enterNegotiation(request, vendorId);
             }
             if (status === "approved") {
                 request.awaitingFrom = sentOffer ? "vendor" : null;
@@ -637,6 +641,7 @@ export const adminUpdateProcurementRequest = async (req, res) => {
             } else if (status === "rejected") {
                 request.awaitingFrom = null;
             }
+            if (status === "approved") toLegacyRates(request);
             await request.save();
             console.log(`Request ${requestId} saved. Assigned Vendor: ${request.assignedVendorId}`);
         }
@@ -1350,8 +1355,8 @@ export const createProcurementFromOrder = async (req, res) => {
             orderId: orderId,
             assignedAt: new Date()
         });
-        // Priced from the vendor's own rate list: no quotation round when the vendor has a rate
-        await priceAtVendorRates(procurementRequest, vendorId, { adminName: req.masteradmin?.fullName || "Admin" });
+        // Goes on the vendor's quotation sheet (or straight to packing if its rates were agreed today)
+        await enterNegotiation(procurementRequest, vendorId);
 
         await procurementRequest.save();
 
@@ -1716,6 +1721,7 @@ const respondToOffer = (decision) => async (req, res) => {
             request.awaitingFrom = null;
             total = recordOffer(request, { by: "vendor", byName: vendorName, action: "accept", note });
             request.totalQuotedAmount = total;
+            toLegacyRates(request);
             await request.save();
             await notifyAdmin(request, {
                 title: "Vendor Accepted Your Rate",
@@ -1743,6 +1749,7 @@ const respondToOffer = (decision) => async (req, res) => {
         total = recordOffer(request, { by: "vendor", byName: vendorName, action: "decline", note });
         request.totalQuotedAmount = total;
         request.vendorQuoteTotal = total;
+        toLegacyRates(request);
         await request.save();
         await notifyAdmin(request, {
             title: "Vendor Declined Your Rate",

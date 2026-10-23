@@ -8,15 +8,16 @@ import { cn } from '@/lib/utils';
 /*
  * Consolidated vendor assignment. Franchise orders (from any time of day) are added up product-wise;
  * the admin compares the vendors' own rates and gives a product — for all franchises or one — to a
- * vendor. That vendor packs it at their rate; no quotation round. Products not packed yet can be moved
- * to another vendor. Every hotel order behind a total stays visible.
+ * vendor. The product goes on that vendor's quotation page (Vendor Quotations) for item-wise rate
+ * negotiation, or straight to packing if the admin fixes the rate here. Products not packed yet can be
+ * moved to another vendor. Every hotel order behind a total stays visible.
  */
 
 const money = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const qtyText = (q, unit) => `${Number(q || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${String(unit || '').toUpperCase()}`;
 const when = (d) => (d && !isNaN(new Date(d).getTime()) ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 const STATUS = {
-    assigned: 'Old quote: waiting for rate', quoted: 'Old quote: rate sent', negotiating: 'Old quote: offer sent',
+    assigned: 'Waiting for vendor rate', quoted: 'Rate sent — reply on Quotations', negotiating: 'Admin offer sent',
     approved: 'To pack', preparing: 'Packing', ready_for_pickup: 'Ready for pickup', picked_up: 'On the way',
 };
 
@@ -52,19 +53,20 @@ function AssignPanel({ product, franchises, vendors, fixedFranchiseId, fromVendo
     const [franchiseId, setFranchiseId] = useState(fixedFranchiseId || '');
     const [vendorId, setVendorId] = useState(() => (options.find((v) => v.rate > 0 && v.available) || options[0])?.vendorId || '');
     const chosen = options.find((v) => v.vendorId === vendorId);
-    const [rate, setRate] = useState(chosen?.rate ? String(chosen.rate) : '');
+    const [rate, setRate] = useState(''); // empty: the vendor sends a rate on the quotation page
     const [busy, setBusy] = useState(false);
 
     const qty = franchiseId ? franchises.find((f) => f.franchiseId === franchiseId)?.qty || 0 : franchises.reduce((s, f) => s + f.qty, 0);
 
-    const pick = (v) => { setVendorId(v.vendorId); setRate(v.rate ? String(v.rate) : ''); };
+    const pick = (v) => setVendorId(v.vendorId);
 
     const submit = async () => {
         if (!vendorId) return toast.error('Choose a vendor');
-        if (!(Number(rate) > 0)) return toast.error('Enter the rate');
+        if (rate !== '' && !(Number(rate) > 0)) return toast.error('Rate must be more than 0');
         setBusy(true);
         try {
-            const body = { productId: product.productId, unit: product.unit, vendorId, rate: Number(rate) };
+            const body = { productId: product.productId, unit: product.unit, vendorId };
+            if (Number(rate) > 0) body.rate = Number(rate);
             if (franchiseId) body.franchiseId = franchiseId;
             if (fromVendorId) body.fromVendorId = fromVendorId;
             const res = await api.post('/procurement/admin/board/assign', body);
@@ -113,21 +115,26 @@ function AssignPanel({ product, franchises, vendors, fixedFranchiseId, fromVendo
                 {options.length > 0 && (
                     <div className="flex flex-wrap items-end gap-2 mt-3">
                         <label className="flex-1 min-w-[140px]">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rate ({product.unit || 'unit'})</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Fix rate now ({product.unit || 'unit'}) — optional</span>
                             <input type="number" min="0" step="any" value={rate} onChange={(e) => setRate(e.target.value)}
-                                className="mt-1 w-full h-9 px-2 border border-slate-200 rounded-sm text-sm font-black tabular-nums" />
+                                placeholder={chosen?.rate ? `Vendor's rate ₹${chosen.rate} — leave empty to negotiate` : 'Leave empty: vendor sends a rate'}
+                                className="mt-1 w-full h-9 px-2 border border-slate-200 rounded-sm text-sm font-black tabular-nums placeholder:font-normal placeholder:text-[11px]" />
                         </label>
-                        <div className="text-right text-[11px] text-slate-500 pb-2">
-                            {qtyText(qty, product.unit)} × {money(rate)} = <span className="font-black text-slate-900">{money(qty * (Number(rate) || 0))}</span>
-                        </div>
+                        {Number(rate) > 0 && (
+                            <div className="text-right text-[11px] text-slate-500 pb-2">
+                                {qtyText(qty, product.unit)} × {money(rate)} = <span className="font-black text-slate-900">{money(qty * (Number(rate) || 0))}</span>
+                            </div>
+                        )}
                         <button type="button" onClick={submit} disabled={busy || !vendorId}
                             className="w-full h-9 bg-slate-900 text-white rounded-sm text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50">
                             {busy ? <Loader2 size={14} className="animate-spin" /> : <UserCheck size={14} />}
-                            {fromVendorId ? 'Move' : 'Assign'} {qtyText(qty, product.unit)} to {chosen?.name || 'vendor'}
+                            {fromVendorId ? 'Move' : 'Assign'} {qtyText(qty, product.unit)} to {chosen?.name || 'vendor'}{Number(rate) > 0 ? ` at ${money(rate)} (final)` : ' for rates'}
                         </button>
-                        {chosen && Number(rate) > 0 && chosen.rate > 0 && Number(rate) !== chosen.rate && (
-                            <p className="w-full text-[10px] text-amber-700">Vendor's own rate is {money(chosen.rate)}; you are assigning at {money(rate)}.</p>
-                        )}
+                        <p className="w-full text-[10px] text-slate-500">
+                            {Number(rate) > 0
+                                ? 'Fixed rate: goes straight to the vendor\'s packing list.'
+                                : 'Goes on the vendor\'s quotation page to agree the rate (a rate already agreed today is used directly).'}
+                        </p>
                     </div>
                 )}
             </div>

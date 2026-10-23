@@ -53,6 +53,8 @@ export async function syncInventoryToAssignedProducts(vendorId) {
                 available: prev.available !== false,
                 rate: prev.rate || 0,
                 rateUpdatedAt: prev.rateUpdatedAt,
+                agreedRate: prev.agreedRate || 0,
+                agreedAt: prev.agreedAt,
                 lastUpdated: prev.lastUpdated || new Date(),
             };
         }

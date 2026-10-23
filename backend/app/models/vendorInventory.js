@@ -28,6 +28,9 @@ const vendorInventorySchema = new mongoose.Schema({
                 min: 0,
             },
             rateUpdatedAt: Date,
+            // Last rate agreed with the admin on the quotation page; new orders that day use it directly
+            agreedRate: { type: Number, default: 0 },
+            agreedAt: Date,
             lastUpdated: {
                 type: Date,
                 default: Date.now,

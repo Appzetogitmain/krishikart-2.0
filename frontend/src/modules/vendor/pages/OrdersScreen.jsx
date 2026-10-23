@@ -127,22 +127,17 @@ export default function OrdersScreen() {
         </div>
     );
 
+    // Items still waiting for a rate are agreed on the Quotation page
     const oldQuotesCard = oldQuotes.length > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4">
-            <p className="flex items-center gap-2 text-base font-bold text-amber-800"><AlertCircle size={20} /> {t('Old requests waiting for your rate')} ({oldQuotes.length})</p>
-            <div className="mt-2 space-y-1.5">
-                {oldQuotes.slice(0, 5).map((r) => (
-                    <button key={r._id} type="button" onClick={() => navigate(`/vendor/orders/${r._id}`)}
-                        className="w-full flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2.5 text-left">
-                        <span className="min-w-0">
-                            <span className="block text-base font-semibold text-slate-900 truncate" translate="no">{franchiseNameOf(r.franchiseId)}</span>
-                            <span className="block text-sm text-slate-500"><span translate="no">{shortId(r._id)}</span> • {(r.items || []).length} {t('items')}</span>
-                        </span>
-                        <span className="text-sm font-semibold text-amber-700 whitespace-nowrap">{t(statusOf(r.status).next || 'View')} →</span>
-                    </button>
-                ))}
-            </div>
-        </div>
+        <button type="button" onClick={() => navigate('/vendor/quotations')}
+            className="w-full flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4 text-left">
+            <AlertCircle size={24} className="text-amber-600 shrink-0" />
+            <span className="flex-1 min-w-0">
+                <span className="block text-base font-bold text-amber-800">{t('Orders waiting for rate agreement')} ({oldQuotes.length})</span>
+                <span className="block text-sm text-slate-600">{t('Send your rates on the Quotation page.')}</span>
+            </span>
+            <span className="text-sm font-bold text-amber-800 whitespace-nowrap">{t('Quotation')} →</span>
+        </button>
     );
 
     const empty = (

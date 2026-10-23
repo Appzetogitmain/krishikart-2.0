@@ -7,12 +7,14 @@ import Order from "../models/order.js";
 import handleResponse from "../utils/helper.js";
 import { emitToVendor, emitToAdmin, emitToFranchise } from "../lib/socket.js";
 import { sendNotificationToUser } from "../utils/pushNotificationHelper.js";
+import { OPEN_RATE, recompute, syncStatus, lineStateFor, applyLineState, freezeLegacy } from "../utils/rateNegotiation.js";
 
 /*
  * Consolidated procurement: franchises order whenever they need to, the admin sees every open
  * request merged product-wise (e.g. Potato 85 KG = Hotel A 20 + Hotel B 25 + ...), compares the
- * vendors' own rates and gives each product to a vendor. The request is priced from that vendor's
- * rate list and goes straight to packing — no quotation round. Each franchise request (and the
+ * vendors' own rates and gives each product to a vendor. The product then sits on that vendor's one
+ * quotation page for item-wise rate negotiation (utils/rateNegotiation.js) — or, if the admin fixes a
+ * rate or the rate was already agreed today, goes straight to packing. Each franchise request (and the
  * hotel order behind it) stays as its own record, so the totals can always be opened up again.
  */
 
@@ -37,44 +39,7 @@ export async function vendorRateMap(vendorId) {
     return map;
 }
 
-/**
- * Price a request from the vendor's rate list (overrides: { productId: rate } chosen by the admin).
- * When every item has a rate the request is approved straight away and true is returned; otherwise
- * nothing changes and false is returned (the old quotation flow is the fallback).
- */
-export async function priceAtVendorRates(request, vendorId, { adminName = "Admin", overrides = {}, rates } = {}) {
-    const map = rates || (await vendorRateMap(vendorId));
-    const priced = request.items.map((i) => {
-        const pid = String(i.productId);
-        const rate = Number(overrides[pid]) > 0 ? Number(overrides[pid]) : map[pid]?.rate || 0;
-        return rate;
-    });
-    if (!priced.every((r) => r > 0)) return false;
-    request.items.forEach((i, k) => {
-        i.quotedPrice = round2(priced[k]);
-        i.originalQuotedPrice = round2(priced[k]);
-    });
-    const total = round2(request.items.reduce((s, i) => s + (Number(i.quotedPrice) || 0) * (Number(i.quantity) || 0), 0));
-    request.totalQuotedAmount = total;
-    request.vendorQuoteTotal = total;
-    request.assignedVendorId = String(vendorId);
-    request.status = "approved";
-    request.awaitingFrom = null;
-    request.pricing = "rate_list";
-    request.assignedAt = new Date();
-    request.offers = request.offers || [];
-    request.offers.push({
-        by: "admin",
-        byName: adminName,
-        action: "accept",
-        items: request.items.map((i) => ({ productId: String(i.productId), name: i.name, unit: i.unit, quantity: Number(i.quantity) || 0, price: Number(i.quotedPrice) || 0 })),
-        total,
-        note: "Assigned at the vendor's rate list",
-    });
-    return true;
-}
-
-const productImages = async (ids) => {
+export const productImages = async (ids) => {
     const valid = [...new Set(ids)].filter((id) => mongoose.Types.ObjectId.isValid(id));
     if (!valid.length) return {};
     const rows = await Product.find({ _id: { $in: valid } }).select("primaryImage images name unit").lean();
@@ -271,10 +236,6 @@ const plainItem = (item) => {
     return o;
 };
 
-const recompute = (request) => {
-    request.totalEstimatedAmount = round2(request.items.reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 0), 0));
-    request.totalQuotedAmount = round2(request.items.reduce((s, i) => s + (Number(i.quotedPrice) || 0) * (Number(i.quantity) || 0), 0));
-};
 
 /**
  * POST /procurement/admin/board/assign
@@ -304,15 +265,14 @@ export const assignProductToVendor = async (req, res) => {
             return handleResponse(res, 400, `${vendor.fullName || "This vendor"} does not supply this product. Add it to the vendor's products first.`);
         }
 
-        const rates = await vendorRateMap(vendorId);
         const adminRate = Number(req.body.rate);
         if (req.body.rate !== undefined && req.body.rate !== null && req.body.rate !== "" && (!Number.isFinite(adminRate) || adminRate <= 0 || adminRate > 1000000)) {
             return handleResponse(res, 400, "Rate must be more than 0");
         }
-        const rate = round2(adminRate > 0 ? adminRate : rates[String(productId)]?.rate || 0);
-        if (!(rate > 0)) {
-            return handleResponse(res, 400, `${vendor.fullName || "This vendor"} has not set a rate for this product. Enter a rate to assign.`);
-        }
+        // A rate from the admin fixes it now; otherwise the item goes on the vendor's quotation sheet
+        // (or takes the rate already agreed with this vendor today)
+        const state = adminRate > 0 ? { rateStatus: "final", rate: round2(adminRate) } : await lineStateFor(vendorId, productId, unit);
+        const rate = state.rateStatus === "final" ? state.rate : 0;
 
         const query = { "items.productId": String(productId) };
         if (franchiseId) query.franchiseId = franchiseId;
@@ -339,26 +299,19 @@ export const assignProductToVendor = async (req, res) => {
             const oldVendor = request.assignedVendorId ? String(request.assignedVendorId) : null;
             moving.forEach((i) => { qty += Number(i.quantity) || 0; });
 
-            const priceItem = (i) => {
-                i.quotedPrice = rate;
-                i.originalQuotedPrice = rate;
-                i.dispatchedQuantity = 0;
-            };
+            const priceItem = (i) => applyLineState(i, state, now);
             const approve = (r) => {
                 r.assignedVendorId = String(vendorId);
-                r.status = "approved";
-                r.awaitingFrom = null;
-                r.pricing = "rate_list";
                 r.assignedAt = now;
                 r.adminId = req.masteradmin?._id || r.adminId;
-                recompute(r);
-                r.vendorQuoteTotal = r.totalQuotedAmount;
+                syncStatus(r);
+                if (rate) r.pricing = adminRate > 0 ? "rate_list" : "negotiated";
                 r.offers = r.offers || [];
                 r.offers.push({
-                    by: "admin", byName: adminName, action: "accept",
+                    by: "admin", byName: adminName, action: rate ? "accept" : "quote",
                     items: r.items.map((i) => ({ productId: String(i.productId), name: i.name, unit: i.unit, quantity: Number(i.quantity) || 0, price: Number(i.quotedPrice) || 0 })),
                     total: r.totalQuotedAmount,
-                    note: `${fromVendorId ? "Moved" : "Assigned"} to ${vendor.fullName || "vendor"} at ${money(rate)}/${moving[0].unit || "unit"}`,
+                    note: `${fromVendorId ? "Moved" : "Assigned"} to ${vendor.fullName || "vendor"}${rate ? ` at ${money(rate)}/${moving[0].unit || "unit"}` : " for rates"}`,
                 });
             };
 
@@ -372,12 +325,10 @@ export const assignProductToVendor = async (req, res) => {
             } else {
                 // Split: this product goes to the vendor in its own request; the rest stays where it was
                 const rootId = request.splitFrom || request._id;
+                request.items.forEach((i) => { if (OPEN_RATE.includes(request.status)) freezeLegacy(i, request); });
                 request.items = request.items.filter((i) => !matches(i));
-                recompute(request);
-                if (REASSIGNABLE.includes(request.status) && request.status !== "approved") {
-                    // An old quotation still running for the remaining items: its total changes too
-                    request.vendorQuoteTotal = request.totalQuotedAmount;
-                }
+                if (OPEN_RATE.includes(request.status)) syncStatus(request); // still negotiating its other items
+                else recompute(request);
                 await request.save();
                 const child = new ProcurementRequest({
                     franchiseId: request.franchiseId,
@@ -409,17 +360,26 @@ export const assignProductToVendor = async (req, res) => {
             return handleResponse(res, 404, fromVendorId ? "Nothing left to move — the vendor may have started packing it." : "No open orders for this product");
         }
 
+        if (adminRate > 0) {
+            // A rate the admin fixed counts as today's agreed rate for later orders of this product
+            await VendorInventory.updateOne({ vendorId, "items.productId": productId },
+                { $set: { "items.$.agreedRate": rate, "items.$.agreedAt": now } }).catch(() => {});
+        }
         const productName = given[0].items.find(matches)?.name || "Product";
         const unitName = given[0].items.find(matches)?.unit || "";
         emitToVendor(String(vendorId), "new_assignment", {
             requestId: given[0]._id,
-            status: "approved",
+            status: given[0].status,
             message: `New order: ${productName} ${round2(qty)} ${unitName}`.trim(),
         });
-        sendNotificationToUser(String(vendorId), {
+        sendNotificationToUser(String(vendorId), rate ? {
             title: "New order to pack",
-            body: `${productName} ${round2(qty)} ${unitName} at your rate ${money(rate)}. Open Pack & Dispatch.`,
+            body: `${productName} ${round2(qty)} ${unitName} at ${money(rate)}/${unitName || "unit"}. Open Pack & Dispatch.`,
             data: { type: "assignment", requestId: String(given[0]._id), link: "/vendor/dispatch" },
+        } : {
+            title: "Send your rate",
+            body: `${productName} ${round2(qty)} ${unitName} added to today's quotation list. Send your rate.`,
+            data: { type: "assignment", requestId: String(given[0]._id), link: "/vendor/quotations" },
         }, "vendor");
         for (const [oldVendor, refs] of takenFrom) {
             emitToVendor(oldVendor, "procurement_update", { status: "reassigned", message: `${productName} was moved to another vendor (${refs.join(", ")}).` });
@@ -433,7 +393,8 @@ export const assignProductToVendor = async (req, res) => {
         franchises.forEach((f) => emitToFranchise(f, "procurement_cycle_update", { status: "approved", message: `${productName}: vendor assigned.` }));
         emitToAdmin("procurement_status_updated", { status: "approved", message: `${productName} assigned to ${vendor.fullName}` });
 
-        return handleResponse(res, 200, `${productName} ${round2(qty)} ${unitName} given to ${vendor.fullName || "the vendor"} at ${money(rate)}`, {
+        return handleResponse(res, 200, `${productName} ${round2(qty)} ${unitName} given to ${vendor.fullName || "the vendor"}${rate ? ` at ${money(rate)}` : " — waiting for the vendor's rate"}`, {
+            status: given[0].status,
             requests: given.map((r) => String(r._id)),
             quantity: round2(qty),
             rate,

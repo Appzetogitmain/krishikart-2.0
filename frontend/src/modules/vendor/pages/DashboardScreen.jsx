@@ -9,8 +9,10 @@ import {
     LayoutDashboard,
     Loader2,
     Package,
-    PackageCheck,
     Tags,
+    Clock,
+    MessageSquare,
+    CheckCircle2,
     Truck,
     Undo2,
 } from 'lucide-react';
@@ -38,14 +40,17 @@ export default function DashboardScreen() {
     const [requests, setRequests] = useState(() => peekPage('assignments') || []);
     const [stats, setStats] = useState(() => peekPage('dashboard')?.stats || null);
     const [returns, setReturns] = useState(() => peekPage('returns') || []);
+    const [sheet, setSheet] = useState(() => peekPage('ratesheet') || null);
     const [loading, setLoading] = useState(!peekPage('assignments'));
 
     const load = useCallback(async () => {
-        const [reqs, st, rets] = await Promise.allSettled([
+        const [reqs, st, rets, rs] = await Promise.allSettled([
             api.get('/procurement/vendor/my-assignments'),
             api.get('/procurement/vendor/dashboard-stats'),
             api.get('/stock-returns/vendor'),
+            api.get('/procurement/vendor/rate-sheet'),
         ]);
+        if (rs.status === 'fulfilled') setSheet(keepPage('ratesheet', rs.value.data?.result || null));
         if (reqs.status === 'fulfilled') setRequests(keepPage('assignments', reqs.value.data?.results || []));
         if (st.status === 'fulfilled') {
             const s = st.value.data?.result || st.value.data?.results || null;
@@ -87,20 +92,32 @@ export default function DashboardScreen() {
         return <div className="flex items-center justify-center h-[60vh]"><Loader2 className="animate-spin text-green-700" size={40} /></div>;
     }
 
+    // Today's quotation list (rate negotiation with the admin)
+    const rs = sheet?.summary || {};
+    const negotiating = (rs.waitingAdmin || 0) + (rs.waitingVendor || 0);
     const tiles = [
-        { label: "Today's Orders", sub: 'franchises', value: count.franchises, icon: ClipboardList, tone: 'bg-blue-50', iconTone: 'bg-blue-100 text-blue-700', go: '/vendor/orders' },
-        { label: 'To pack', sub: 'Pack & Dispatch', value: loadText(count.load, t), icon: Package, tone: 'bg-amber-50', iconTone: 'bg-amber-100 text-amber-600', go: '/vendor/dispatch' },
-        { label: 'Ready for pickup', sub: 'Waiting for delivery', value: count.ready, icon: PackageCheck, tone: 'bg-green-50', iconTone: 'bg-green-100 text-green-700', go: '/vendor/dispatch' },
-        { label: 'Payment pending', sub: 'To be paid to you', value: rupees(stats?.pendingSettlement), icon: IndianRupee, tone: 'bg-violet-50', iconTone: 'bg-violet-100 text-violet-700', go: '/vendor/reports' },
+        { label: "Today's List", sub: `${rs.itemCount || 0} ${t('items')}`, value: `${(rs.totalKg || 0).toLocaleString('en-IN')} KG`, icon: Clock, tone: 'bg-blue-50', iconTone: 'bg-blue-600 text-white', go: '/vendor/quotations' },
+        { label: 'In negotiation', sub: t('items'), value: negotiating, icon: MessageSquare, tone: 'bg-amber-50', iconTone: 'bg-amber-400 text-white', go: '/vendor/quotations' },
+        { label: 'Finalized', sub: t('items'), value: rs.finalCount || 0, icon: CheckCircle2, tone: 'bg-green-50', iconTone: 'bg-green-600 text-white', go: '/vendor/quotations' },
+        { label: 'Send rates', sub: t(rs.open ? 'Still to send' : 'All sent'), value: rs.open || 0, icon: IndianRupee, tone: 'bg-rose-50', iconTone: 'bg-rose-500 text-white', go: '/vendor/quotations' },
     ];
+    const hero = rs.open
+        ? { title: "Send today's rates", text: 'The franchise total requirement list is ready.', button: `${t('Send Rates')} (${rs.open} ${t('items')})` }
+        : rs.waitingVendor
+            ? { title: 'Admin has replied', text: 'Accept the admin rate or send your new rate.', button: t('Open negotiation') }
+            : rs.waitingAdmin
+                ? { title: 'Waiting for admin', text: 'Admin will review and respond.', button: t('Open negotiation') }
+                : null;
+    const messages = (sheet?.messages || []).slice(-3).reverse();
 
     const actions = [
         { label: 'New orders', hint: 'Franchise-wise total of all orders', icon: ClipboardList, go: '/vendor/orders', badge: count.franchises },
-        { label: 'Pack & Dispatch', hint: "Pack today's goods and send for delivery", icon: Truck, go: '/vendor/dispatch', badge: count.pack },
+        { label: 'Pack & Dispatch', hint: count.pack ? `${loadText(count.load, t)} ${t('to pack')}` : "Pack today's goods and send for delivery", icon: Truck, go: '/vendor/dispatch', badge: count.pack },
+        { label: 'Payments', hint: `${rupees(stats?.pendingSettlement)} ${t('to be paid to you')}`, icon: IndianRupee, go: '/vendor/reports', badge: 0 },
         { label: 'My Rates', hint: noRate ? `${noRate} products have no rate` : 'Set your own rates', icon: Tags, go: '/vendor/inventory', badge: noRate },
         { label: 'Returns', hint: 'Check goods franchises sent back', icon: Undo2, go: '/vendor/returns', badge: count.returns },
         { label: 'Dispatch History', hint: 'Orders you have dispatched', icon: History, go: '/vendor/dispatch-history', badge: 0 },
-        ...(count.rates + count.reply ? [{ label: 'Old requests waiting for your rate', hint: 'Enter rates for new requests', icon: FileText, go: '/vendor/orders', badge: count.rates + count.reply }] : []),
+        ...(count.rates + count.reply ? [{ label: 'Old requests waiting for your rate', hint: 'Enter rates for new requests', icon: FileText, go: '/vendor/quotations', badge: count.rates + count.reply }] : []),
     ];
 
     const recentList = (
@@ -141,6 +158,22 @@ export default function DashboardScreen() {
                 <p className="text-lg text-slate-600 mt-1 mb-4">{t("Here is today's work.")}</p>
             </div>
 
+            {hero && (
+                <div className="rounded-3xl bg-green-50 border border-green-100 p-5 mb-4 flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div className="flex items-start gap-4 flex-1">
+                        <span className="w-16 h-16 rounded-2xl bg-white text-green-700 flex items-center justify-center shrink-0"><Package size={34} /></span>
+                        <span>
+                            <span className="block text-2xl font-bold text-slate-900">{t(hero.title)}</span>
+                            <span className="block text-base text-slate-600 mt-1">{t(hero.text)}</span>
+                        </span>
+                    </div>
+                    <button type="button" onClick={() => navigate('/vendor/quotations')}
+                        className="flex items-center justify-center gap-3 h-14 px-6 rounded-2xl bg-green-700 text-white text-lg font-bold">
+                        <FileText size={22} /> {hero.button} <ChevronRight size={22} />
+                    </button>
+                </div>
+            )}
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 {tiles.map((k) => (
                     <button key={k.label} type="button" onClick={() => navigate(k.go)}
@@ -174,6 +207,28 @@ export default function DashboardScreen() {
                     </div>
                 </div>
                 <div>
+                    {messages.length > 0 && (
+                        <div className="mb-5">
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="text-xl font-bold text-slate-900">{t('Recent Activity')}</h2>
+                                <button type="button" onClick={() => navigate('/vendor/quotations')} className="text-base font-semibold text-green-700">{t('View All')}</button>
+                            </div>
+                            <div className="rounded-2xl border border-slate-100 bg-white divide-y divide-slate-100">
+                                {messages.map((m) => (
+                                    <div key={m._id} className="flex gap-3 p-4">
+                                        <span className={cn('w-10 h-10 rounded-full text-white font-bold flex items-center justify-center shrink-0', m.by === 'admin' ? 'bg-blue-600' : 'bg-green-600')}>{m.by === 'admin' ? 'A' : 'V'}</span>
+                                        <span className="flex-1 min-w-0">
+                                            <span className="flex items-center justify-between gap-2">
+                                                <span className="text-base font-bold text-slate-900">{m.by === 'admin' ? t('Admin') : t('You')}</span>
+                                                <span className="text-sm text-slate-500">{formatTime(new Date(m.createdAt), locale)}</span>
+                                            </span>
+                                            <span className="block text-base text-slate-700 break-words" translate="no">{m.text}</span>
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     <div className="flex items-center justify-between mb-3">
                         <h2 className="text-xl font-bold text-slate-900">{t('Recent orders')}</h2>
                         <button type="button" onClick={() => navigate('/vendor/orders')} className="text-base font-semibold text-green-700">{t('View All')}</button>

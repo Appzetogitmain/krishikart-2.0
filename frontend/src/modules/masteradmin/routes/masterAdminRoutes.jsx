@@ -67,6 +67,7 @@ const SubcategoryManagement = lazy(
 const CouponManagement = lazy(() => import("../pages/CouponManagementScreen"));
 const LoyaltyControl = lazy(() => import("../pages/LoyaltyControlScreen"));
 const VendorQuotation = lazy(() => import("../pages/VendorQuotationScreen"));
+const RateNegotiation = lazy(() => import("../pages/RateNegotiationScreen"));
 const Returns = lazy(() => import("../pages/ReturnsScreen"));
 const FranchisePayouts = lazy(() => import("../pages/FranchisePayoutsScreen"));
 const CodRemittance = lazy(() => import("../pages/CodRemittanceScreen"));
@@ -296,7 +297,8 @@ export const masterAdminRoutes = (
         <Route
           path="quotations"
           element={<PermissionRoute permissionKey="quotations" />}>
-          <Route index element={<VendorQuotation />} />
+          <Route index element={<RateNegotiation />} />
+          <Route path="requests" element={<VendorQuotation />} />
         </Route>
         <Route
           path="vendor-reports"

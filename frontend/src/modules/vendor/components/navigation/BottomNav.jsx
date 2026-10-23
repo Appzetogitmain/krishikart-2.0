@@ -7,7 +7,7 @@ import { useVendorLanguage } from '../../contexts/VendorLanguageContext';
 import { vendorNavItems, isVendorNavActive } from './vendorNavConfig';
 
 // Day-to-day destinations stay on the bar; everything else is under "More"
-const BAR_IDS = ['dashboard', 'orders', 'dispatch', 'inventory'];
+const BAR_IDS = ['dashboard', 'quotations', 'dispatch', 'orders'];
 
 export default function BottomNav() {
     const navigate = useNavigate();

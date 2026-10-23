@@ -17,6 +17,7 @@ import VendorReportsHub from '../pages/VendorReportsHub';
 import RejectionReportsScreen from '../pages/RejectionReportsScreen';
 import ReturnsScreen from '../pages/ReturnsScreen';
 import QuotationHistoryScreen from '../pages/QuotationHistoryScreen';
+import RateSheetScreen from '../pages/RateSheetScreen';
 import SignupScreen from '../pages/SignupScreen';
 import TermsScreen from '../pages/TermsScreen'
 import HelpSupportScreen from '../pages/HelpSupportScreen'
@@ -53,7 +54,8 @@ export const vendorRoutes = (
             <Route path="preview" element={<MarketplacePreviewScreen />} />
             <Route path="orders" element={<OrdersScreen />} />
             <Route path="orders/:id" element={<OrderDetailScreen />} />
-            <Route path="quotations" element={<QuotationHistoryScreen />} />
+            <Route path="quotations" element={<RateSheetScreen />} />
+            <Route path="quotations/history" element={<QuotationHistoryScreen />} />
             <Route path="dispatch" element={<PackingScreen />} />
             <Route path="dispatch-history" element={<DispatchHistoryScreen />} />
             <Route path="alerts" element={<StockAlertsScreen />} />

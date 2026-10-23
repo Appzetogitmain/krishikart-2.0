@@ -20,7 +20,8 @@ export const vendorNavItems = [
     { id: 'orders', path: '/vendor/orders', icon: ClipboardList, label: 'Manage Orders', shortLabel: 'Orders' },
     { id: 'inventory', path: '/vendor/inventory', icon: Tags, label: 'My Rates', shortLabel: 'Rates' },
     { id: 'dispatch', path: '/vendor/dispatch', icon: Truck, label: 'Pack & Dispatch', shortLabel: 'Pack & Dispatch' },
-    { id: 'quotations', path: '/vendor/quotations', icon: FileText, label: 'My Quotations', shortLabel: 'Quotes' },
+    { id: 'quotations', path: '/vendor/quotations', icon: FileText, label: 'Quotation', shortLabel: 'Quotation' },
+    { id: 'pastquotes', path: '/vendor/quotations/history', icon: History, label: 'Past Quotations', shortLabel: 'Past Quotations' },
     { id: 'history', path: '/vendor/dispatch-history', icon: History, label: 'Dispatch History', shortLabel: 'Dispatch History' },
     { id: 'reports', path: '/vendor/reports', icon: FileText, label: 'Reports', shortLabel: 'Reports' },
     { id: 'rejections', path: '/vendor/rejected-stock', icon: Archive, label: 'Rejected Stock', shortLabel: 'Rejected' },
@@ -52,7 +53,7 @@ export function isVendorNavActive(pathname, itemPath) {
         return pathname === '/vendor/dispatch-history';
     }
     if (itemPath === '/vendor/quotations') {
-        return pathname.startsWith('/vendor/quotations');
+        return pathname === '/vendor/quotations';
     }
     if (itemPath === '/vendor/reports') {
         return pathname === '/vendor/reports';

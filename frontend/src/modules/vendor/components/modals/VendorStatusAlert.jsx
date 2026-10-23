@@ -146,8 +146,8 @@ const VendorStatusAlert = () => {
                                 type="button"
                                 onClick={() => {
                                     setIsStatusAlertOpen(false);
-                                    if (status === 'negotiating' && requestId) {
-                                        navigate(`/vendor/orders/${requestId}`);
+                                    if (['negotiating', 'assigned', 'quoted', 'rate_sheet'].includes(status)) {
+                                        navigate('/vendor/quotations');
                                     } else if (status === 'approved' || status === 'preparing') {
                                         navigate(`/vendor/dispatch`);
                                     } else {
