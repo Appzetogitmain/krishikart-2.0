@@ -17,6 +17,53 @@ import {
 import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import api from '@/lib/axios';
+
+/**
+ * How many packages the order goes out in (what the franchise hands to the delivery partner). Entered
+ * here, right where the partner is chosen; a partner can be assigned only once it is set.
+ */
+function PackageCountBox({ order, onSaved }) {
+    const saved = Number(order.numberOfPackages) || 0;
+    const max = Math.min(500, Math.max(1, Math.ceil((order.items || []).reduce((s, i) => s + (Number(i.quantity) || 0), 0))));
+    const [count, setCount] = useState(saved || '');
+    const [busy, setBusy] = useState(false);
+    useEffect(() => { setCount(saved || ''); }, [saved]);
+    const n = Number(count) || 0;
+    const set = (v) => setCount(Math.min(max, Math.max(1, Math.round(Number(v) || 0))) || '');
+    const save = async () => {
+        if (!(n >= 1)) return toast.error('Enter the number of packages');
+        setBusy(true);
+        try {
+            await api.put(`/orders/franchise/${order.id}/packages`, { numberOfPackages: n });
+            toast.success(`Saved: ${n} package${n > 1 ? 's' : ''}`);
+            if (onSaved) await onSaved();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not save the package count');
+        } finally {
+            setBusy(false);
+        }
+    };
+    return (
+        <div className={cn('w-full mt-3 rounded-sm border p-2.5 text-right', saved ? 'border-slate-200 bg-white' : 'border-amber-300 bg-amber-50')}>
+            <p className={cn('text-[10px] font-black uppercase tracking-widest mb-1.5', saved ? 'text-slate-400' : 'text-amber-700')}>
+                {saved ? 'Packages' : 'Enter packages to assign'}
+            </p>
+            <div className="flex items-center justify-end gap-1">
+                <button type="button" onClick={() => set(n - 1)} disabled={busy || n <= 1} className="w-8 h-9 border border-slate-200 bg-white rounded-sm font-black disabled:opacity-30" aria-label="Fewer packages">−</button>
+                <input type="number" inputMode="numeric" min="1" max={max} value={count} placeholder="0"
+                    onChange={(e) => setCount(e.target.value === '' ? '' : Math.min(max, Math.max(0, Math.round(Number(e.target.value) || 0))))}
+                    className="w-14 h-9 border border-slate-200 bg-white rounded-sm text-center text-sm font-black tabular-nums outline-none focus:border-slate-900 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                    aria-label="Number of packages" />
+                <button type="button" onClick={() => set(n + 1)} disabled={busy || n >= max} className="w-8 h-9 border border-slate-200 bg-white rounded-sm font-black disabled:opacity-30" aria-label="More packages">+</button>
+                <button type="button" onClick={save} disabled={busy || !(n >= 1) || n === saved}
+                    className="h-9 px-3 bg-slate-900 text-white rounded-sm text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+                    {busy ? '...' : n === saved && saved ? 'Saved' : 'Save'}
+                </button>
+            </div>
+        </div>
+    );
+}
 
 // Enterprise Components
 import MetricRow from '../components/cards/MetricRow';
@@ -356,6 +403,9 @@ export default function DeliveryScreen() {
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Order Value</p>
                                                 <p className="text-[14px] font-black text-slate-900 tabular-nums">₹{order.total.toLocaleString()}</p>
                                             </div>
+                                        )}
+                                        {order.status === 'packed' && activeTab === 'active' && (
+                                            <PackageCountBox order={order} onSaved={refreshOrders} />
                                         )}
                                     </div>
                                 </motion.div>
