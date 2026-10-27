@@ -10,6 +10,7 @@ import {
     Navigation,
     Banknote,
     QrCode,
+    CreditCard,
     ArrowLeft,
     X
 } from 'lucide-react';
@@ -41,6 +42,7 @@ const ActiveDelivery = () => {
     const [returnReason, setReturnReason] = useState('');
     // Split payment at the door: the cash part (the rest is paid on the franchise QR)
     const [splitCash, setSplitCash] = useState('');
+    const [splitCredit, setSplitCredit] = useState('');
 
     const order = useMemo(() => {
         if (!activeDeliveryId) return null;
@@ -85,8 +87,12 @@ const ActiveDelivery = () => {
 
     const codAmount = amountDue.toFixed(2);
     const franchiseName = order?.franchise || 'the franchise';
+    // KK Credit at the door: only when the customer has limit left and is not on hold or overdue
+    const credit = order?.customerCredit || { available: 0, usable: false };
+    const creditLeft = credit.usable ? Number(credit.available) || 0 : 0;
     const cashPart = Math.min(amountDue, Math.max(0, Number(splitCash) || 0));
-    const upiPart = r2(amountDue - cashPart);
+    const creditPart = r2(Math.min(amountDue - cashPart, creditLeft, Math.max(0, Number(splitCredit) || 0)));
+    const upiPart = r2(amountDue - cashPart - creditPart);
 
     // What to send with "Delivered": returned items, and how a COD order was paid
     const deliveryExtras = () => ({
@@ -94,8 +100,10 @@ const ActiveDelivery = () => {
             returnedItems: returnedLines.map((i) => ({ productId: pidOf(i), quantity: Number(returned[pidOf(i)]) })),
             returnReason: returnReason.trim(),
         } : {}),
-        ...(pendingMode === 'split' ? { payments: [{ mode: 'cash', amount: cashPart }, { mode: 'upi', amount: upiPart }] }
-            : pendingMode ? { collectionMode: pendingMode } : {}),
+        ...(pendingMode === 'split'
+            ? { payments: [{ mode: 'cash', amount: cashPart }, { mode: 'credit', amount: creditPart }, { mode: 'upi', amount: upiPart }].filter((p) => p.amount > 0) }
+            : pendingMode === 'credit' ? { payments: [{ mode: 'credit', amount: amountDue }] }
+                : pendingMode ? { collectionMode: pendingMode } : {}),
     });
 
     const finishDelivery = async (extra = {}) => {
@@ -118,6 +126,7 @@ const ActiveDelivery = () => {
         setReturned({});
         setReturnReason('');
         setSplitCash('');
+        setSplitCredit('');
         // COD: first ask how the customer is paying; then the customer's code
         setPaySheet(isCodOrder ? 'choose' : 'otp');
     };
@@ -470,7 +479,7 @@ const ActiveDelivery = () => {
                         {paySheet === 'split' && (
                             <div className="space-y-4">
                                 <div className="text-center">
-                                    <p className="text-xs font-bold uppercase text-slate-400">Part cash, part UPI</p>
+                                    <p className="text-xs font-bold uppercase text-slate-400">Pay in parts</p>
                                     <p className="text-3xl font-black text-slate-900">Rs {codAmount}</p>
                                 </div>
                                 <label className="block">
@@ -483,11 +492,27 @@ const ActiveDelivery = () => {
                                             className="flex-1 min-w-0 text-2xl font-black outline-none bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
                                     </span>
                                 </label>
+                                {credit.usable && (
+                                    <label className="block">
+                                        <span className="flex items-center justify-between text-xs font-bold text-slate-600">
+                                            <span>On KK Credit</span>
+                                            <span className="text-violet-700">Rs {creditLeft.toFixed(2)} left</span>
+                                        </span>
+                                        <span className="mt-1 flex items-center h-14 px-4 rounded-2xl border-2 border-slate-200 focus-within:border-violet-500">
+                                            <CreditCard className="w-5 h-5 text-violet-600 mr-2" />
+                                            <span className="text-slate-500 mr-1">Rs</span>
+                                            <input type="number" inputMode="decimal" min="0" step="any" value={splitCredit}
+                                                onChange={(e) => setSplitCredit(e.target.value)}
+                                                className="flex-1 min-w-0 text-2xl font-black outline-none bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                                        </span>
+                                        {Number(splitCredit) > creditPart && <span className="block text-[11px] font-semibold text-amber-700 mt-1">Only Rs {creditPart.toFixed(2)} can go on credit.</span>}
+                                    </label>
+                                )}
                                 <div className="flex items-center justify-between rounded-2xl bg-indigo-50 px-4 py-3">
-                                    <span className="flex items-center gap-2 text-sm font-bold text-indigo-800"><QrCode className="w-5 h-5" /> Customer pays on QR</span>
+                                    <span className="flex items-center gap-2 text-sm font-bold text-indigo-800"><QrCode className="w-5 h-5" /> Rest on UPI (QR)</span>
                                     <span className="text-xl font-black text-slate-900">Rs {upiPart.toFixed(2)}</span>
                                 </div>
-                                {order?.franchiseQrCode ? (
+                                {upiPart <= 0 ? null : order?.franchiseQrCode ? (
                                     <div className="mx-auto w-56 max-w-full bg-white border border-slate-200 rounded-2xl p-3">
                                         <img src={order.franchiseQrCode} alt={`${franchiseName} payment QR`} className="w-full h-auto rounded-lg" />
                                     </div>
@@ -498,10 +523,10 @@ const ActiveDelivery = () => {
                                 )}
                                 <button
                                     onClick={() => goToCode('split')}
-                                    disabled={isUpdating || !order?.franchiseQrCode || !(cashPart > 0) || !(upiPart > 0)}
+                                    disabled={isUpdating || (upiPart > 0 && !order?.franchiseQrCode) || [cashPart, creditPart, upiPart].filter((n) => n > 0).length < 2}
                                     className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
                                 >
-                                    Cash Rs {cashPart.toFixed(2)} + UPI Rs {upiPart.toFixed(2)} received - Next
+                                    {[cashPart > 0 && `Cash Rs ${cashPart.toFixed(2)}`, creditPart > 0 && `Credit Rs ${creditPart.toFixed(2)}`, upiPart > 0 && `UPI Rs ${upiPart.toFixed(2)}`].filter(Boolean).join(' + ')} - Next
                                 </button>
                             </div>
                         )}
@@ -536,14 +561,33 @@ const ActiveDelivery = () => {
                                     </div>
                                 </button>
                                 <button
-                                    onClick={() => { setSplitCash(''); setPaySheet('split'); }}
+                                    onClick={() => {
+                                        // Whole amount on credit when the limit covers it; otherwise credit what is left and pay the rest
+                                        if (creditLeft >= amountDue) { goToCode('credit'); return; }
+                                        setSplitCash(''); setSplitCredit(String(creditLeft)); setPaySheet('split');
+                                    }}
+                                    disabled={isUpdating || !credit.usable}
+                                    className="w-full p-4 rounded-2xl border-2 border-slate-200 flex items-center gap-4 text-left active:scale-[0.98] transition-all disabled:opacity-50"
+                                >
+                                    <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0"><CreditCard className="w-6 h-6" /></div>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">KK Credit</p>
+                                        <p className="text-xs text-slate-500">
+                                            {credit.usable
+                                                ? creditLeft >= amountDue ? `Charge it to the customer's credit (Rs ${creditLeft.toFixed(2)} left).` : `Only Rs ${creditLeft.toFixed(2)} credit left - the rest by cash or UPI.`
+                                                : credit.blocked ? 'Customer\'s credit is on hold.' : credit.overdue ? 'Customer has an overdue credit bill.' : 'Customer has no KK Credit.'}
+                                        </p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => { setSplitCash(''); setSplitCredit(''); setPaySheet('split'); }}
                                     disabled={isUpdating}
                                     className="w-full p-4 rounded-2xl border-2 border-slate-200 flex items-center gap-4 text-left active:scale-[0.98] transition-all disabled:opacity-60"
                                 >
                                     <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><Banknote className="w-5 h-5" /><QrCode className="w-4 h-4 -ml-1" /></div>
                                     <div>
-                                        <p className="text-sm font-black text-slate-900">Part cash + part UPI</p>
-                                        <p className="text-xs text-slate-500">e.g. Rs 200 cash and the rest on the franchise QR.</p>
+                                        <p className="text-sm font-black text-slate-900">Pay in parts</p>
+                                        <p className="text-xs text-slate-500">e.g. Rs 200 cash{credit.usable ? ', some on KK Credit' : ''} and the rest on the franchise QR.</p>
                                     </div>
                                 </button>
                             </div>
@@ -584,7 +628,7 @@ const ActiveDelivery = () => {
                                     <p className="text-xs font-bold uppercase text-slate-400">Confirm delivery</p>
                                     <p className="text-sm text-slate-600 mt-1">
                                         {isPartial ? `${returnedLines.length} item${returnedLines.length > 1 ? 's' : ''} given back. ` : ''}
-                                        {pendingMode === 'cash' ? `Cash Rs ${codAmount} collected. ` : pendingMode === 'upi_franchise_qr' ? `Rs ${codAmount} paid on ${franchiseName}'s QR. ` : pendingMode === 'split' ? `Cash Rs ${cashPart.toFixed(2)} + UPI Rs ${upiPart.toFixed(2)} collected. ` : ''}
+                                        {pendingMode === 'cash' ? `Cash Rs ${codAmount} collected. ` : pendingMode === 'upi_franchise_qr' ? `Rs ${codAmount} paid on ${franchiseName}'s QR. ` : pendingMode === 'split' ? `${[cashPart > 0 && `Cash Rs ${cashPart.toFixed(2)}`, creditPart > 0 && `KK Credit Rs ${creditPart.toFixed(2)}`, upiPart > 0 && `UPI Rs ${upiPart.toFixed(2)}`].filter(Boolean).join(' + ')} collected. ` : pendingMode === 'credit' ? `Rs ${codAmount} on the customer's KK Credit. ` : ''}
                                         {needsCode ? 'Ask the customer for their 4-digit delivery code (it is in their app and notifications).' : 'Only continue if you have handed over the order to the customer.'}
                                     </p>
                                 </div>

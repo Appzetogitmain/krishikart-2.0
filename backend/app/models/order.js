@@ -269,9 +269,10 @@ const orderSchema = new mongoose.Schema({
         // (what the partner hands to the franchise); upiAmount went straight to the franchise's QR.
         cashAmount: { type: Number, default: 0 },
         upiAmount: { type: Number, default: 0 },
+        creditAmount: { type: Number, default: 0 }, // charged to the customer's KK Credit at the door
         collectionMode: {
             type: String,
-            enum: ['cash', 'upi_franchise_qr'],
+            enum: ['cash', 'upi_franchise_qr', 'kk_credit'],
             default: 'cash'
         },
         remittanceStatus: {

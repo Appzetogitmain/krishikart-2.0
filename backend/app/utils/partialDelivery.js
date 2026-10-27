@@ -125,29 +125,80 @@ export async function refundPartialDelivery(orderId) {
 }
 
 /**
- * Payments taken at the door for a cash-on-delivery order: [{ mode: "cash" | "upi", amount }].
+ * Payments taken at the door for a cash-on-delivery order: [{ mode: "cash" | "upi" | "credit", amount }].
  * Without a list, the whole amount is taken in one mode (legacy "collectionMode").
- * Returns { error } or { cash, upi }.
+ * Returns { error } or { cash, upi, credit }.
  */
 export function splitPayments(payments, amountDue, legacyMode) {
     const due = round2(amountDue);
     if (!Array.isArray(payments) || !payments.length) {
-        return legacyMode === "upi_franchise_qr" ? { cash: 0, upi: due } : { cash: due, upi: 0 };
+        return legacyMode === "upi_franchise_qr" ? { cash: 0, upi: due, credit: 0 } : { cash: due, upi: 0, credit: 0 };
     }
-    let cash = 0;
-    let upi = 0;
+    const sum = { cash: 0, upi: 0, credit: 0 };
     for (const p of payments) {
         const amount = Number(p?.amount);
-        if (!["cash", "upi"].includes(p?.mode) || !Number.isFinite(amount) || amount < 0) {
-            return { error: "Each payment needs a mode (cash or UPI) and an amount" };
+        if (!["cash", "upi", "credit"].includes(p?.mode) || !Number.isFinite(amount) || amount < 0) {
+            return { error: "Each payment needs a mode (cash, UPI or KK Credit) and an amount" };
         }
-        if (p.mode === "cash") cash += amount;
-        else upi += amount;
+        sum[p.mode] += amount;
     }
-    cash = round2(cash);
-    upi = round2(upi);
-    if (Math.abs(cash + upi - due) > 0.5) {
-        return { error: `Cash + UPI must add up to ₹${due} (you entered ₹${round2(cash + upi)}).` };
+    const cash = round2(sum.cash);
+    const upi = round2(sum.upi);
+    const credit = round2(sum.credit);
+    if (Math.abs(cash + upi + credit - due) > 0.5) {
+        return { error: `The payments must add up to ₹${due} (you entered ₹${round2(cash + upi + credit)}).` };
     }
-    return { cash, upi };
+    return { cash, upi, credit };
+}
+
+/** Same rules as paying by KK Credit at checkout: not blocked, nothing overdue, enough limit left. */
+export function creditProblem(user, amount) {
+    if (!user) return "Customer not found";
+    if (user.creditBlocked) return "This customer's KK Credit is on hold. Please take cash or UPI.";
+    if (Number(user.usedCredit) > 0 && user.creditOverdueDate && new Date() > new Date(user.creditOverdueDate)) {
+        return "This customer has an overdue KK Credit bill. Please take cash or UPI.";
+    }
+    const available = round2((Number(user.creditLimit) || 0) - (Number(user.usedCredit) || 0));
+    if (available < round2(amount)) return `Only ₹${Math.max(0, available)} KK Credit is left. Take the rest by cash or UPI.`;
+    return null;
+}
+
+/**
+ * Charge KK Credit for a payment at the door, atomically (the limit check and the charge are one
+ * database update, so the same limit can't be spent twice). Returns true when charged.
+ */
+export async function chargeDoorCredit(order, amount) {
+    const value = round2(amount);
+    if (!(value > 0)) return true;
+    const now = new Date();
+    const dueDate = new Date(now);
+    dueDate.setDate(dueDate.getDate() + 7);
+    const shortId = order._id.toString().slice(-6).toUpperCase();
+    const updated = await User.findOneAndUpdate(
+        {
+            _id: order.userId,
+            creditBlocked: { $ne: true },
+            $and: [
+                { $expr: { $gte: [{ $subtract: [{ $ifNull: ["$creditLimit", 0] }, { $ifNull: ["$usedCredit", 0] }] }, value] } },
+                { $or: [{ usedCredit: { $lte: 0 } }, { creditOverdueDate: null }, { creditOverdueDate: { $gte: now } }] },
+            ],
+        },
+        [
+            {
+                $set: {
+                    // Start the 7-day repayment clock only when this is the first unpaid credit
+                    creditOverdueDate: { $cond: [{ $lte: [{ $ifNull: ["$usedCredit", 0] }, 0] }, dueDate, "$creditOverdueDate"] },
+                    usedCredit: { $round: [{ $add: [{ $ifNull: ["$usedCredit", 0] }, value] }, 2] },
+                    walletTransactions: {
+                        $concatArrays: [
+                            { $literal: [{ txnId: `CRD-DLV-${Date.now()}-${shortId}`, type: "Credit Used", amount: value, status: "Success", note: `Paid on KK Credit at delivery, order #${shortId}`, referenceOrderId: order._id, createdAt: now }] },
+                            { $ifNull: ["$walletTransactions", []] },
+                        ],
+                    },
+                },
+            },
+        ],
+        { new: true, updatePipeline: true },
+    );
+    return !!updated;
 }

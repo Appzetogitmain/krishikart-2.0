@@ -33,7 +33,7 @@ import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
-import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments } from "../utils/partialDelivery.js";
+import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments, creditProblem, chargeDoorCredit } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
 
 const OUT_FOR_DELIVERY = ["Dispatched", "Out for Delivery"];
@@ -1179,7 +1179,7 @@ export const updateOrderStatus = async (req, res) => {
     const isDelivery = !!req.delivery || req.user?.role === "delivery";
     const isUser = !!req.user && !isMasterAdmin && !isDelivery;
     let partialPlan = null; // items given back at the door (utils/partialDelivery.js)
-    let doorPayment = null; // { cash, upi } taken for a cash-on-delivery order
+    let doorPayment = null; // { cash, upi, credit } taken for a cash-on-delivery order
 
     if (
       isMasterAdmin &&
@@ -1401,6 +1401,12 @@ export const updateOrderStatus = async (req, res) => {
         if (order.paymentMethod === "COD") {
           doorPayment = splitPayments(payments, partialPlan ? partialPlan.newTotal : order.totalAmount, collectionMode);
           if (doorPayment.error) return handleResponse(res, 400, doorPayment.error);
+          // KK Credit at the door: check the customer can use it before the code is asked for
+          if (doorPayment.credit > 0) {
+            const customer = await User.findById(order.userId).select("creditLimit usedCredit creditBlocked creditOverdueDate").lean();
+            const problem = creditProblem(customer, doorPayment.credit);
+            if (problem) return handleResponse(res, 400, problem);
+          }
         }
       }
       // Delivered needs the customer's code (orders dispatched before codes existed have none)
@@ -1474,6 +1480,14 @@ export const updateOrderStatus = async (req, res) => {
       }
     }
 
+    // KK Credit at the door: charged atomically, only now that the delivery code has been checked
+    if (status === "Delivered" && order.paymentMethod === "COD" && (doorPayment?.credit || 0) > 0) {
+      const charged = await chargeDoorCredit(order, doorPayment.credit);
+      if (!charged) {
+        return handleResponse(res, 400, "Could not use KK Credit (limit used up, on hold or overdue). Please take cash or UPI.");
+      }
+    }
+
     order.orderStatus = status;
 
     // Push to history
@@ -1501,18 +1515,19 @@ export const updateOrderStatus = async (req, res) => {
       if (order.paymentMethod === "COD") {
         const collectorId =
           req.delivery?._id || order.deliveryPartnerId || null;
-        const split = doorPayment || { cash: Number(order.totalAmount || 0), upi: 0 };
+        const split = doorPayment || { cash: Number(order.totalAmount || 0), upi: 0, credit: 0 };
         order.codTracking = order.codTracking || {};
         order.codTracking.isCollected = true;
         // collectedAmount = the cash the partner holds and hands to the franchise
         order.codTracking.collectedAmount = split.cash > 0 ? split.cash : Number(order.totalAmount || 0);
         order.codTracking.cashAmount = split.cash;
         order.codTracking.upiAmount = split.upi;
+        order.codTracking.creditAmount = split.credit || 0; // charged to the customer's KK Credit
         order.codTracking.collectedAt = new Date();
         order.codTracking.collectedByDeliveryId = collectorId;
         if (split.cash <= 0) {
-          // All paid to the franchise's QR, so the delivery partner holds no cash to hand over
-          order.codTracking.collectionMode = "upi_franchise_qr";
+          // Paid on the franchise's QR and/or KK Credit, so the delivery partner holds no cash to hand over
+          order.codTracking.collectionMode = split.upi > 0 ? "upi_franchise_qr" : "kk_credit";
           order.codTracking.remittanceStatus = "verified";
           order.codTracking.verifiedAt = new Date();
         } else {
@@ -2492,7 +2507,7 @@ export const getDispatchedOrders = async (req, res) => {
       orderStatus: "Dispatched",
       deliveryPartnerId: partnerId,
     })
-      .populate("userId", "fullName mobile address")
+      .populate("userId", "fullName mobile address creditLimit usedCredit creditBlocked creditOverdueDate")
       .populate("franchiseId", "franchiseName city area mobile location formattedAddress storeQRCode")
       .sort({ updatedAt: -1 });
 
@@ -2565,7 +2580,14 @@ export const getDispatchedOrders = async (req, res) => {
         deliveryShift: order.deliveryShift,
         isPreOrder: order.isPreOrder,
         franchiseId: order.franchiseId,
-        userId: order.userId,
+        userId: order.userId ? { _id: order.userId._id, fullName: order.userId.fullName, mobile: order.userId.mobile, address: order.userId.address } : null,
+        // Can the customer pay part or all of a cash-on-delivery order on KK Credit at the door?
+        customerCredit: (() => {
+          const u = order.userId || {};
+          const available = Math.max(0, Math.round(((Number(u.creditLimit) || 0) - (Number(u.usedCredit) || 0)) * 100) / 100);
+          const overdue = Number(u.usedCredit) > 0 && u.creditOverdueDate && new Date() > new Date(u.creditOverdueDate);
+          return { available, usable: available > 0 && !u.creditBlocked && !overdue, blocked: !!u.creditBlocked, overdue: !!overdue };
+        })(),
         shippingAddress: order.shippingAddress,
         codTracking: order.codTracking || {},
       };

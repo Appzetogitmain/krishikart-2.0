@@ -19,8 +19,11 @@ import { buildAdminFinanceReport, buildFranchiseFinanceReport, buildVendorFinanc
 /** A COD order's money: the cash the partner holds (tracked until handed over) and, for a split payment at the door, the UPI part. */
 const codParts = (o) => {
     const t = o.codTracking || {};
-    const split = Number(t.cashAmount) > 0 && Number(t.upiAmount) > 0;
-    return { cash: Number(t.collectedAmount || o.totalAmount || 0), upi: split ? Number(t.upiAmount) : 0 };
+    // Delivered with the split recorded: cash the partner holds, UPI to the franchise QR (KK Credit is not collected money)
+    if (Number(t.cashAmount) > 0 || Number(t.upiAmount) > 0 || Number(t.creditAmount) > 0) {
+        return { cash: Number(t.cashAmount) || 0, upi: Number(t.upiAmount) || 0 };
+    }
+    return { cash: Number(t.collectedAmount || o.totalAmount || 0), upi: 0 };
 };
 
 /**
