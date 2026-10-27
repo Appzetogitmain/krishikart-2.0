@@ -22,3 +22,12 @@ export const NEEDS_REPLY = ['negotiating'];
 export const TO_PACK = ['approved', 'preparing'];
 export const READY = ['ready_for_pickup'];
 export const DONE = ['picked_up', 'completed'];
+
+/** The page an order belongs on now (rates on Quotation, packing on Pack & Dispatch, sent ones in history). */
+export const pageForRequest = (r) => {
+    if (!r) return '/vendor/orders';
+    if ([...NEEDS_RATES, ...NEEDS_REPLY, 'quoted'].includes(r.status)) return '/vendor/quotations';
+    if ([...TO_PACK, ...READY].includes(r.status)) return `/vendor/dispatch?order=${r._id}`;
+    if (DONE.includes(r.status)) return '/vendor/dispatch-history';
+    return '/vendor/orders';
+};

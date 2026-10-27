@@ -7,7 +7,7 @@ import ForgotPasswordScreen from '../pages/ForgotPasswordScreen';
 import InventoryScreen from '../pages/InventoryScreen';
 import MarketplacePreviewScreen from '../pages/MarketplacePreviewScreen';
 import OrdersScreen from '../pages/OrdersScreen';
-import OrderDetailScreen from '../pages/OrderDetailScreen';
+import OrderRedirect from '../pages/OrderRedirect';
 import PackingScreen from '../pages/PackingScreen';
 import StockAlertsScreen from '../pages/StockAlertsScreen';
 import HistoryScreen from '../pages/HistoryScreen';
@@ -53,7 +53,7 @@ export const vendorRoutes = (
             <Route path="inventory" element={<InventoryScreen />} />
             <Route path="preview" element={<MarketplacePreviewScreen />} />
             <Route path="orders" element={<OrdersScreen />} />
-            <Route path="orders/:id" element={<OrderDetailScreen />} />
+            <Route path="orders/:id" element={<OrderRedirect />} />
             <Route path="quotations" element={<RateSheetScreen />} />
             <Route path="quotations/history" element={<QuotationHistoryScreen />} />
             <Route path="dispatch" element={<PackingScreen />} />

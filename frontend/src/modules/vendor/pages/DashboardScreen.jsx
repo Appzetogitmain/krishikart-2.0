@@ -24,7 +24,7 @@ import { useVendorInventory } from '../contexts/VendorInventoryContext';
 import { VendorDesktopHeader, VendorMobileTopBar, formatDay, formatTime } from '../components/layout/VendorPageHeader';
 import { keepPage, peekPage } from '../lib/pageCache';
 import { franchiseNameOf, loadOf, loadText, rupees, shortId } from '../lib/packing';
-import { DONE, NEEDS_RATES, NEEDS_REPLY, READY, TO_PACK, statusOf } from '../lib/requestStatus';
+import { DONE, NEEDS_RATES, NEEDS_REPLY, READY, TO_PACK, pageForRequest, statusOf } from '../lib/requestStatus';
 
 function Thumb({ src }) {
     return src
@@ -126,7 +126,7 @@ export default function DashboardScreen() {
             {recent.map((r) => {
                 const st = statusOf(r.status);
                 return (
-                    <button key={r._id} type="button" onClick={() => navigate(`/vendor/orders/${r._id}`)}
+                    <button key={r._id} type="button" onClick={() => navigate(pageForRequest(r))}
                         className="w-full flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left">
                         <span className="flex-1 min-w-0">
                             <span className="flex items-start justify-between gap-2">

@@ -8,6 +8,7 @@ import { VendorDesktopHeader, VendorMobileTopBar, formatDay, formatTime } from '
 import { keepPage, peekPage } from '../lib/pageCache';
 import { franchiseNameOf, loadOf, loadText, rupees, shortId } from '../lib/packing';
 import { statusOf } from '../lib/requestStatus';
+import { pageForRequest } from '../lib/requestStatus';
 
 const QUOTED = ['quoted', 'negotiating', 'approved', 'preparing', 'ready_for_pickup', 'picked_up', 'completed', 'rejected'];
 const TABS = [
@@ -82,7 +83,7 @@ export default function QuotationHistoryScreen() {
         return <div className="flex items-center justify-center h-[60vh]"><Loader2 className="animate-spin text-green-700" size={40} /></div>;
     }
 
-    const open = (r) => navigate(`/vendor/orders/${r._id}`);
+    const open = (r) => navigate(pageForRequest(r));
 
     const kpis = [
         { label: 'Total quotations', value: totals.count, tone: 'bg-blue-50' },
