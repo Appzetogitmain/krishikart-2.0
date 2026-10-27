@@ -341,7 +341,7 @@ const Dashboard = () => {
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Picked Up From</p>
                                             <h4 className="text-sm font-bold text-slate-900 uppercase">{selectedOrder.franchiseName}</h4>
-                                            <p className="text-[10px] font-medium text-slate-500 line-clamp-1">{selectedOrder.franchiseAddress}</p>
+                                            <p className="text-xs font-medium text-slate-600 break-words">{selectedOrder.franchiseAddress}</p>
                                         </div>
                                     </div>
 

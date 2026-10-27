@@ -155,8 +155,8 @@ export default function OrdersScreen() {
                 const active = g.key === group?.key;
                 return (
                     <button key={g.key} type="button" onClick={() => setSelected(g.key)}
-                        className={cn('w-full flex items-center gap-3 rounded-2xl border p-4 text-left', active ? 'bg-green-50 border-green-300' : 'bg-white border-slate-100')}>
-                        <span className="w-14 h-14 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0"><Store size={26} /></span>
+                        className={cn('w-full flex items-center gap-3 rounded-2xl border px-3 py-3 text-left', active ? 'bg-green-50 border-green-300' : 'bg-white border-slate-100')}>
+                        <span className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0"><Store size={26} /></span>
                         <span className="flex-1 min-w-0">
                             <span className="flex items-start justify-between gap-2">
                                 <span className="block text-xl font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(g.franchise)}</span>
@@ -286,7 +286,7 @@ export default function OrdersScreen() {
                     {tabs}
                     <div className="w-[380px]">{searchBox}</div>
                 </div>
-                <div className="grid grid-cols-[minmax(340px,420px)_minmax(0,1fr)] gap-5 items-start">
+                <div className="grid grid-cols-[minmax(280px,340px)_minmax(0,1fr)] gap-5 items-start">
                     <div>{list}</div>
                     <div className="bg-white rounded-3xl border border-slate-100 p-5 min-h-[400px]">
                         {detail || (

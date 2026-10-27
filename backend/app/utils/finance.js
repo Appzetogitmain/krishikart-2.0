@@ -72,8 +72,9 @@ export async function recordDeliveredOrder(orderId, source = "delivery") {
 
   const lines = (order.items || []).map((i) => {
     const pid = String(i.productId?._id || i.productId);
-    // What was actually handed over (partial delivery packs less than ordered)
-    const quantity = Number(i.packedQuantity) > 0 ? Number(i.packedQuantity) : Number(i.quantity) || 0;
+    // What the customer actually kept (packed short, or some items given back at the door)
+    const quantity = i.deliveredQuantity != null ? Number(i.deliveredQuantity) || 0
+      : Number(i.packedQuantity) > 0 ? Number(i.packedQuantity) : Number(i.quantity) || 0;
     const sellPrice = Number(i.price) || 0;
     const revenue = round2(quantity * sellPrice);
     const categoryId = categoryOf.get(pid) || null;

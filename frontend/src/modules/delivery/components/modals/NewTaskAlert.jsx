@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, X, ArrowRight, Bell } from 'lucide-react';
+import { Package, X, ArrowRight, Bell, MapPin, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDeliveryOrders } from '../../contexts/DeliveryOrderContext';
 import { ROUTES } from '../../utils/constants';
@@ -113,11 +113,47 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
 
                             {/* Content */}
                             <div className="p-6 bg-white">
-                                <div className="space-y-4 mb-6 text-center">
-                                    <p className="text-slate-600 text-sm">
-                                        {data.message || "A new task requires your attention."}
-                                    </p>
-                                </div>
+                                {isDeliveryTask && (data.address || data.orderTotal !== undefined) ? (
+                                    // Where it goes and what to collect, so the partner can decide before accepting
+                                    <div className="mb-5 space-y-3 text-left">
+                                        <div className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                                            <div>
+                                                <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                                                    {Number(data.amountToCollect) > 0 ? 'Collect from customer' : 'Already paid online'}
+                                                </p>
+                                                <p className="text-2xl font-black text-slate-900">
+                                                    ₹{Math.round(Number(data.amountToCollect) > 0 ? data.amountToCollect : data.orderTotal || 0).toLocaleString('en-IN')}
+                                                </p>
+                                            </div>
+                                            <div className="text-right text-xs font-semibold text-slate-600">
+                                                <p>{data.paymentMethod === 'COD' ? 'Cash / UPI' : data.paymentMethod || ''}</p>
+                                                {data.itemCount ? <p>{data.itemCount} item{data.itemCount > 1 ? 's' : ''}</p> : null}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <MapPin className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                                            <div className="min-w-0">
+                                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Deliver to {data.customerName ? `· ${data.customerName}` : ''}</p>
+                                                <p className="text-sm font-semibold text-slate-900 break-words">{data.address || '—'}</p>
+                                            </div>
+                                        </div>
+                                        {data.pickupFrom && (
+                                            <div className="flex gap-3">
+                                                <Store className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                                                <div className="min-w-0">
+                                                    <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Pick up from</p>
+                                                    <p className="text-sm text-slate-700 break-words">{data.pickupFrom}{data.pickupAddress ? `, ${data.pickupAddress}` : ''}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 mb-6 text-center">
+                                        <p className="text-slate-600 text-sm">
+                                            {data.message || "A new task requires your attention."}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Actions */}
                                 <div className="space-y-3">

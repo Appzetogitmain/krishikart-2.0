@@ -32,6 +32,8 @@ import { resolveDeliverySchedule, getDeliveryOffDays } from "../utils/deliverySc
 import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
+import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
+import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
 
 const OUT_FOR_DELIVERY = ["Dispatched", "Out for Delivery"];
@@ -1167,7 +1169,7 @@ export const updateReturnPickupStatus = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, allowPartialFulfillment, collectionMode } = req.body;
+    const { status, allowPartialFulfillment, collectionMode, returnedItems, returnReason, payments } = req.body;
 
     const order = await Order.findById(id);
     if (!order) return handleResponse(res, 404, "Order not found");
@@ -1176,6 +1178,8 @@ export const updateOrderStatus = async (req, res) => {
     const isFranchise = !!req.franchise;
     const isDelivery = !!req.delivery || req.user?.role === "delivery";
     const isUser = !!req.user && !isMasterAdmin && !isDelivery;
+    let partialPlan = null; // items given back at the door (utils/partialDelivery.js)
+    let doorPayment = null; // { cash, upi } taken for a cash-on-delivery order
 
     if (
       isMasterAdmin &&
@@ -1384,6 +1388,21 @@ export const updateOrderStatus = async (req, res) => {
           return handleResponse(res, 403, "This order is not assigned to you");
         }
       }
+      // Partial delivery: the customer gives some items back at the door. Check the list (and the
+      // payment split) before the code, so a wrong entry doesn't use up a code attempt.
+      if (status === "Delivered" && (isDelivery || isFranchise)) {
+        if (Array.isArray(returnedItems) && returnedItems.some((r) => Number(r?.quantity) > 0)) {
+          partialPlan = planPartialDelivery(order, returnedItems);
+          if (partialPlan.error) return handleResponse(res, 400, partialPlan.error);
+          if (!String(returnReason || "").trim()) {
+            return handleResponse(res, 400, "Please write why the customer is returning these items.");
+          }
+        }
+        if (order.paymentMethod === "COD") {
+          doorPayment = splitPayments(payments, partialPlan ? partialPlan.newTotal : order.totalAmount, collectionMode);
+          if (doorPayment.error) return handleResponse(res, 400, doorPayment.error);
+        }
+      }
       // Delivered needs the customer's code (orders dispatched before codes existed have none)
       if (status === "Delivered" && (isDelivery || isFranchise)) {
         const check = await verifyDeliveryOtp(order._id, "customer", req.body?.otp);
@@ -1446,9 +1465,8 @@ export const updateOrderStatus = async (req, res) => {
       order.numberOfPackages = packages;
     }
 
-    // A COD customer may pay by UPI to the franchise's QR instead of giving cash
-    const paidByFranchiseQr =
-      status === "Delivered" && order.paymentMethod === "COD" && collectionMode === "upi_franchise_qr";
+    // A COD customer may pay (all or part) by UPI to the franchise's QR instead of giving cash
+    const paidByFranchiseQr = status === "Delivered" && order.paymentMethod === "COD" && (doorPayment?.upi || 0) > 0;
     if (paidByFranchiseQr) {
       const store = order.franchiseId ? await Franchise.findById(order.franchiseId).select("storeQRCode") : null;
       if (!store?.storeQRCode) {
@@ -1474,16 +1492,26 @@ export const updateOrderStatus = async (req, res) => {
     if (status === "Delivered") {
       order.deliveredAt = new Date();
 
+      if (partialPlan) {
+        applyPartialDelivery(order, partialPlan, { reason: returnReason, partnerId: order.deliveryPartnerId || null });
+        order.statusHistory[order.statusHistory.length - 1].message =
+          `Partly delivered: ${partialPlan.lines.map((l) => `${l.name} ${l.quantity} ${l.unit}`.trim()).join(", ")} given back (${String(returnReason).trim().slice(0, 120)}).`;
+      }
+
       if (order.paymentMethod === "COD") {
         const collectorId =
           req.delivery?._id || order.deliveryPartnerId || null;
+        const split = doorPayment || { cash: Number(order.totalAmount || 0), upi: 0 };
         order.codTracking = order.codTracking || {};
         order.codTracking.isCollected = true;
-        order.codTracking.collectedAmount = Number(order.totalAmount || 0);
+        // collectedAmount = the cash the partner holds and hands to the franchise
+        order.codTracking.collectedAmount = split.cash > 0 ? split.cash : Number(order.totalAmount || 0);
+        order.codTracking.cashAmount = split.cash;
+        order.codTracking.upiAmount = split.upi;
         order.codTracking.collectedAt = new Date();
         order.codTracking.collectedByDeliveryId = collectorId;
-        if (paidByFranchiseQr) {
-          // The money went straight to the franchise, so the delivery partner holds no cash to hand over
+        if (split.cash <= 0) {
+          // All paid to the franchise's QR, so the delivery partner holds no cash to hand over
           order.codTracking.collectionMode = "upi_franchise_qr";
           order.codTracking.remittanceStatus = "verified";
           order.codTracking.verifiedAt = new Date();
@@ -1693,6 +1721,38 @@ export const updateOrderStatus = async (req, res) => {
         status,
       },
     });
+
+    // Partial delivery: money back for prepaid orders, and tell everyone which goods are coming back
+    if (status === "Delivered" && partialPlan) {
+      const shortId = order._id.toString().slice(-6).toUpperCase();
+      const list = partialPlan.lines.map((l) => `${l.name} ${l.quantity} ${l.unit}`.trim()).join(", ");
+      let refund = { walletRefund: 0, creditRestore: 0 };
+      try {
+        refund = await refundPartialDelivery(order._id);
+      } catch (refundErr) {
+        console.error("[partial delivery] refund error", order._id.toString(), refundErr);
+      }
+      const refundText = [
+        refund.walletRefund > 0 ? `₹${refund.walletRefund} added to your wallet` : "",
+        refund.creditRestore > 0 ? `₹${refund.creditRestore} added back to your KK Credit` : "",
+      ].filter(Boolean).join(" and ");
+      try {
+        await createUserNotification({
+          userId: order.userId,
+          type: "order_update",
+          title: "Order partly delivered",
+          message: `Order #${shortId}: you returned ${list}. ${order.paymentMethod === "COD" ? `You paid ₹${order.totalAmount}.` : refundText ? `${refundText}.` : ""}`.trim(),
+          link: `/order-detail/${order._id}`,
+          meta: { orderId: order._id.toString(), status },
+        });
+        const note = `Order #${shortId} was partly delivered. Coming back with the delivery partner: ${list}. Reason: ${String(returnReason).trim().slice(0, 120)}`;
+        if (order.franchiseId) emitToFranchise(order.franchiseId, "order_partly_delivered", { orderId: order._id, message: note, items: partialPlan.lines });
+        emitToAdmin("order_partly_delivered", { orderId: order._id, message: note });
+        await createAdminNotification({ type: "order_partly_delivered", title: "Order partly delivered", message: note, link: "/masteradmin/orders", meta: { orderId: order._id.toString(), status } });
+      } catch (notifyErr) {
+        console.error("[partial delivery] notification error", notifyErr);
+      }
+    }
 
     // Financial record of the delivered order (once per order; never blocks the delivery)
     if (status === "Delivered") {
@@ -1922,8 +1982,10 @@ export const getFranchiseOrders = async (req, res) => {
       fs.appendFileSync("debug_log.txt", debugInfo);
     }
 
-    // The franchise's return code is shown only while refused goods are on their way back
-    const comingBack = orders.filter((o) => o.deliveryRefusal?.goodsStatus === "with_delivery" && !o.deliveryRefusal?.handedBackAt);
+    // The franchise's return code is shown only while refused (or partly returned) goods are on their way back
+    const comingBack = orders.filter((o) =>
+      (o.deliveryRefusal?.goodsStatus === "with_delivery" && !o.deliveryRefusal?.handedBackAt) ||
+      (o.partialReturn?.goodsStatus === "with_delivery" && !o.partialReturn?.handedBackAt));
     const returnCodes = await otpsOf(comingBack.map((o) => o._id));
 
     const formattedOrders = orders.map((order) => {
@@ -2389,19 +2451,21 @@ export const assignDeliveryPartner = async (req, res) => {
       `🚚 Order ${id} dispatched by franchise ${franchiseId} via partner ${deliveryPartnerId}`,
     );
 
-    // Send Real-time Notification
+    // Send Real-time Notification (with address and amount, so the partner can decide before accepting)
+    const taskInfo = await deliveryTaskSummary(order._id).catch(() => ({}));
     emitToDelivery(deliveryPartnerId, "new_task", {
       orderId: order._id,
       type: "DELIVERY",
       message: `New delivery task assigned: #${order._id.toString().slice(-6)}`,
+      ...taskInfo,
     });
 
     // Send Push Notification (standardized payload for delivery assignment)
     sendNotificationToUser(
       deliveryPartnerId,
       {
-        title: "New Delivery Task",
-        body: `You have been assigned a new delivery task for order #${order._id.toString().slice(-6)}.`,
+        title: `New Delivery Task #${order._id.toString().slice(-6).toUpperCase()}`,
+        body: taskSummaryLine(taskInfo) || `You have been assigned a new delivery task for order #${order._id.toString().slice(-6)}.`,
         data: {
           type: "new_delivery",
           notificationCategory: "assignment",
@@ -2485,6 +2549,8 @@ export const getDispatchedOrders = async (req, res) => {
         priority: "medium",
         amount: 50, // Delivery earnings per order
         totalAmount: order.totalAmount,
+        discountAmount: order.discountAmount || 0, // to show the amount due when some items are given back
+        tax: order.tax || 0,
         paymentMethod: order.paymentMethod,
         status: order.orderStatus,
         orderStatus: order.orderStatus,
@@ -2647,6 +2713,12 @@ export const refuseOrderAtDoor = async (req, res) => {
   }
 };
 
+/** Which goods-return record is open on an order: "deliveryRefusal" (whole order) or "partialReturn" (some items). */
+const goodsComingBack = (order) =>
+  order.deliveryRefusal?.goodsStatus === "with_delivery" ? "deliveryRefusal"
+    : order.partialReturn?.goodsStatus === "with_delivery" ? "partialReturn"
+      : null;
+
 /**
  * PUT /orders/franchise/:id/refused-goods  { action: "restock" | "write_off" }
  * The delivery partner brought the refused goods back. Good goods go back into the franchise's
@@ -2665,17 +2737,20 @@ export const confirmRefusedGoodsReturned = async (req, res) => {
     if (!existing.franchiseId || existing.franchiseId.toString() !== req.franchise._id.toString()) {
       return handleResponse(res, 403, "Not authorized to manage this order");
     }
-    if (existing.deliveryRefusal?.goodsStatus === "with_delivery" && existing.deliveryOtp?.franchiseCode && !existing.deliveryRefusal?.handedBackAt) {
+    // Refused order (all goods back) or partial delivery (some items back)
+    const box = goodsComingBack(existing);
+    if (!box) return handleResponse(res, 400, "There are no returned goods waiting for this order");
+    if (existing.deliveryOtp?.franchiseCode && !existing[box]?.handedBackAt) {
       return handleResponse(res, 400, "The delivery partner has not handed the goods back yet. Give them your return code when they bring the goods.");
     }
 
     // Claim atomically so the stock can only be put back once
     const order = await Order.findOneAndUpdate(
-      { _id: id, "deliveryRefusal.goodsStatus": "with_delivery" },
+      { _id: id, [`${box}.goodsStatus`]: "with_delivery" },
       {
         $set: {
-          "deliveryRefusal.goodsStatus": action === "restock" ? "restocked" : "written_off",
-          "deliveryRefusal.resolvedAt": new Date(),
+          [`${box}.goodsStatus`]: action === "restock" ? "restocked" : "written_off",
+          [`${box}.resolvedAt`]: new Date(),
         },
       },
       { new: true },
@@ -2683,9 +2758,11 @@ export const confirmRefusedGoodsReturned = async (req, res) => {
     if (!order) return handleResponse(res, 400, "There are no returned goods waiting for this order");
 
     if (action === "restock") {
-      for (const item of order.items) {
-        const qty = Number(item.packedQuantity || 0);
-        if (qty > 0) await addStock(order.franchiseId, item.productId, qty);
+      const lines = box === "partialReturn"
+        ? order.partialReturn.items.map((i) => ({ productId: i.productId, qty: Number(i.quantity || 0) }))
+        : order.items.map((i) => ({ productId: i.productId, qty: Number(i.packedQuantity || 0) }));
+      for (const l of lines) {
+        if (l.qty > 0) await addStock(order.franchiseId, l.productId, l.qty);
       }
     }
 
@@ -2693,7 +2770,7 @@ export const confirmRefusedGoodsReturned = async (req, res) => {
       res,
       200,
       action === "restock" ? "Goods added back to your stock" : "Goods written off (not added to stock)",
-      { _id: order._id, goodsStatus: order.deliveryRefusal.goodsStatus },
+      { _id: order._id, goodsStatus: order[box].goodsStatus },
     );
   } catch (error) {
     console.error("confirmRefusedGoodsReturned error:", error);
@@ -2709,25 +2786,32 @@ export const getReturnsToFranchise = async (req, res) => {
   try {
     const partnerId = req.delivery?._id;
     const orders = await Order.find({
-      "deliveryRefusal.deliveryPartnerId": partnerId,
-      "deliveryRefusal.goodsStatus": "with_delivery",
-      "deliveryRefusal.handedBackAt": null,
+      $or: [
+        { "deliveryRefusal.deliveryPartnerId": partnerId, "deliveryRefusal.goodsStatus": "with_delivery", "deliveryRefusal.handedBackAt": null },
+        { "partialReturn.deliveryPartnerId": partnerId, "partialReturn.goodsStatus": "with_delivery", "partialReturn.handedBackAt": null },
+      ],
     })
       .populate("franchiseId", "franchiseName mobile city area formattedAddress")
       .populate("userId", "fullName")
-      .sort({ "deliveryRefusal.refusedAt": -1 })
+      .sort({ updatedAt: -1 })
       .lean();
-    return handleResponse(res, 200, "Goods to return", orders.map((o) => ({
-      _id: o._id,
-      franchiseName: o.franchiseId?.franchiseName || "Franchise",
-      franchiseMobile: o.franchiseId?.mobile || "",
-      franchiseAddress: o.franchiseId?.formattedAddress || [o.franchiseId?.area, o.franchiseId?.city].filter(Boolean).join(", "),
-      customerName: o.userId?.fullName || "Customer",
-      reason: o.deliveryRefusal?.reasonLabel || "",
-      refusedAt: o.deliveryRefusal?.refusedAt,
-      numberOfPackages: o.numberOfPackages || 0,
-      items: (o.items || []).map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit })),
-    })));
+    return handleResponse(res, 200, "Goods to return", orders.map((o) => {
+      const partial = goodsComingBack(o) === "partialReturn";
+      return {
+        _id: o._id,
+        kind: partial ? "partial" : "refused",
+        franchiseName: o.franchiseId?.franchiseName || "Franchise",
+        franchiseMobile: o.franchiseId?.mobile || "",
+        franchiseAddress: o.franchiseId?.formattedAddress || [o.franchiseId?.area, o.franchiseId?.city].filter(Boolean).join(", "),
+        customerName: o.userId?.fullName || "Customer",
+        reason: partial ? `Partly returned: ${o.partialReturn?.reason || ""}` : o.deliveryRefusal?.reasonLabel || "",
+        refusedAt: partial ? o.partialReturn?.at : o.deliveryRefusal?.refusedAt,
+        numberOfPackages: partial ? 0 : o.numberOfPackages || 0,
+        items: partial
+          ? (o.partialReturn?.items || []).map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit }))
+          : (o.items || []).map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit })),
+      };
+    }));
   } catch (error) {
     console.error("getReturnsToFranchise error:", error);
     return handleResponse(res, 500, "Server error");
@@ -2742,21 +2826,23 @@ export const handBackToFranchise = async (req, res) => {
   try {
     const { id } = req.params;
     const partnerId = req.delivery?._id;
-    const order = await Order.findById(id).select("deliveryRefusal franchiseId");
+    const order = await Order.findById(id).select("deliveryRefusal partialReturn franchiseId orderStatus");
     if (!order) return handleResponse(res, 404, "Order not found");
-    if (String(order.deliveryRefusal?.deliveryPartnerId) !== String(partnerId)) {
-      return handleResponse(res, 403, "This order is not yours to return");
-    }
-    if (order.deliveryRefusal?.goodsStatus !== "with_delivery" || order.deliveryRefusal?.handedBackAt) {
+    // Refused order (all goods) or partial delivery (the items the customer gave back)
+    const box = goodsComingBack(order);
+    if (!box || order[box]?.handedBackAt) {
       return handleResponse(res, 400, "These goods have already been handed back");
+    }
+    if (String(order[box]?.deliveryPartnerId) !== String(partnerId)) {
+      return handleResponse(res, 403, "This order is not yours to return");
     }
 
     const check = await verifyDeliveryOtp(order._id, "franchise", req.body?.otp);
     if (!check.ok) return handleResponse(res, check.status, check.message);
 
     const updated = await Order.findOneAndUpdate(
-      { _id: id, "deliveryRefusal.handedBackAt": null },
-      { $set: { "deliveryRefusal.handedBackAt": new Date() } },
+      { _id: id, [`${box}.handedBackAt`]: null },
+      { $set: { [`${box}.handedBackAt`]: new Date() } },
       { new: true },
     );
     if (!updated) return handleResponse(res, 400, "These goods have already been handed back");
@@ -2764,12 +2850,14 @@ export const handBackToFranchise = async (req, res) => {
     if (order.franchiseId) {
       emitToFranchise(order.franchiseId, "order_status_changed", {
         orderId: order._id,
-        status: "Cancelled",
-        message: `Goods of refused order #${order._id.toString().slice(-6)} are back. Add them to stock or write them off.`,
+        status: order.orderStatus,
+        message: box === "partialReturn"
+          ? `Items the customer gave back from order #${order._id.toString().slice(-6)} are with you. Add them to stock or write them off.`
+          : `Goods of refused order #${order._id.toString().slice(-6)} are back. Add them to stock or write them off.`,
         updatedAt: new Date(),
       });
     }
-    return handleResponse(res, 200, "Goods handed back to the franchise", { _id: updated._id, handedBackAt: updated.deliveryRefusal.handedBackAt });
+    return handleResponse(res, 200, "Goods handed back to the franchise", { _id: updated._id, handedBackAt: updated[box].handedBackAt });
   } catch (error) {
     console.error("handBackToFranchise error:", error);
     return handleResponse(res, 500, "Server error");

@@ -162,14 +162,56 @@ export function FranchiseOrdersProvider({ children }) {
             fetchOrders(); // Refresh to get updated order status
         };
 
+        // Crucial moments after dispatch: tell the franchise straight away instead of waiting for the next poll
+        const shortRef = (d) => `#${String(d?.orderId || '').slice(-6).toUpperCase()}`;
+        const handleRefusedAtDoor = (data) => {
+            playNotificationSound();
+            toast.error(`Order ${shortRef(data)} was not accepted at the door`, {
+                description: `${data?.reason || ''}${data?.note ? ` - ${data.note}` : ''}. The delivery partner is bringing the goods back.`,
+                duration: 10000,
+            });
+            fetchOrders();
+        };
+        const handlePartlyDelivered = (data) => {
+            playNotificationSound();
+            toast.warning(`Order ${shortRef(data)} partly delivered`, { description: data?.message, duration: 10000 });
+            fetchOrders();
+        };
+        const handleOrderStatusChanged = (data) => {
+            if (data?.message) toast.info(data.message, { duration: 8000 }); // e.g. returned goods handed back
+            else if (data?.status === 'Delivered') toast.success(`Order ${shortRef(data)} delivered`);
+            fetchOrders();
+        };
+        const handleCashHandedOver = (data) => {
+            playNotificationSound();
+            toast.info(`${data?.deliveryPartnerName || 'A delivery partner'} handed over ₹${Math.round(Number(data?.amount) || 0).toLocaleString('en-IN')} cash`, {
+                description: `${data?.orderCount || ''} order${data?.orderCount === 1 ? '' : 's'}. Count it and verify it in COD Cash.`.trim(),
+                duration: 10000,
+            });
+        };
+        const handleReturnStatus = (data) => {
+            toast.info(data?.title || 'Customer return updated', { description: data?.message, duration: 8000 });
+            fetchOrders();
+        };
+
         socket.on('new_order', handleNewOrder);
         socket.on('procurement_cycle_update', handleProcurementUpdate);
         socket.on('partial_fulfillment_approved', handlePartialFulfillmentApproved);
+        socket.on('order_refused_at_door', handleRefusedAtDoor);
+        socket.on('order_partly_delivered', handlePartlyDelivered);
+        socket.on('order_status_changed', handleOrderStatusChanged);
+        socket.on('cod_remittance_submitted', handleCashHandedOver);
+        socket.on('return_status_changed', handleReturnStatus);
 
         return () => {
             socket.off('new_order', handleNewOrder);
             socket.off('procurement_cycle_update', handleProcurementUpdate);
             socket.off('partial_fulfillment_approved', handlePartialFulfillmentApproved);
+            socket.off('order_refused_at_door', handleRefusedAtDoor);
+            socket.off('order_partly_delivered', handlePartlyDelivered);
+            socket.off('order_status_changed', handleOrderStatusChanged);
+            socket.off('cod_remittance_submitted', handleCashHandedOver);
+            socket.off('return_status_changed', handleReturnStatus);
         };
     }, [franchise?._id]);
 
@@ -182,6 +224,8 @@ export function FranchiseOrdersProvider({ children }) {
             status: (o.orderStatus || '').toLowerCase(),
             numberOfPackages: Number(o.numberOfPackages) || 0,
             deliveryRefusal: o.deliveryRefusal?.reason ? o.deliveryRefusal : null,
+            // The customer kept only some items at the door; the rest comes back like refused goods
+            partialReturn: o.partialReturn?.goodsStatus ? o.partialReturn : null,
             returnOtpCode: o.returnOtpCode || null,
             total: o.totalAmount,
             items: (Array.isArray(o.items) ? o.items : []).map(i => ({

@@ -354,13 +354,13 @@ export default function PackingScreen() {
                             type="button"
                             onClick={() => openGroup(g.key)}
                             className={cn(
-                                'w-full flex items-center gap-3.5 text-left px-3 py-4 lg:px-4 border-b border-slate-100 lg:border lg:rounded-2xl transition-colors',
+                                'w-full flex items-center gap-3.5 text-left px-3 py-3 lg:px-3 border-b border-slate-100 lg:border lg:rounded-2xl transition-colors',
                                 active ? 'bg-green-50 border border-green-300 rounded-2xl lg:border-green-300' : 'lg:border-slate-100 hover:bg-slate-50'
                             )}
                         >
                             <span className={cn('hidden lg:flex w-9 h-9 rounded-full items-center justify-center text-base font-bold shrink-0',
                                 active ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-700')}>{idx + 1}</span>
-                            <span className={cn('lg:hidden w-14 h-14 rounded-full flex items-center justify-center shrink-0',
+                            <span className={cn('lg:hidden w-12 h-12 rounded-full flex items-center justify-center shrink-0',
                                 greenIcon ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-800')}>
                                 <Store size={26} />
                             </span>
@@ -672,7 +672,7 @@ export default function PackingScreen() {
             </div>
 
             {/* Desktop: list on the left, the selected franchise on the right */}
-            <div className="hidden lg:grid grid-cols-[minmax(340px,400px)_minmax(0,1fr)] gap-5 items-start">
+            <div className="hidden lg:grid grid-cols-[minmax(280px,320px)_minmax(0,1fr)] gap-5 items-start">
                 {listPanel}
                 <div className="bg-white rounded-3xl border border-slate-100 p-5 min-h-[400px]">
                     {detail || (

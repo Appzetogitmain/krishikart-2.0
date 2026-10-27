@@ -39,6 +39,7 @@ export function DeliveryOrderProvider({ children }) {
     // reached the list yet isn't dropped by a stale refresh.
     const [ringingTaskIds, setRingingTaskIds] = useState([]);
     const ringSeenRef = useRef(new Set());
+    const taskInfoRef = useRef({}); // orderId -> details sent with the new-task alert
 
     const startRingingFor = (orderId) => {
         if (!orderId) return;
@@ -165,6 +166,7 @@ export function DeliveryOrderProvider({ children }) {
             };
 
             const handleNewTask = (data) => {
+                if (data?.orderId) taskInfoRef.current[String(data.orderId)] = data;
                 setNewTaskData(data);
                 setIsAlertOpen(true);
                 // Delivery tasks can be accepted or rejected, so they ring until one happens.
@@ -176,13 +178,35 @@ export function DeliveryOrderProvider({ children }) {
                 fetchReturnPickups();
             };
 
+            // The franchise checked the cash this partner handed over
+            const handleCashReviewed = (data) => {
+                playNotificationSound();
+                const amount = `₹${Math.round(Number(data?.amount) || 0).toLocaleString('en-IN')}`;
+                if (data?.status === 'rejected') {
+                    toast.error(`${data?.franchiseName || 'The franchise'} did not accept the ${amount} cash`, { description: data?.reason || 'Please talk to the franchise.', duration: 10000 });
+                } else {
+                    toast.success(`${data?.franchiseName || 'The franchise'} confirmed your ${amount} cash`, { duration: 8000 });
+                }
+            };
+            const handleAccountNews = (data) => {
+                playNotificationSound();
+                const ok = data?.status === 'approved';
+                toast[ok ? 'success' : 'error'](data?.message || (ok ? 'Approved by the admin' : 'Update from the admin'), { duration: 10000 });
+            };
+
             syncDeliveryTasks();
             socket.on('connect', syncDeliveryTasks);
             socket.on('new_task', handleNewTask);
+            socket.on('cod_remittance_reviewed', handleCashReviewed);
+            socket.on('account_status', handleAccountNews);
+            socket.on('docs_status', handleAccountNews);
 
             return () => {
                 socket.off('connect', syncDeliveryTasks);
                 socket.off('new_task', handleNewTask);
+                socket.off('cod_remittance_reviewed', handleCashReviewed);
+                socket.off('account_status', handleAccountNews);
+                socket.off('docs_status', handleAccountNews);
             };
         }
     }, [delivery]);
@@ -203,7 +227,19 @@ export function DeliveryOrderProvider({ children }) {
             newTaskData,
             ringingTaskIds,
             reopenTaskAlert: (orderId) => {
-                setNewTaskData({ orderId, type: 'DELIVERY', message: `Delivery task waiting for you: #${String(orderId).slice(-6)}` });
+                // Show the same details as the first alert (address, amount), from the task list if needed
+                const o = dispatchedOrders.find((x) => String(x.id || x._id) === String(orderId));
+                const fromList = o ? {
+                    customerName: o.customerName,
+                    address: o.customerAddress,
+                    pickupFrom: o.franchise,
+                    pickupAddress: o.franchiseAddress,
+                    orderTotal: o.totalAmount,
+                    amountToCollect: o.paymentMethod === 'COD' ? o.totalAmount : 0,
+                    paymentMethod: o.paymentMethod,
+                    itemCount: o.items?.length || o.itemCount,
+                } : {};
+                setNewTaskData({ orderId, type: 'DELIVERY', message: `Delivery task waiting for you: #${String(orderId).slice(-6)}`, ...fromList, ...(taskInfoRef.current[String(orderId)] || {}) });
                 setIsAlertOpen(true);
             },
             fetchDispatchedOrders,

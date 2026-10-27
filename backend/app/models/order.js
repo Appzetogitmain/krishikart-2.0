@@ -37,6 +37,11 @@ const orderItemSchema = new mongoose.Schema({
     packedQuantity: {
         type: Number,
         default: 0
+    },
+    // What the customer kept at the door; set only when some of the item was given back (partial delivery)
+    deliveredQuantity: {
+        type: Number,
+        default: null
     }
 }, { _id: false });
 
@@ -204,6 +209,29 @@ const orderSchema = new mongoose.Schema({
         handedBackAt: { type: Date, default: null },
         resolvedAt: { type: Date, default: null }
     },
+    // The customer kept only some items at the door (see utils/partialDelivery.js). The rest goes back to
+    // the franchise like refused goods; totalAmount/discountAmount/tax already show the smaller order.
+    partialReturn: {
+        items: [{
+            productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+            name: String,
+            unit: String,
+            quantity: Number,
+            price: Number,
+            value: Number,
+            _id: false
+        }],
+        reason: { type: String, default: '' },
+        returnedValue: { type: Number, default: 0 },
+        originalTotal: { type: Number, default: 0 },
+        refundAmount: { type: Number, default: 0 }, // prepaid orders: given back to wallet / KK Credit
+        refundedAt: { type: Date, default: null },
+        at: { type: Date, default: null },
+        deliveryPartnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery', default: null },
+        goodsStatus: { type: String, enum: ['with_delivery', 'restocked', 'written_off'], default: undefined },
+        handedBackAt: { type: Date, default: null },
+        resolvedAt: { type: Date, default: null }
+    },
     // Delivery confirmation codes (see utils/deliveryOtp.js). The codes themselves are never
     // returned unless explicitly selected, so the delivery partner cannot see them.
     deliveryOtp: {
@@ -237,6 +265,10 @@ const orderSchema = new mongoose.Schema({
         },
         // cash = the delivery partner took cash (to be handed to the franchise);
         // upi_franchise_qr = the customer paid by UPI straight to the franchise's QR, so there is no cash to hand over
+        // Split payment at the door (e.g. ₹200 cash + ₹100 UPI). collectedAmount is the cash part
+        // (what the partner hands to the franchise); upiAmount went straight to the franchise's QR.
+        cashAmount: { type: Number, default: 0 },
+        upiAmount: { type: Number, default: 0 },
         collectionMode: {
             type: String,
             enum: ['cash', 'upi_franchise_qr'],

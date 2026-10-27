@@ -39,6 +39,74 @@ import DataGrid from '../components/tables/DataGrid';
 import FilterBar from '../components/tables/FilterBar';
 import OrderHistoryModal from '../components/modals/OrderHistoryModal';
 
+/**
+ * The same product across all orders in the list, added up (e.g. Potato 85 KG from 4 hotels), with the
+ * stock in hand, so the franchise packs and procures on totals. Each order still opens on its own below.
+ */
+function ProductTotals({ orders, inventory }) {
+    const [open, setOpen] = useState(true);
+    const rows = new Map();
+    for (const o of orders) {
+        for (const i of o.items || []) {
+            const pid = String(i.productId?._id || i.productId || i.name);
+            const key = `${pid}|${String(i.unit || '').toLowerCase()}`;
+            if (!rows.has(key)) rows.set(key, { key, pid, name: i.name, unit: i.unit, image: i.image, qty: 0, orders: 0 });
+            const r = rows.get(key);
+            r.qty = Math.round((r.qty + (Number(i.quantity) || 0)) * 100) / 100;
+            r.orders += 1;
+            if (!r.image && i.image) r.image = i.image;
+        }
+    }
+    const list = [...rows.values()].sort((a, b) => b.qty - a.qty);
+    if (!list.length) return null;
+    const stockOf = (pid) => (inventory || []).find((s) => String(s.productId || s.id) === pid)?.currentStock;
+    return (
+        <div className="border-b border-slate-200">
+            <button type="button" onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between px-4 py-2.5 bg-emerald-50/60 text-left">
+                <span className="text-[11px] font-black uppercase tracking-widest text-slate-900">
+                    Product-wise total <span className="text-slate-500 normal-case tracking-normal font-bold">({list.length} products from {orders.length} orders)</span>
+                </span>
+                <span className="text-[10px] font-black uppercase text-emerald-700">{open ? 'Hide' : 'Show'}</span>
+            </button>
+            {open && (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                                <th className="text-left px-4 py-2">Product</th>
+                                <th className="text-right px-4 py-2">Total needed</th>
+                                <th className="text-right px-4 py-2">Orders</th>
+                                <th className="text-right px-4 py-2">In stock</th>
+                                <th className="text-right px-4 py-2">Short</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {list.map((r) => {
+                                const stock = stockOf(r.pid);
+                                const short = stock === undefined ? null : Math.max(0, Math.round((r.qty - stock) * 100) / 100);
+                                return (
+                                    <tr key={r.key}>
+                                        <td className="px-4 py-2">
+                                            <span className="flex items-center gap-2">
+                                                {r.image ? <img src={r.image} alt="" className="w-7 h-7 object-contain" /> : null}
+                                                <span className="font-bold text-slate-900">{r.name}</span>
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-right font-black text-slate-900 tabular-nums whitespace-nowrap">{r.qty} {String(r.unit || '').toUpperCase()}</td>
+                                        <td className="px-4 py-2 text-right text-slate-600 tabular-nums">{r.orders}</td>
+                                        <td className="px-4 py-2 text-right text-slate-600 tabular-nums">{stock === undefined ? '—' : stock}</td>
+                                        <td className={cn('px-4 py-2 text-right font-black tabular-nums', short > 0 ? 'text-rose-600' : 'text-emerald-600')}>{short === null ? '—' : short > 0 ? short : 'OK'}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function OrdersScreen() {
     const navigate = useNavigate();
     const {
@@ -197,7 +265,7 @@ export default function OrdersScreen() {
         { id: 'new', label: 'New', icon: ShoppingBag },
         { id: 'ready', label: 'Ready to Dispatch', icon: Zap },
         { id: 'completed', label: 'Completed', icon: History },
-        { id: 'refused', label: 'Refused at door', icon: Undo2 }
+        { id: 'refused', label: 'Returned at door', icon: Undo2 }
     ];
 
     const filteredOrders = allOrders.filter(order => {
@@ -211,7 +279,8 @@ export default function OrdersScreen() {
         } else if (activeTab === 'completed') {
             matchesTab = ['delivered', 'received', 'completed'].includes(status);
         } else if (activeTab === 'refused') {
-            matchesTab = status === 'cancelled' && !!order.deliveryRefusal;
+            // Whole order refused, or some items given back at a partial delivery
+            matchesTab = (status === 'cancelled' && !!order.deliveryRefusal) || !!order.partialReturn;
         }
 
         const hotelName = order.hotelName || order.userId?.fullName || 'Unknown';
@@ -393,17 +462,26 @@ export default function OrdersScreen() {
                             </>
                         )
                     )}
-                    {activeTab === 'refused' && row.deliveryRefusal && (
+                    {activeTab === 'refused' && (row.deliveryRefusal || row.partialReturn) && (() => {
+                        const back = row.deliveryRefusal || row.partialReturn;
+                        return (
                         <div className="flex flex-col items-end gap-1">
-                            <span className="text-[10px] font-bold text-rose-600 max-w-[220px] text-right">
-                                {row.deliveryRefusal.reasonLabel || 'Not accepted'}{row.deliveryRefusal.note ? ` - ${row.deliveryRefusal.note}` : ''}
+                            <span className="text-[10px] font-bold text-rose-600 max-w-[240px] text-right">
+                                {row.deliveryRefusal
+                                    ? <>{row.deliveryRefusal.reasonLabel || 'Not accepted'}{row.deliveryRefusal.note ? ` - ${row.deliveryRefusal.note}` : ''}</>
+                                    : <>Partly delivered{row.partialReturn.reason ? ` - ${row.partialReturn.reason}` : ''}</>}
                             </span>
-                            {row.deliveryRefusal.goodsStatus === 'with_delivery' && row.returnOtpCode ? (
+                            {row.partialReturn && !row.deliveryRefusal && (
+                                <span className="text-[10px] font-semibold text-slate-600 max-w-[240px] text-right">
+                                    Given back: {(row.partialReturn.items || []).map((i) => `${i.name} ${i.quantity} ${i.unit || ''}`.trim()).join(', ')}
+                                </span>
+                            )}
+                            {back.goodsStatus === 'with_delivery' && row.returnOtpCode ? (
                                 <div className="text-right">
                                     <p className="text-[10px] font-bold text-slate-500">Return code - tell the delivery partner when they bring the goods back</p>
                                     <p className="text-lg font-black tracking-[0.3em] text-slate-900 tabular-nums">{row.returnOtpCode}</p>
                                 </div>
-                            ) : row.deliveryRefusal.goodsStatus === 'with_delivery' ? (
+                            ) : back.goodsStatus === 'with_delivery' ? (
                                 <button
                                     onClick={() => setReturnedGoodsOrder({ id: row.id, name: row.hotelName || row.userId?.fullName || 'this order' })}
                                     className="p-1.5 px-3 text-xs font-bold uppercase text-amber-700 border border-amber-600 bg-amber-50 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"
@@ -412,11 +490,12 @@ export default function OrdersScreen() {
                                 </button>
                             ) : (
                                 <span className="text-[10px] font-black uppercase text-slate-500">
-                                    {row.deliveryRefusal.goodsStatus === 'restocked' ? 'Added back to stock' : 'Written off'}
+                                    {back.goodsStatus === 'restocked' ? 'Added back to stock' : 'Written off'}
                                 </span>
                             )}
                         </div>
-                    )}
+                        );
+                    })()}
                     {activeTab === 'ready' && row.status === 'packed' && !(row.numberOfPackages > 0) && (
                         <button
                             onClick={() => {
@@ -641,6 +720,7 @@ export default function OrdersScreen() {
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.2 }}
                             >
+                                {['new', 'ready'].includes(activeTab) && <ProductTotals orders={filteredOrders} inventory={inventory} />}
                                 <DataGrid
                                     columns={orderColumns}
                                     data={filteredOrders}

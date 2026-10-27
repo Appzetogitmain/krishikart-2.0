@@ -16,6 +16,13 @@ import { franchiseScopeMatch, customerIdsInScope, toObjectIds } from "../utils/a
 import { getISTDayKey, istDayKeyToDate } from "../utils/deliverySchedule.js";
 import { buildAdminFinanceReport, buildFranchiseFinanceReport, buildVendorFinanceReport } from "../utils/financeReports.js";
 
+/** A COD order's money: the cash the partner holds (tracked until handed over) and, for a split payment at the door, the UPI part. */
+const codParts = (o) => {
+    const t = o.codTracking || {};
+    const split = Number(t.cashAmount) > 0 && Number(t.upiAmount) > 0;
+    return { cash: Number(t.collectedAmount || o.totalAmount || 0), upi: split ? Number(t.upiAmount) : 0 };
+};
+
 /**
  * Reports for every panel (admin, franchise, vendor, delivery partner).
  *
@@ -247,12 +254,13 @@ async function buildAdminReport(range, scope = null) {
     let codCollected = 0;
     for (const o of codOrders) {
         const key = String(o.codTracking?.collectedByDeliveryId || "unknown");
-        const amt = Number(o.codTracking?.collectedAmount || o.totalAmount || 0);
+        const { cash: amt, upi } = codParts(o);
         const row = byPartner.get(key) || { partner: partnerNames.get(key) || "Unknown", collected: 0, pending: 0, submitted: 0, verified: 0 };
-        row.collected += amt;
+        row.collected += amt + upi;
         const st = o.codTracking?.remittanceStatus || "pending";
         if (row[st] !== undefined) row[st] += amt;
-        codCollected += amt;
+        row.verified += upi; // paid straight to the franchise QR
+        codCollected += amt + upi;
         byPartner.set(key, row);
     }
     const payoutTotal = payouts.reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -579,15 +587,16 @@ async function buildDeliveryReport(range, deliveryId) {
         const day = getISTDayKey(o.deliveredAt);
         const d = daily.get(day) || { deliveries: 0, cod: 0 };
         d.deliveries += 1;
-        if (o.paymentMethod === "COD") d.cod += Number(o.codTracking?.collectedAmount || o.totalAmount || 0);
+        if (o.paymentMethod === "COD") d.cod += codParts(o).cash + codParts(o).upi;
         daily.set(day, d);
     }
     const cod = { collected: 0, pending: 0, submitted: 0, verified: 0 };
     for (const o of codOrders) {
-        const amt = Number(o.codTracking?.collectedAmount || o.totalAmount || 0);
-        cod.collected += amt;
+        const { cash: amt, upi } = codParts(o);
+        cod.collected += amt + upi;
         const st = o.codTracking?.remittanceStatus || "pending";
         if (cod[st] !== undefined) cod[st] += amt;
+        cod.verified += upi; // paid straight to the franchise QR
     }
     const pickups = returnsOrders.flatMap((o) => (o.returnRequests || []).filter((r) =>
         String(r.pickupDeliveryPartnerId) === String(did) && r.pickupPickedAt && r.pickupPickedAt >= range.start && r.pickupPickedAt < range.end));

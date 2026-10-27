@@ -5,6 +5,7 @@ import Delivery from "../models/delivery.js";
 import { sendNotificationToUser } from "./pushNotificationHelper.js";
 import { createUserNotification } from "./userNotification.js";
 import { emitToFranchise, emitToDelivery } from "../lib/socket.js";
+import { deliveryTaskSummary, taskSummaryLine } from "./deliveryTask.js";
 import { latLngToCell } from "h3-js";
 import { getDistance } from "./geo.js";
 
@@ -462,11 +463,12 @@ export const assignDeliveryToOrder = async (orderId) => {
       order.deliveryPartnerId = partner._id;
       await order.save();
 
+      const taskInfo = await deliveryTaskSummary(order._id).catch(() => ({}));
       await sendNotificationToUser(
         partner._id,
         {
-          title: "New Delivery Task",
-          body: `You have a new delivery task for order #${order._id.toString().slice(-6)}.`,
+          title: `New Delivery Task #${order._id.toString().slice(-6).toUpperCase()}`,
+          body: taskSummaryLine(taskInfo) || `You have a new delivery task for order #${order._id.toString().slice(-6)}.`,
           data: {
             type: "new_delivery",
             notificationCategory: "assignment",
@@ -482,6 +484,7 @@ export const assignDeliveryToOrder = async (orderId) => {
         orderId: order._id,
         type: "DELIVERY",
         message: `New delivery task assigned: #${order._id.toString().slice(-6)}`,
+        ...taskInfo,
       });
 
       return true;

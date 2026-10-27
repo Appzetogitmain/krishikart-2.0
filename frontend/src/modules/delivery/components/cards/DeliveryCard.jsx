@@ -45,7 +45,7 @@ const DeliveryCard = ({ request, onAccept, onReject }) => {
                         <div className="min-w-0 flex-1">
                             <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Pickup From</p>
                             <p className="text-sm font-bold text-slate-900 truncate">{request.franchise}</p>
-                            <p className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">{request.franchiseAddress}</p>
+                            <p className="text-xs text-slate-600 font-medium mt-0.5 break-words">{request.franchiseAddress}</p>
                         </div>
                     </div>
 
@@ -57,7 +57,7 @@ const DeliveryCard = ({ request, onAccept, onReject }) => {
                         <div className="min-w-0 flex-1">
                             <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Deliver To</p>
                             <p className="text-sm font-bold text-slate-900 truncate">{request.customerName}</p>
-                            <p className="text-[10px] text-slate-400 font-medium line-clamp-1 mt-0.5">{request.customerAddress}</p>
+                            <p className="text-xs text-slate-700 font-semibold mt-0.5 break-words">{request.customerAddress}</p>
                         </div>
                     </div>
                 </div>

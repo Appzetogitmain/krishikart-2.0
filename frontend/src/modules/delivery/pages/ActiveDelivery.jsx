@@ -36,6 +36,11 @@ const ActiveDelivery = () => {
     const [refuseOpen, setRefuseOpen] = useState(false);
     const [refuseReason, setRefuseReason] = useState('');
     const [refuseNote, setRefuseNote] = useState('');
+    // Partial delivery: how much of each item the customer gives back (productId -> qty), and why
+    const [returned, setReturned] = useState({});
+    const [returnReason, setReturnReason] = useState('');
+    // Split payment at the door: the cash part (the rest is paid on the franchise QR)
+    const [splitCash, setSplitCash] = useState('');
 
     const order = useMemo(() => {
         if (!activeDeliveryId) return null;
@@ -58,8 +63,40 @@ const ActiveDelivery = () => {
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`, '_blank', 'noopener');
     };
 
-    const codAmount = Number(order?.totalAmount || 0).toFixed(2);
+    // Items as handed to the partner (packed quantity when the franchise packed short)
+    const pidOf = (i) => String(i?.productId?._id || i?.productId || '');
+    const carriedOf = (i) => (Number(i?.packedQuantity) > 0 ? Number(i.packedQuantity) : Number(i?.quantity) || 0);
+    const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+    const returnedLines = (order?.items || []).filter((i) => Number(returned[pidOf(i)]) > 0);
+    const isPartial = returnedLines.length > 0;
+    // Same rule as the server: kept items; delivery fee stays; discount and tax shrink in proportion
+    const amountDue = useMemo(() => {
+        const total = Number(order?.totalAmount || 0);
+        if (!isPartial) return r2(total);
+        const items = order?.items || [];
+        const itemsValue = items.reduce((s, i) => s + carriedOf(i) * (Number(i.price) || 0), 0);
+        const back = items.reduce((s, i) => s + (Number(returned[pidOf(i)]) || 0) * (Number(i.price) || 0), 0);
+        const share = itemsValue > 0 ? Math.min(1, back / itemsValue) : 0;
+        const disc = Number(order?.discountAmount || 0);
+        const tax = Number(order?.tax || 0);
+        return Math.max(0, r2(total - back + disc * share - tax * share));
+    }, [order, returned, isPartial]);
+    const keptAnything = (order?.items || []).some((i) => carriedOf(i) - (Number(returned[pidOf(i)]) || 0) > 0);
+
+    const codAmount = amountDue.toFixed(2);
     const franchiseName = order?.franchise || 'the franchise';
+    const cashPart = Math.min(amountDue, Math.max(0, Number(splitCash) || 0));
+    const upiPart = r2(amountDue - cashPart);
+
+    // What to send with "Delivered": returned items, and how a COD order was paid
+    const deliveryExtras = () => ({
+        ...(isPartial ? {
+            returnedItems: returnedLines.map((i) => ({ productId: pidOf(i), quantity: Number(returned[pidOf(i)]) })),
+            returnReason: returnReason.trim(),
+        } : {}),
+        ...(pendingMode === 'split' ? { payments: [{ mode: 'cash', amount: cashPart }, { mode: 'upi', amount: upiPart }] }
+            : pendingMode ? { collectionMode: pendingMode } : {}),
+    });
 
     const finishDelivery = async (extra = {}) => {
         submittingRef.current = true;
@@ -78,9 +115,22 @@ const ActiveDelivery = () => {
         if (!order || submittingRef.current) return;
         setOtpCode('');
         setPendingMode(null);
+        setReturned({});
+        setReturnReason('');
+        setSplitCash('');
         // COD: first ask how the customer is paying; then the customer's code
         setPaySheet(isCodOrder ? 'choose' : 'otp');
     };
+
+    // The customer keeps only some items: choose what goes back, then payment (COD) and the code
+    const handlePartial = () => {
+        if (!order || submittingRef.current) return;
+        setOtpCode('');
+        setPendingMode(null);
+        setSplitCash('');
+        setPaySheet('items');
+    };
+    const afterItems = () => setPaySheet(isCodOrder ? 'choose' : 'otp');
 
     const goToCode = (mode) => {
         setPendingMode(mode);
@@ -91,7 +141,7 @@ const ActiveDelivery = () => {
     const submitDelivered = async () => {
         if (submittingRef.current) return;
         if (needsCode && otpCode.length !== 4) return;
-        await finishDelivery({ ...(pendingMode ? { collectionMode: pendingMode } : {}), ...(needsCode ? { otp: otpCode } : {}) });
+        await finishDelivery({ ...deliveryExtras(), ...(needsCode ? { otp: otpCode } : {}) });
     };
 
     const REFUSE_REASONS = [
@@ -158,7 +208,7 @@ const ActiveDelivery = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-full pb-36">
+        <div className="flex flex-col min-h-full pb-52">
             {/* Header */}
             <div className="px-6 pt-8 pb-2 bg-white sticky top-0 z-10 border-b border-border/30">
                 <div className="flex justify-between items-center mb-4">
@@ -339,8 +389,16 @@ const ActiveDelivery = () => {
                     <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isUpdating && setPaySheet(null)} />
                     <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 pb-8 shadow-2xl max-h-[92vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-4">
-                            {paySheet === 'qr' || (paySheet === 'otp' && isCodOrder) ? (
-                                <button onClick={() => setPaySheet(paySheet === 'otp' && pendingMode === 'upi_franchise_qr' ? 'qr' : 'choose')} disabled={isUpdating} className="p-2 -ml-2 rounded-full hover:bg-slate-100" aria-label="Back">
+                            {paySheet === 'qr' || paySheet === 'split' || (paySheet === 'otp' && (isCodOrder || isPartial)) || (paySheet === 'choose' && isPartial) ? (
+                                <button
+                                    onClick={() => setPaySheet(
+                                        paySheet === 'choose' ? 'items'
+                                            : paySheet === 'otp' && !isCodOrder ? 'items'
+                                                : paySheet === 'otp' && pendingMode === 'upi_franchise_qr' ? 'qr'
+                                                    : paySheet === 'otp' && pendingMode === 'split' ? 'split'
+                                                        : 'choose',
+                                    )}
+                                    disabled={isUpdating} className="p-2 -ml-2 rounded-full hover:bg-slate-100" aria-label="Back">
                                     <ArrowLeft className="w-5 h-5" />
                                 </button>
                             ) : <span />}
@@ -349,10 +407,109 @@ const ActiveDelivery = () => {
                             </button>
                         </div>
 
+                        {paySheet === 'items' && (
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-base font-black text-slate-900">Customer kept only some items</p>
+                                    <p className="text-xs text-slate-500 mt-1">Set how much of each item the customer is giving back. Bring those back to {franchiseName}.</p>
+                                </div>
+                                <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl">
+                                    {(order.items || []).map((i) => {
+                                        const pid = pidOf(i);
+                                        const max = carriedOf(i);
+                                        const back = Number(returned[pid]) || 0;
+                                        const clamp = (v) => Math.min(max, Math.max(0, r2(v)));
+                                        const set = (v) => setReturned((r) => ({ ...r, [pid]: clamp(v) }));
+                                        // Quick double taps must both count: change from the latest value, not this render's
+                                        const step = (d) => setReturned((r) => ({ ...r, [pid]: clamp((Number(r[pid]) || 0) + d) }));
+                                        return (
+                                            <div key={pid} className={`flex items-center gap-3 px-3 py-3 ${back > 0 ? 'bg-rose-50/60' : ''}`}>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-slate-900 break-words">{i.name}</p>
+                                                    <p className="text-[11px] text-slate-500">Delivered {max} {i.unit || ''} · keeps <b className="text-slate-800">{r2(max - back)}</b></p>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <button type="button" onClick={() => step(-1)} disabled={back <= 0} className="w-9 h-10 rounded-lg border border-slate-200 font-black disabled:opacity-30">−</button>
+                                                    <input type="number" inputMode="decimal" min="0" max={max} step="any" value={back || ''} placeholder="0"
+                                                        onChange={(e) => set(parseFloat(e.target.value) || 0)}
+                                                        className="w-14 h-10 rounded-lg border border-slate-200 text-center text-sm font-black outline-none focus:border-rose-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                                                        aria-label={`${i.name} returned`} />
+                                                    <button type="button" onClick={() => step(1)} disabled={back >= max} className="w-9 h-10 rounded-lg border border-slate-200 font-black disabled:opacity-30">+</button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <textarea
+                                    value={returnReason}
+                                    onChange={(e) => setReturnReason(e.target.value)}
+                                    maxLength={300}
+                                    placeholder="Why is the customer giving these back? (required)"
+                                    className="w-full min-h-[64px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:border-slate-400"
+                                />
+                                <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3">
+                                    <span className="text-xs font-bold uppercase text-emerald-700">{isCodOrder ? 'New amount to collect' : 'Customer pays (prepaid)'}</span>
+                                    <span className="text-xl font-black text-slate-900">Rs {codAmount}</span>
+                                </div>
+                                {!isCodOrder && isPartial && (
+                                    <p className="text-[11px] text-slate-500">This order was paid online. The money for the returned items goes back to the customer automatically.</p>
+                                )}
+                                {!keptAnything && (
+                                    <p className="text-xs font-semibold text-rose-600">Every item is being returned. Close this and use "Customer refused / problem with order".</p>
+                                )}
+                                <button
+                                    onClick={afterItems}
+                                    disabled={isUpdating || !isPartial || !keptAnything || !returnReason.trim()}
+                                    className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
+
+                        {paySheet === 'split' && (
+                            <div className="space-y-4">
+                                <div className="text-center">
+                                    <p className="text-xs font-bold uppercase text-slate-400">Part cash, part UPI</p>
+                                    <p className="text-3xl font-black text-slate-900">Rs {codAmount}</p>
+                                </div>
+                                <label className="block">
+                                    <span className="text-xs font-bold text-slate-600">Cash you take</span>
+                                    <span className="mt-1 flex items-center h-14 px-4 rounded-2xl border-2 border-slate-200 focus-within:border-primary">
+                                        <Banknote className="w-5 h-5 text-emerald-600 mr-2" />
+                                        <span className="text-slate-500 mr-1">Rs</span>
+                                        <input type="number" inputMode="decimal" min="0" step="any" value={splitCash} autoFocus
+                                            onChange={(e) => setSplitCash(e.target.value)}
+                                            className="flex-1 min-w-0 text-2xl font-black outline-none bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                                    </span>
+                                </label>
+                                <div className="flex items-center justify-between rounded-2xl bg-indigo-50 px-4 py-3">
+                                    <span className="flex items-center gap-2 text-sm font-bold text-indigo-800"><QrCode className="w-5 h-5" /> Customer pays on QR</span>
+                                    <span className="text-xl font-black text-slate-900">Rs {upiPart.toFixed(2)}</span>
+                                </div>
+                                {order?.franchiseQrCode ? (
+                                    <div className="mx-auto w-56 max-w-full bg-white border border-slate-200 rounded-2xl p-3">
+                                        <img src={order.franchiseQrCode} alt={`${franchiseName} payment QR`} className="w-full h-auto rounded-lg" />
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-semibold text-amber-800">
+                                        {franchiseName} has not uploaded a payment QR yet, so UPI is not possible. Please collect cash.
+                                    </div>
+                                )}
+                                <button
+                                    onClick={() => goToCode('split')}
+                                    disabled={isUpdating || !order?.franchiseQrCode || !(cashPart > 0) || !(upiPart > 0)}
+                                    className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
+                                >
+                                    Cash Rs {cashPart.toFixed(2)} + UPI Rs {upiPart.toFixed(2)} received - Next
+                                </button>
+                            </div>
+                        )}
+
                         {paySheet === 'choose' && (
                             <div className="space-y-3">
                                 <div className="text-center mb-2">
-                                    <p className="text-xs font-bold uppercase text-slate-400">Amount to collect</p>
+                                    <p className="text-xs font-bold uppercase text-slate-400">{isPartial ? 'New amount to collect (items returned)' : 'Amount to collect'}</p>
                                     <p className="text-3xl font-black text-slate-900">Rs {codAmount}</p>
                                     <p className="text-xs text-slate-500 mt-1">How is the customer paying?</p>
                                 </div>
@@ -376,6 +533,17 @@ const ActiveDelivery = () => {
                                     <div>
                                         <p className="text-sm font-black text-slate-900">UPI / QR</p>
                                         <p className="text-xs text-slate-500">Show the franchise QR. The customer pays {franchiseName} directly.</p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => { setSplitCash(''); setPaySheet('split'); }}
+                                    disabled={isUpdating}
+                                    className="w-full p-4 rounded-2xl border-2 border-slate-200 flex items-center gap-4 text-left active:scale-[0.98] transition-all disabled:opacity-60"
+                                >
+                                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><Banknote className="w-5 h-5" /><QrCode className="w-4 h-4 -ml-1" /></div>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Part cash + part UPI</p>
+                                        <p className="text-xs text-slate-500">e.g. Rs 200 cash and the rest on the franchise QR.</p>
                                     </div>
                                 </button>
                             </div>
@@ -415,7 +583,8 @@ const ActiveDelivery = () => {
                                 <div>
                                     <p className="text-xs font-bold uppercase text-slate-400">Confirm delivery</p>
                                     <p className="text-sm text-slate-600 mt-1">
-                                        {pendingMode === 'cash' ? `Cash Rs ${codAmount} collected. ` : pendingMode === 'upi_franchise_qr' ? `Rs ${codAmount} paid on ${franchiseName}'s QR. ` : ''}
+                                        {isPartial ? `${returnedLines.length} item${returnedLines.length > 1 ? 's' : ''} given back. ` : ''}
+                                        {pendingMode === 'cash' ? `Cash Rs ${codAmount} collected. ` : pendingMode === 'upi_franchise_qr' ? `Rs ${codAmount} paid on ${franchiseName}'s QR. ` : pendingMode === 'split' ? `Cash Rs ${cashPart.toFixed(2)} + UPI Rs ${upiPart.toFixed(2)} collected. ` : ''}
                                         {needsCode ? 'Ask the customer for their 4-digit delivery code (it is in their app and notifications).' : 'Only continue if you have handed over the order to the customer.'}
                                     </p>
                                 </div>
@@ -506,6 +675,14 @@ const ActiveDelivery = () => {
                         className="w-full py-2.5 rounded-xl border-2 border-rose-200 bg-white text-rose-600 text-xs font-black uppercase tracking-wider disabled:opacity-50"
                     >
                         Customer refused / problem with order
+                    </button>
+                    <button
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={handlePartial}
+                        className="w-full py-2.5 rounded-xl border-2 border-amber-200 bg-white text-amber-700 text-xs font-black uppercase tracking-wider disabled:opacity-50"
+                    >
+                        Customer kept only some items
                     </button>
                     <motion.button
                         whileTap={{ scale: 0.95 }}
