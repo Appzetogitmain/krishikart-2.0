@@ -61,8 +61,13 @@ export default function OrderDetailScreen() {
                     subtotal: o.subtotal ?? 0,
                     deliveryFee: o.deliveryFee ?? 0,
                     tax: o.tax ?? 0,
+                    discount: o.discountAmount ?? 0,
+                    // Items the customer gave back at the door (partial delivery) and how a COD order was paid
+                    partialReturn: o.partialReturn?.goodsStatus ? o.partialReturn : null,
+                    codTracking: o.codTracking || null,
                     status: (o.orderStatus || '').toLowerCase() || 'pending',
                     items: (o.items || []).map(i => ({
+                        productId: String(i.productId?._id || i.productId || ''),
                         name: i.name || 'Item',
                         quantity: i.quantity ?? 0,
                         price: i.price ?? 0,
@@ -425,8 +430,11 @@ export default function OrderDetailScreen() {
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums">{(order.items || []).length} ITEMS</span>
                             </div>
                             <div className="divide-y divide-slate-100">
-                                {(order.items || []).map((item, idx) => (
-                                    <div key={idx} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                                {(order.items || []).map((item, idx) => {
+                                    // Quantity the customer gave back at the door, if any
+                                    const back = (order.partialReturn?.items || []).find((r) => String(r.productId) === item.productId);
+                                    return (
+                                    <div key={idx} className={cn('p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group', back && 'bg-rose-50/40')}>
                                         <div className="flex items-center gap-4">
                                             <div className="min-w-[40px] px-2 h-8 rounded-sm bg-slate-50 border border-slate-100 text-[10px] font-black text-slate-400 flex items-center justify-center tabular-nums gap-1">
                                                 <span>{Number(item.quantity) || 0}</span>
@@ -438,31 +446,104 @@ export default function OrderDetailScreen() {
                                                     Shortage
                                                 </span>
                                             )}
+                                            {back && (
+                                                <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">
+                                                    −{back.quantity} {back.unit} returned
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-8">
                                             <div className="hidden md:flex flex-col items-end opacity-0 group-hover:opacity-100 transition-all">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase italic">Price</span>
                                                 <span className="text-[10px] font-black text-slate-900 tabular-nums">₹{(Number(item.price) || 0).toLocaleString()}</span>
                                             </div>
-                                            <span className="text-[11px] font-black text-slate-900 tabular-nums">₹{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}</span>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[11px] font-black text-slate-900 tabular-nums">₹{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString()}</span>
+                                                {back && <span className="text-[10px] font-black text-rose-600 tabular-nums">−₹{(Number(back.value) || 0).toLocaleString()}</span>}
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
-                            <div className="bg-slate-900 p-6 flex flex-col gap-3">
-                                <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                    <span>Subtotal</span>
-                                    <span className="tabular-nums">₹{order.subtotal?.toLocaleString()}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                    <span>Delivery Fee</span>
-                                    <span className="tabular-nums">₹{order.deliveryFee?.toLocaleString() || '0'}</span>
-                                </div>
-                                {order.tax > 0 && (
-                                    <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                        <span>Tax</span>
-                                        <span className="tabular-nums">₹{order.tax?.toLocaleString()}</span>
+
+                            {/* Partial delivery: what came back, at what rate, and its value */}
+                            {order.partialReturn && (
+                                <div className="border-t border-rose-200 bg-rose-50/60 p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-[10px] font-black text-rose-700 uppercase tracking-[0.2em]">Returned at the door</h3>
+                                        <span className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">
+                                            {order.partialReturn.goodsStatus === 'with_delivery' ? 'Coming back with delivery partner' : order.partialReturn.goodsStatus === 'restocked' ? 'Added back to stock' : 'Written off'}
+                                        </span>
                                     </div>
+                                    {order.partialReturn.reason && <p className="text-[11px] font-semibold text-rose-700 mb-2">Reason: {order.partialReturn.reason}</p>}
+                                    <div className="divide-y divide-rose-100 border border-rose-100 rounded-sm bg-white">
+                                        {(order.partialReturn.items || []).map((r, i) => (
+                                            <div key={i} className="flex items-center justify-between px-3 py-2 text-[11px] font-black text-rose-700">
+                                                <span className="uppercase">{r.name}</span>
+                                                <span className="tabular-nums">{r.quantity} {r.unit} × ₹{(Number(r.price) || 0).toLocaleString()} = ₹{(Number(r.value) || 0).toLocaleString()}</span>
+                                            </div>
+                                        ))}
+                                        <div className="flex items-center justify-between px-3 py-2 text-[11px] font-black text-rose-800 bg-rose-50">
+                                            <span className="uppercase">Returned items total</span>
+                                            <span className="tabular-nums">₹{(Number(order.partialReturn.returnedValue) || 0).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                    {Number(order.partialReturn.refundAmount) > 0 && (
+                                        <p className="text-[11px] font-semibold text-emerald-700 mt-2">₹{Number(order.partialReturn.refundAmount).toLocaleString()} given back to the customer (wallet / KK Credit), as the order was paid online.</p>
+                                    )}
+                                </div>
+                            )}
+                            <div className="bg-slate-900 p-6 flex flex-col gap-3">
+                                {order.partialReturn ? (() => {
+                                    // Bill after a partial delivery: original bill - returned items +/- the discount and tax on them = what the customer pays
+                                    const original = Number(order.partialReturn.originalTotal) || 0;
+                                    const returnedValue = Number(order.partialReturn.returnedValue) || 0;
+                                    const adjust = Math.round(((Number(order.total) || 0) - (original - returnedValue)) * 100) / 100;
+                                    return (
+                                        <>
+                                            <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                                                <span>Original bill ({(order.items || []).length} items, subtotal ₹{order.subtotal?.toLocaleString()})</span>
+                                                <span className="tabular-nums">₹{original.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-rose-400 text-[10px] font-black uppercase tracking-widest">
+                                                <span>Returned at the door</span>
+                                                <span className="tabular-nums">−₹{returnedValue.toLocaleString()}</span>
+                                            </div>
+                                            {adjust !== 0 && (
+                                                <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                                                    <span>Discount / tax on returned items</span>
+                                                    <span className="tabular-nums">{adjust > 0 ? '+' : '−'}₹{Math.abs(adjust).toLocaleString()}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+                                                <span>Now: discount ₹{(Number(order.discount) || 0).toLocaleString()} · tax ₹{(Number(order.tax) || 0).toLocaleString()} · delivery ₹{(Number(order.deliveryFee) || 0).toLocaleString()}</span>
+                                            </div>
+                                        </>
+                                    );
+                                })() : (
+                                    <>
+                                        <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                                            <span>Subtotal</span>
+                                            <span className="tabular-nums">₹{order.subtotal?.toLocaleString()}</span>
+                                        </div>
+                                        {Number(order.discount) > 0 && (
+                                            <div className="flex items-center justify-between text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+                                                <span>Discount</span>
+                                                <span className="tabular-nums">−₹{Number(order.discount).toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                                            <span>Delivery Fee</span>
+                                            <span className="tabular-nums">₹{order.deliveryFee?.toLocaleString() || '0'}</span>
+                                        </div>
+                                        {order.tax > 0 && (
+                                            <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                                                <span>Tax</span>
+                                                <span className="tabular-nums">₹{order.tax?.toLocaleString()}</span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                                 <div className="h-px bg-slate-800 my-1" />
                                 <div className="flex items-center justify-between">
@@ -474,6 +555,15 @@ export default function OrderDetailScreen() {
                                     </div>
                                     <span className="text-xl font-black text-white tracking-tighter tabular-nums">₹{(Number(order.total) || 0).toLocaleString()}</span>
                                 </div>
+                                {/* How a cash-on-delivery order was paid at the door */}
+                                {order.paymentMethod === 'COD' && order.codTracking?.isCollected && (Number(order.codTracking.cashAmount) > 0 || Number(order.codTracking.upiAmount) > 0 || Number(order.codTracking.creditAmount) > 0) && (
+                                    <div className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        <span>Paid:</span>
+                                        {Number(order.codTracking.cashAmount) > 0 && <span className="text-emerald-400">Cash ₹{Number(order.codTracking.cashAmount).toLocaleString()}</span>}
+                                        {Number(order.codTracking.upiAmount) > 0 && <span className="text-indigo-300">UPI ₹{Number(order.codTracking.upiAmount).toLocaleString()}</span>}
+                                        {Number(order.codTracking.creditAmount) > 0 && <span className="text-violet-300">KK Credit ₹{Number(order.codTracking.creditAmount).toLocaleString()}</span>}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
