@@ -158,11 +158,9 @@ export default function OrdersScreen() {
                         className={cn('w-full flex items-center gap-3 rounded-2xl border px-3 py-3 text-left', active ? 'bg-green-50 border-green-300' : 'bg-white border-slate-100')}>
                         <span className="w-12 h-12 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0"><Store size={26} /></span>
                         <span className="flex-1 min-w-0">
-                            <span className="flex items-start justify-between gap-2">
-                                <span className="block text-xl font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(g.franchise)}</span>
-                                <span className={cn('px-3 py-1 rounded-lg text-sm font-semibold whitespace-nowrap', st.cls)}>{t(st.label)}</span>
-                            </span>
-                            <span className="block text-base text-slate-600 mt-0.5">{g.products.length} {t('items')} <span className="mx-1">•</span> {loadText(g.load, t)}</span>
+                            <span className="block text-xl font-bold text-slate-900 leading-snug break-words" translate="no">{franchiseNameOf(g.franchise)}</span>
+                            <span className="block text-base text-slate-600 mt-0.5">{g.products.length} {t('items')} <span className="mx-1">•</span> <span className="whitespace-nowrap">{loadText(g.load, t)}</span></span>
+                            <span className={cn('inline-flex mt-1.5 px-3 py-1 rounded-lg text-sm font-semibold whitespace-nowrap', st.cls)}>{t(st.label)}</span>
                             <span className="flex items-center justify-between gap-2 mt-1">
                                 <span className="text-sm text-slate-500">{g.requests.length} {t(g.requests.length === 1 ? 'Order' : 'orders')}</span>
                                 {g.amount > 0 && <span className="text-lg font-bold text-slate-900">{rupees(g.amount)}</span>}
@@ -286,7 +284,7 @@ export default function OrdersScreen() {
                     {tabs}
                     <div className="w-[380px]">{searchBox}</div>
                 </div>
-                <div className="grid grid-cols-[minmax(280px,340px)_minmax(0,1fr)] gap-5 items-start">
+                <div className="grid xl:grid-cols-[minmax(280px,340px)_minmax(0,1fr)] gap-5 items-start">
                     <div>{list}</div>
                     <div className="bg-white rounded-3xl border border-slate-100 p-5 min-h-[400px]">
                         {detail || (

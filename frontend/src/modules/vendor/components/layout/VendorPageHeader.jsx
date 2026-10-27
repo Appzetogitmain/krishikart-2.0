@@ -84,7 +84,7 @@ export function VendorDesktopHeader({ icon: Icon, title, subtitle, dateSlot }) {
                 {subtitle && <p className="text-base text-slate-600 mt-1">{subtitle}</p>}
             </div>
             {dateSlot || (
-                <div className="flex items-center gap-3 h-16 px-5 rounded-2xl border border-slate-200 bg-white">
+                <div className="hidden xl:flex items-center gap-3 h-16 px-5 rounded-2xl border border-slate-200 bg-white">
                     <CalendarDays size={24} className="text-slate-700" />
                     <div className="leading-tight">
                         <p className="text-xs text-slate-500">{t('Today')}</p>

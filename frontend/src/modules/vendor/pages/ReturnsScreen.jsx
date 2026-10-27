@@ -575,7 +575,7 @@ export default function ReturnsScreen() {
                     {tabs}
                     <div className="w-[380px]">{searchBox}</div>
                 </div>
-                <div className="grid grid-cols-[minmax(320px,380px)_minmax(0,1fr)] gap-5 items-start">
+                <div className="grid xl:grid-cols-[minmax(320px,380px)_minmax(0,1fr)] gap-5 items-start">
                     {list}
                     <div className="bg-white rounded-3xl border border-slate-100 p-5 min-h-[400px]">
                         {detailFor(true) || (

@@ -364,13 +364,14 @@ export default function PackingScreen() {
                                 greenIcon ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-800')}>
                                 <Store size={26} />
                             </span>
+                            {/* Name on its own line; details and status below, so a narrow column doesn't squeeze them */}
                             <span className="flex-1 min-w-0">
-                                <span className="block text-xl font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(g.franchise)}</span>
+                                <span className="block text-xl font-bold text-slate-900 leading-snug break-words" translate="no">{franchiseNameOf(g.franchise)}</span>
                                 <span className="block text-base text-slate-500 mt-0.5">
-                                    {g.rows.length} {t('items')} <span className="mx-1.5">•</span> {loadText(l, t)}
+                                    {g.rows.length} {t('items')} <span className="mx-1">•</span> <span className="whitespace-nowrap">{loadText(l, t)}</span>
                                 </span>
+                                <StatusPill status={g.status} className="mt-1.5" />
                             </span>
-                            <StatusPill status={g.status} />
                             <ChevronRight size={22} className="text-slate-500 shrink-0" />
                         </button>
                     );
@@ -672,7 +673,7 @@ export default function PackingScreen() {
             </div>
 
             {/* Desktop: list on the left, the selected franchise on the right */}
-            <div className="hidden lg:grid grid-cols-[minmax(280px,320px)_minmax(0,1fr)] gap-5 items-start">
+            <div className="hidden lg:grid xl:grid-cols-[minmax(300px,360px)_minmax(0,1fr)] gap-5 items-start">
                 {listPanel}
                 <div className="bg-white rounded-3xl border border-slate-100 p-5 min-h-[400px]">
                     {detail || (

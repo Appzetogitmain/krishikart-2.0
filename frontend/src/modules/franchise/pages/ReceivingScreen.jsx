@@ -28,6 +28,42 @@ import { useInventory } from '../contexts/InventoryContext';
 import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { getSocket } from '@/lib/socket';
 
+/*
+ * Deliveries from the same supplier arrive together (orders are split per product and per hotel order),
+ * so they are shown and received as one: one row per supplier, all items on one check screen. Each
+ * delivery is still saved on its own (its own invoice, hotel order and vendor payment).
+ */
+const ON_THE_WAY = new Set(['ready_for_pickup', 'picked_up', 'dispatched', 'in_transit']);
+const supplierKey = (po) => String(po.supplierFranchiseId?._id || po.supplierFranchiseId || po.assignedVendorId || 'unknown');
+const supplierName = (po) => (po.supplierFranchiseId?.franchiseName
+    ? `${po.supplierFranchiseId.franchiseName} (mother franchise)`
+    : (po.vendorName || po.vendor || po.assignedVendorName || 'Kisaankart Franchise'));
+
+function groupDeliveries(pos) {
+    const groups = new Map();
+    for (const po of pos) {
+        // Goods on the way are received together; ones still being prepared stay apart
+        const key = `${supplierKey(po)}|${ON_THE_WAY.has(po.status) ? 'out' : 'prep'}`;
+        if (!groups.has(key)) groups.set(key, { _id: key, requests: [], items: [], vendorName: supplierName(po), statuses: new Set() });
+        const g = groups.get(key);
+        g.requests.push(po);
+        g.statuses.add(po.status);
+        (po.items || []).forEach((item) => {
+            const itemId = String(item._id || item.productId);
+            g.items.push({ ...item, _id: `${po._id}:${itemId}`, _reqId: po._id, _itemId: itemId, _ref: po.invoice?.invoiceNumber || String(po._id).slice(-8).toUpperCase() });
+        });
+    }
+    return [...groups.values()].map((g) => {
+        const refs = g.requests.map((r) => r.invoice?.invoiceNumber || String(r._id).slice(-8).toUpperCase());
+        return {
+            ...g,
+            status: [...g.statuses].map((s) => String(s || '').replace(/_/g, ' ')).join(', '),
+            invoice: { invoiceNumber: refs.length > 1 ? `${refs[0]} +${refs.length - 1} more` : refs[0], invoiceDate: g.requests[0]?.invoice?.invoiceDate },
+            refs,
+        };
+    });
+}
+
 const ReceivingScreen = () => {
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -143,50 +179,56 @@ const ReceivingScreen = () => {
         if (!selectedPO) return;
         setIsSubmitting(true);
 
-        const auditItems = Object.entries(receivingData).map(([id, data]) => {
-            const isRejected = rejectedItems.has(id);
-            return {
-                productId: id,
+        // One save per delivery in the group, each with its own items
+        const byRequest = new Map();
+        for (const item of selectedPO.items) {
+            const data = receivingData[item._id];
+            if (!data) continue;
+            const isRejected = rejectedItems.has(item._id);
+            if (!byRequest.has(item._reqId)) byRequest.set(item._reqId, []);
+            byRequest.get(item._reqId).push({
+                productId: item._itemId,
                 receivedQuantity: isRejected ? 0 : data.received,
                 damagedQuantity: isRejected ? (data.damage || 0) : data.damage,
                 rejected: isRejected
-            };
-        });
-
-        try {
-            const response = await api.put(`/procurement/franchise/${selectedPO._id}/receive`, {
-                items: auditItems
             });
+        }
 
-            if (response.data.success) {
-                // Say exactly what happened to the stock (added, and whether a waiting customer order used it)
-                toast.success("Stock received and added to your inventory", {
-                    description: response.data.message && !/updated successfully/i.test(response.data.message) ? response.data.message : undefined,
-                    duration: 12000,
-                });
-
-                // Refresh live inventory and orders from server
-                refreshInventory();
-                if (refreshOrders) refreshOrders();
-
-                // Refresh list and close panel
-                fetchOrders();
-                setSelectedPO(null);
-                setRejectedItems(new Set());
+        const messages = [];
+        let saved = 0;
+        try {
+            for (const [requestId, items] of byRequest) {
+                const response = await api.put(`/procurement/franchise/${requestId}/receive`, { items });
+                if (!response.data.success) throw new Error(response.data.message || 'Could not save');
+                saved += 1;
+                // What happened to the stock (added, and whether a waiting customer order used it)
+                if (response.data.message && !/updated successfully/i.test(response.data.message)) messages.push(response.data.message);
             }
+            toast.success(byRequest.size > 1 ? `${byRequest.size} deliveries received and added to your stock` : "Stock received and added to your inventory", {
+                description: messages.length ? messages.join(' ') : undefined,
+                duration: 12000,
+            });
+            setSelectedPO(null);
+            setRejectedItems(new Set());
         } catch (error) {
             console.error("Reception failed", error);
-            toast.error(error.response?.data?.message || "Could not save. Please try again.");
+            const why = error.response?.data?.message || error.message || "Could not save. Please try again.";
+            toast.error(saved > 0 ? `${saved} of ${byRequest.size} deliveries were saved. ${why}` : why, { duration: 12000 });
+            if (saved > 0) setSelectedPO(null);
         } finally {
+            // Refresh live inventory, orders and this list from the server
+            refreshInventory();
+            if (refreshOrders) refreshOrders();
+            fetchOrders();
             setIsSubmitting(false);
         }
     };
 
-    const filteredPOs = orders.filter(po =>
+    const filteredPOs = groupDeliveries(orders.filter(po =>
         po._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (po.vendor || po.vendorName || po.assignedVendorName || po.assignedVendorId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         po.invoice?.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    ));
 
     const poColumns = [
         {
@@ -194,8 +236,10 @@ const ReceivingScreen = () => {
             label: 'PO / INVOICE',
             render: (_, row) => (
                 <div className="flex flex-col">
-                    <span className="font-black text-slate-900 uppercase text-[10px] tracking-tight">{row.invoice?.invoiceNumber || row._id.slice(-8)}</span>
-                    <span className="text-[10px] font-bold text-slate-400">ID: {row._id}</span>
+                    <span className="font-black text-slate-900 uppercase text-[10px] tracking-tight">{row.invoice?.invoiceNumber}</span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                        {row.requests.length > 1 ? `${row.requests.length} deliveries together` : `ID: ${row.requests[0]?._id}`}
+                    </span>
                 </div>
             )
         },
@@ -374,6 +418,7 @@ const ReceivingScreen = () => {
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <h4 className="text-xs font-black text-slate-900 uppercase truncate leading-none mb-1.5">{item.name}</h4>
+                                                                {selectedPO.requests?.length > 1 && <p className="text-[10px] font-bold text-slate-400 mb-1">{item._ref}</p>}
                                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                                                     <div className="flex items-center gap-1.5">
                                                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order:</span>
