@@ -5,8 +5,24 @@ import Sidebar from '../navigation/Sidebar';
 import { useState, Suspense } from 'react';
 import NewOrderAlert from '../modals/NewOrderAlert';
 import ProcurementUpdateAlert from '../modals/ProcurementUpdateAlert';
+import LanguagePickerModal from '../modals/LanguagePickerModal';
+import { FranchiseLanguageProvider, useFranchiseLanguage } from '../../contexts/FranchiseLanguageContext';
 
 export default function FranchiseLayout() {
+    return (
+        <FranchiseLanguageProvider>
+            <FranchiseShell />
+        </FranchiseLanguageProvider>
+    );
+}
+
+/** The owner picks a language the first time they open the portal (no language saved yet). */
+function FirstLoginLanguage() {
+    const { needsChoice } = useFranchiseLanguage();
+    return <LanguagePickerModal open={needsChoice} />;
+}
+
+function FranchiseShell() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const location = useLocation();
 
@@ -70,6 +86,7 @@ export default function FranchiseLayout() {
             </main>
             <NewOrderAlert />
             <ProcurementUpdateAlert />
+            {!hideNav && <FirstLoginLanguage />}
         </div>
     );
 }

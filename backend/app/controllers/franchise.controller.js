@@ -18,6 +18,30 @@ import {
 } from "../utils/franchisePayoutReport.js";
 import FranchiseAdminPayout from "../models/franchiseAdminPayout.js";
 import admin from "../services/firebaseAdmin.js";
+import { PORTAL_LANGUAGES } from "../utils/portalLanguages.js";
+import { translateTexts } from "../utils/translate.js";
+
+/* ================= LANGUAGE (same engine as the vendor portal) ================= */
+export const setFranchiseLanguage = async (req, res) => {
+  const { language } = req.body || {};
+  if (!PORTAL_LANGUAGES.includes(language)) return handleResponse(res, 400, "Unsupported language");
+  const franchise = await Franchise.findByIdAndUpdate(req.franchise._id, { preferredLanguage: language }, { returnDocument: "after" });
+  if (!franchise) return handleResponse(res, 404, "Franchise not found");
+  return handleResponse(res, 200, "Language saved", { preferredLanguage: franchise.preferredLanguage });
+};
+
+export const translateFranchisePortalText = async (req, res) => {
+  try {
+    const { texts, lang } = req.body || {};
+    if (!Array.isArray(texts)) return handleResponse(res, 400, "texts must be a list");
+    if (!PORTAL_LANGUAGES.includes(lang)) return handleResponse(res, 400, "Unsupported language");
+    const translations = await translateTexts(texts, lang);
+    return handleResponse(res, 200, "Translated", { lang, translations });
+  } catch (error) {
+    console.error("Franchise translate error:", error);
+    return handleResponse(res, 500, "Translation failed");
+  }
+};
 
 /**
  * @desc Submit KYC Documents (Aadhaar, PAN, FSSAI, shop establishment, GST)

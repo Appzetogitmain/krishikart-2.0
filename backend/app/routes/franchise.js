@@ -23,6 +23,7 @@ import {
   saveFCMToken,
   testPushByToken
 } from "../controllers/franchise.controller.js";
+import { setFranchiseLanguage, translateFranchisePortalText } from "../controllers/franchise.controller.js";
 import {
   getFranchiseCodRemittances,
   reviewFranchiseCodRemittance,
@@ -47,6 +48,9 @@ router.post("/login", loginFranchiseWithPassword);
 router.post("/forgot-password", forgotFranchisePassword);
 router.post("/reset-password", resetFranchisePassword);
 router.get("/me", protectFranchise, getFranchiseMe);
+// Language works before verification too, so a new owner can read the documents page
+router.put("/language", protectFranchise, setFranchiseLanguage);
+router.post("/translate", protectFranchise, translateFranchisePortalText);
 router.put(
   "/update",
   protectFranchise,

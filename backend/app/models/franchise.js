@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { PORTAL_LANGUAGES } from "../utils/portalLanguages.js";
 
 const franchiseSchema = new mongoose.Schema(
   {
@@ -91,6 +92,13 @@ const franchiseSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "active", "blocked"],
       default: "pending",
+    },
+
+    // Language the owner picked on first login (null = not chosen yet); same list as the vendor portal
+    preferredLanguage: {
+      type: String,
+      enum: [...PORTAL_LANGUAGES, null],
+      default: null,
     },
 
     /** Set by the admin: this franchise also supplies stock to other franchises (acts as a dark store). */

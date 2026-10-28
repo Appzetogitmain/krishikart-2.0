@@ -12,8 +12,11 @@ import {
     Layers,
     Check,
     ScrollText,
-    Clock
+    Clock,
+    Languages,
 } from 'lucide-react';
+import { PORTAL_LANGUAGES, useFranchiseLanguage } from '../contexts/FranchiseLanguageContext';
+import LanguagePickerModal from '../components/modals/LanguagePickerModal';
 import api from '@/lib/axios';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -39,6 +42,8 @@ export default function ProfileScreen() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(getStoredNotificationsEnabled);
     const [isUploading, setIsUploading] = useState(false);
+    const { lang } = useFranchiseLanguage();
+    const [pickLanguage, setPickLanguage] = useState(false);
 
     useEffect(() => {
         if (!contextLoading) {
@@ -58,6 +63,7 @@ export default function ProfileScreen() {
         {
             group: 'Settings',
             items: [
+                { id: 'language', label: 'Language / भाषा', icon: Languages, sub: `Portal language: ${PORTAL_LANGUAGES.find((l) => l.code === lang)?.name || 'English'}`, onClick: () => setPickLanguage(true) },
                 { id: 'notifications', label: 'Notifications', icon: Bell, sub: 'Manage order alerts', toggle: true },
                 { id: 'terms', label: 'Terms & Conditions', icon: ScrollText, sub: 'Read the franchise rules', onClick: () => navigate('/franchise/terms') }
             ]
@@ -244,6 +250,7 @@ export default function ProfileScreen() {
             </div>
 
             {/* Modals */}
+            <LanguagePickerModal open={pickLanguage} closable onClose={() => setPickLanguage(false)} />
             <AnimatePresence>
                 {isEditModalOpen && (
                     <EditProfileModal

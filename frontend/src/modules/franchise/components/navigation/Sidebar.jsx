@@ -20,9 +20,13 @@ import {
     BarChart3,
     Headphones,
     PackageX,
+    Languages,
 } from 'lucide-react';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useFranchiseAuth } from '@/modules/franchise/contexts/FranchiseAuthContext';
+import { PORTAL_LANGUAGES, useFranchiseLanguage } from '@/modules/franchise/contexts/FranchiseLanguageContext';
+import LanguagePickerModal from '../modals/LanguagePickerModal';
 
 const DOC_PATH = '/franchise/documentation';
 
@@ -40,6 +44,9 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { franchise } = useFranchiseAuth();
+    const { lang } = useFranchiseLanguage();
+    const [pickLanguage, setPickLanguage] = useState(false);
+    const langName = PORTAL_LANGUAGES.find((l) => l.code === lang)?.name || 'English';
     const isVerified = !!franchise?.isVerified;
 
     const mainItems = [
@@ -98,7 +105,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             isCollapsed ? 'w-20' : 'w-64',
         )}>
             {/* Brand */}
-            <div className={cn('h-20 flex items-center gap-2.5 border-b border-slate-100', isCollapsed ? 'justify-center px-2' : 'px-5')}>
+            <div translate="no" className={cn('h-20 flex items-center gap-2.5 border-b border-slate-100', isCollapsed ? 'justify-center px-2' : 'px-5')}>
                 <KisaanLeaf size={isCollapsed ? 32 : 38} />
                 {!isCollapsed && (
                     <div className="leading-tight">
@@ -116,8 +123,15 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
                 </div>
             </nav>
 
-            {/* Help + logout */}
+            {/* Language, help + logout */}
             <div className="p-3 space-y-2">
+                <button type="button" onClick={() => setPickLanguage(true)} translate="no"
+                    title="Change language"
+                    className={cn('w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 transition-colors', isCollapsed && 'justify-center')}>
+                    <Languages size={18} className="text-green-700 shrink-0" />
+                    {!isCollapsed && <span className="text-sm font-semibold">भाषा: {langName}</span>}
+                </button>
+                <LanguagePickerModal open={pickLanguage} closable onClose={() => setPickLanguage(false)} />
                 {!isCollapsed && (
                     <button type="button" onClick={() => navigate('/franchise/help-support')}
                         className="w-full flex items-center gap-3 rounded-2xl bg-green-50 px-3 py-3 text-left hover:bg-green-100 transition-colors">
