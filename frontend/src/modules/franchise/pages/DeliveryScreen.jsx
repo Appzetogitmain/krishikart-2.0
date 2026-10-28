@@ -274,7 +274,7 @@ export default function DeliveryScreen() {
                                 <span className="w-14 h-14 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shrink-0"><Package size={26} /></span>
                                 <div className="flex-1 min-w-[180px]">
                                     <p className="text-[16px] font-bold text-slate-900">Order #{String(order.id).slice(-6).toUpperCase()}</p>
-                                    <p className="text-[16px] font-semibold text-slate-800">{order.hotelName}</p>
+                                    <p translate="no" className="text-[16px] font-semibold text-slate-800">{order.hotelName}</p>
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[13px] text-slate-500">
                                         {order.customerMobile && <a href={`tel:${order.customerMobile}`} className="flex items-center gap-1 hover:text-green-700"><Phone size={13} /> {order.customerMobile}</a>}
                                         <span className="flex items-center gap-1"><Clock size={13} /> {order.deliverySlot}</span>

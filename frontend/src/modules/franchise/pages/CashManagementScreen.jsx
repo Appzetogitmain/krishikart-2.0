@@ -221,7 +221,7 @@ export default function CashManagementScreen() {
                             <div className="flex items-center gap-3 min-w-0">
                                 <span className={cn('w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold shrink-0', AVATAR[idx % AVATAR.length])}>{name.charAt(0).toUpperCase()}</span>
                                 <div className="min-w-0">
-                                    <p className="text-[16px] font-bold text-slate-900 truncate">{name}</p>
+                                    <p translate="no" className="text-[16px] font-bold text-slate-900 truncate">{name}</p>
                                     {r.deliveryPartnerId?.mobile && <p className="text-[14px] text-slate-500 flex items-center gap-1.5"><Phone size={14} /> {r.deliveryPartnerId.mobile}</p>}
                                 </div>
                             </div>

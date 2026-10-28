@@ -244,7 +244,7 @@ export default function StockReturnsScreen() {
                     <div className="flex items-start gap-3 min-w-0">
                         <span className="w-14 h-14 rounded-full bg-green-50 text-green-700 flex items-center justify-center shrink-0"><Store size={24} /></span>
                         <div className="min-w-0 space-y-1">
-                            <p className="text-[16px] font-bold text-slate-900 truncate">{who}</p>
+                            <p translate="no" className="text-[16px] font-bold text-slate-900 truncate">{who}</p>
                             <p className="text-[13px] text-slate-500 truncate">{side === 'in' ? 'Returned to you' : `To: ${destName(r) || 'admin will decide'}`}</p>
                             <p className="text-[13px] text-slate-500 flex items-center gap-1.5"><CalendarDays size={14} /> {when(r.createdAt)}</p>
                             <p className="text-[13px] text-slate-500 flex items-center gap-1.5"><FileText size={14} /> Return #{String(r._id).slice(-6).toUpperCase()}</p>

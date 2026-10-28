@@ -95,7 +95,7 @@ export default function DashboardScreen() {
                         {franchise?.profilePicture ? <img src={franchise.profilePicture} alt="" className="w-full h-full object-cover" /> : <Store size={20} />}
                     </span>
                     <span className="leading-tight max-w-[180px]">
-                        <span className="block text-[15px] font-bold text-slate-900 truncate">{franchise?.franchiseName || 'My Store'}</span>
+                        <span translate="no" className="block text-[15px] font-bold text-slate-900 truncate">{franchise?.franchiseName || 'My Store'}</span>
                         <span className="block text-xs text-slate-500 truncate">{franchise?.city || ''}</span>
                     </span>
                 </div>
@@ -138,7 +138,7 @@ export default function DashboardScreen() {
                                     <Thumb src={o.items?.[0]?.image} />
                                     <div className="min-w-[140px] flex-1 lg:min-w-0">
                                         <p className="text-[15px] font-bold text-slate-900">ऑर्डर #{String(o.id).slice(-4).toUpperCase()}</p>
-                                        <p className="text-[15px] text-slate-700 truncate">{o.hotelName}</p>
+                                        <p translate="no" className="text-[15px] text-slate-700 truncate">{o.hotelName}</p>
                                         {o.city && <p className="text-[13px] text-slate-500 flex items-center gap-1"><MapPin size={13} /> {o.city}</p>}
                                     </div>
                                     <div className="min-w-[104px]">

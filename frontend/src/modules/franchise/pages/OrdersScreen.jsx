@@ -493,7 +493,7 @@ export default function OrdersScreen() {
                             <span className={cn('px-3 py-1 rounded-lg text-[13px] font-semibold', cls)}>{label}</span>
                             {row.status === 'procuring' && <RefreshCw size={14} className="text-amber-600 animate-spin" />}
                         </div>
-                        <p className="text-[16px] font-semibold text-slate-800 mt-0.5">{row.hotelName}</p>
+                        <p translate="no" className="text-[16px] font-semibold text-slate-800 mt-0.5">{row.hotelName}</p>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[13px] text-slate-500">
                             {row.customerMobile && <span className="flex items-center gap-1"><Phone size={13} /> {row.customerMobile}</span>}
                             {row.city && <span className="flex items-center gap-1"><MapPin size={13} /> {row.city}</span>}

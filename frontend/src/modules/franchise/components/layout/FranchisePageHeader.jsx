@@ -34,7 +34,7 @@ export function FranchisePageHeader({ icon: Icon, title, subtitle, right, showDa
                     {franchise?.profilePicture ? <img src={franchise.profilePicture} alt="" className="w-full h-full object-cover" /> : <Store size={20} />}
                 </span>
                 <span className="leading-tight max-w-[180px]">
-                    <span className="block text-[15px] font-bold text-slate-900 truncate">{franchise?.franchiseName || 'My Store'}</span>
+                    <span translate="no" className="block text-[15px] font-bold text-slate-900 truncate">{franchise?.franchiseName || 'My Store'}</span>
                     <span className="block text-xs text-slate-500 truncate">{franchise?.city || 'Franchise Store'}</span>
                 </span>
             </div>

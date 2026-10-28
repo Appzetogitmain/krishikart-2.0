@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Languages } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PORTAL_LANGUAGES } from '@/lib/portalLanguage';
@@ -20,9 +21,11 @@ export default function LanguagePickerModal({ open, onClose, closable = false, l
         onClose?.();
     };
 
-    return (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-slate-900/50 p-0 sm:p-6">
-            <div translate="no" className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] max-h-[92vh] overflow-y-auto">
+    // Rendered on <body>: opened from the sidebar, it would otherwise sit under the page content
+    // (the sidebar is its own stacking layer) and the Continue button could not be clicked.
+    return createPortal(
+        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center bg-slate-900/50 p-0 sm:p-6">
+            <div translate="no" className="w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 pb-0 max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center gap-3 mb-1">
                     <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center">
                         <Languages size={26} />
@@ -61,7 +64,8 @@ export default function LanguagePickerModal({ open, onClose, closable = false, l
                     })}
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                {/* Buttons stay in view on short screens */}
+                <div className="sticky bottom-0 -mx-6 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] mt-2 bg-white flex gap-3">
                     {closable && (
                         <button type="button" onClick={onClose} className="flex-1 h-14 rounded-2xl border-2 border-slate-200 text-lg font-semibold text-slate-700">
                             Cancel
@@ -77,6 +81,7 @@ export default function LanguagePickerModal({ open, onClose, closable = false, l
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
