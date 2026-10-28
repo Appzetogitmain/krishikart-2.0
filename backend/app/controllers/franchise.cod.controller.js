@@ -27,13 +27,18 @@ export const getFranchiseCodRemittances = async (req, res) => {
     ]);
 
     const awaiting = all.filter((r) => r.status === "submitted");
+    const verified = all.filter((r) => r.status === "verified");
+    const rejected = all.filter((r) => r.status === "rejected");
     return handleResponse(res, 200, "COD cash fetched", {
       remittances: rows.map((r) => ({ ...r, orderCount: (r.orderIds || []).length })),
       totals: {
         awaitingAmount: sumAmount(awaiting),
         awaitingCount: awaiting.length,
-        verifiedAmount: sumAmount(all.filter((r) => r.status === "verified")),
-        rejectedAmount: sumAmount(all.filter((r) => r.status === "rejected")),
+        verifiedAmount: sumAmount(verified),
+        verifiedCount: verified.length,
+        rejectedAmount: sumAmount(rejected),
+        rejectedCount: rejected.length,
+        allCount: all.length,
       },
     });
   } catch (err) {

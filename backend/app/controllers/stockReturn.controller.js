@@ -295,6 +295,10 @@ export const getMyStockReturns = async (req, res) => {
         const incoming = req.franchise.isMotherFranchise
             ? await populateReturn(StockReturn.find({ "destination.franchiseId": me, status: { $in: ["approved", "sent", "received"] } })).sort({ createdAt: -1 }).limit(200).lean()
             : [];
+        // Product photo on each line, for the franchise's return cards
+        const ids = [...new Set([...mine, ...incoming].flatMap((r) => (r.items || []).map((i) => String(i.productId))))];
+        const pics = new Map((await Product.find({ _id: { $in: ids } }).select("primaryImage").lean()).map((p) => [String(p._id), p.primaryImage || ""]));
+        for (const r of [...mine, ...incoming]) for (const i of r.items || []) i.image = pics.get(String(i.productId)) || "";
         return handleResponse(res, 200, "Stock returns", { mine, incoming });
     } catch (err) {
         console.error("getMyStockReturns error:", err);

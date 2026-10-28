@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Monitor,
     Search,
     ShoppingBasket,
-    Scale,
     Trash2,
     Plus,
     Minus,
@@ -15,58 +13,77 @@ import {
     X,
     ShoppingCart,
     Package,
-    ArrowRight,
-    Home,
     ChevronRight,
     RefreshCw,
-    ShieldCheck,
-    IndianRupee,
-    ChevronLeft,
-    Monitor as MonitorIcon
+    Store,
+    LayoutGrid,
+    Leaf,
+    Apple,
+    Milk,
+    MoreHorizontal,
+    Smartphone,
 } from 'lucide-react';
 import { useInventory } from '../contexts/InventoryContext';
-import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import { cn } from '@/lib/utils';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
+import { FranchisePageHeader } from '../components/layout/FranchisePageHeader';
+import { hindiName } from '../utils/hindiNames';
+
+/* Counter sale (POS), built to the client's mockup: Hindi-first product cards, cart with totals, Cash / UPI. */
+
+const GROUPS = [
+    { id: 'all', label: 'सभी', Icon: LayoutGrid },
+    { id: 'veg', label: 'सब्जियां', Icon: Leaf, re: /veg/i, cls: 'text-green-600' },
+    { id: 'fruit', label: 'फल', Icon: Apple, re: /fruit/i, cls: 'text-rose-500' },
+    { id: 'dairy', label: 'डेयरी', Icon: Milk, re: /dairy|milk/i, cls: 'text-blue-500' },
+    { id: 'other', label: 'अन्य', Icon: MoreHorizontal },
+];
+const groupOf = (category) => GROUPS.find((g) => g.re?.test(category || ''))?.id || 'other';
+const round3 = (n) => Math.round((Number(n) || 0) * 1000) / 1000;
+const rupees = (n) => `₹${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-IN')}`;
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=40';
 
 export default function POSScreen() {
     const { inventory, refreshInventory, loading: inventoryLoading } = useInventory();
     const { franchise } = useFranchiseAuth();
     const [searchQuery, setSearchQuery] = useState('');
+    const [group, setGroup] = useState('all');
     const [cart, setCart] = useState(() => {
-        const savedCart = localStorage.getItem('pos_cart');
-        return savedCart ? JSON.parse(savedCart) : [];
+        try {
+            const savedCart = localStorage.getItem('pos_cart');
+            return savedCart ? JSON.parse(savedCart) : [];
+        } catch {
+            return [];
+        }
     });
+    const [payMode, setPayMode] = useState('Cash');
     const [lastSale, setLastSale] = useState(null);
-    const [showCheckout, setShowCheckout] = useState(false);
     const [showQRCodeModal, setShowQRCodeModal] = useState(false);
     const [isReceiptShown, setIsReceiptShown] = useState(false);
-    const [weight, setWeight] = useState(0);
-    const [selectedItemForScale, setSelectedItemForScale] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // Loading state handled by context
 
     // Persist cart
     useEffect(() => {
         localStorage.setItem('pos_cart', JSON.stringify(cart));
     }, [cart]);
 
-    const filteredItems = inventory.filter(item =>
-        item.showOnPOS !== false && (
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.category.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-    );
+    const filteredItems = inventory.filter((item) => {
+        if (item.showOnPOS === false) return false;
+        if (group !== 'all' && groupOf(item.category) !== group) return false;
+        const term = searchQuery.trim().toLowerCase();
+        return !term
+            || item.name.toLowerCase().includes(term)
+            || item.category.toLowerCase().includes(term)
+            || hindiName(item.name).includes(term);
+    });
 
     const addToCart = (item, qty = 1) => {
         setCart(prev => {
             const existing = prev.find(i => i.id === item.id);
             if (existing) {
-                return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + qty } : i);
+                return prev.map(i => i.id === item.id ? { ...i, qty: round3((Number(i.qty) || 0) + qty) } : i);
             }
             return [...prev, { ...item, qty }];
         });
@@ -76,17 +93,20 @@ export default function POSScreen() {
         setCart(prev => prev.filter(i => i.id !== id));
     };
 
-    const updateQty = (id, delta) => {
-        setCart(prev => prev.map(i => {
-            if (i.id === id) {
-                const newQty = Math.max(1, i.qty + delta);
-                return { ...i, qty: newQty };
-            }
-            return i;
-        }));
+    const setQty = (id, qty) => {
+        const n = round3(qty);
+        setCart(prev => (n > 0 ? prev.map(i => (i.id === id ? { ...i, qty: n } : i)) : prev.filter(i => i.id !== id)));
     };
+    const updateQty = (id, delta) => {
+        const item = cart.find(i => i.id === id);
+        if (item) setQty(id, (Number(item.qty) || 0) + delta);
+    };
+    // While typing (e.g. "0.5") keep the text as it is; an empty or zero amount is removed on blur
+    const typeQty = (id, value) => setCart(prev => prev.map(i => (i.id === id ? { ...i, qty: value } : i)));
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const total = cart.reduce((sum, item) => sum + (item.price * (Number(item.qty) || 0)), 0);
+    const totalQty = round3(cart.reduce((s, i) => s + (Number(i.qty) || 0), 0));
+    const units = [...new Set(cart.map((i) => i.unit))];
 
     const handleCheckout = async (paymentMode) => {
         setIsSubmitting(true);
@@ -95,9 +115,9 @@ export default function POSScreen() {
                 items: cart.map(item => ({
                     productId: item.productId,
                     name: item.name,
-                    quantity: item.qty,
+                    quantity: Number(item.qty) || 0,
                     price: item.price,
-                    subtotal: item.price * item.qty,
+                    subtotal: item.price * (Number(item.qty) || 0),
                     unit: item.unit
                 })),
                 totalAmount: total,
@@ -121,7 +141,6 @@ export default function POSScreen() {
                 setCart([]);
 
                 refreshInventory();
-                setShowCheckout(false);
                 setIsReceiptShown(true);
                 toast.success('Sale recorded successfully');
             }
@@ -134,17 +153,15 @@ export default function POSScreen() {
         }
     };
 
-    const handleScaleComplete = () => {
-        if (weight > 0 && selectedItemForScale) {
-            addToCart(selectedItemForScale, weight);
-            setSelectedItemForScale(null);
-            setWeight(0);
-        }
+    const checkout = () => {
+        if (!cart.length || isSubmitting) return;
+        if (cart.some((i) => !(Number(i.qty) > 0))) { toast.error("Enter a quantity for every item"); return; }
+        if (payMode === 'UPI') setShowQRCodeModal(true);
+        else handleCheckout('Cash');
     };
 
     const handlePrint = () => {
         const printContent = document.getElementById('printable-receipt');
-        const originalContent = document.body.innerHTML;
         const receiptHtml = printContent.innerHTML;
 
         // Custom print style
@@ -174,441 +191,229 @@ export default function POSScreen() {
         }, 250);
     };
 
+    const closeReceipt = () => {
+        localStorage.removeItem('pos_cart');
+        setCart([]);
+        setIsReceiptShown(false);
+    };
+
     return (
-        <div className="min-h-screen bg-white flex flex-col lg:flex-row h-screen overflow-hidden font-sans">
-            {/* Left: Terminal Items */}
-            <div className="flex-1 flex flex-col h-full bg-slate-50 relative border-r border-slate-200">
-                {/* Enterprise Terminal Header */}
-                <div className="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between sticky top-0 z-30">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
-                            <Home size={12} />
-                            <ChevronRight size={10} />
-                            <span>Counter</span>
-                            <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest leading-none">New Sale</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded-sm">
-                            <ShieldCheck size={10} className="text-emerald-500" />
-                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest leading-none">System Online</span>
-                        </div>
+        <div className="bg-[#f6f8f7] min-h-screen pb-28 lg:pb-8">
+            <FranchisePageHeader
+                icon={Store}
+                title="Counter Sale / काउंटर बिक्री"
+                subtitle="ग्राहकों को सीधे यहां से सामान बेचें"
+                showDate={false}
+                right={
+                    <button onClick={() => refreshInventory()} className="h-14 w-14 rounded-2xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center hover:bg-slate-50" aria-label="Refresh stock">
+                        <RefreshCw size={20} className={cn(inventoryLoading && 'animate-spin')} />
+                    </button>
+                }
+            />
+
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-5 px-4 lg:px-6">
+                <div className="min-w-0 space-y-4">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                        <input
+                            type="text"
+                            placeholder="सब्जी या सामान खोजें..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full h-14 bg-white border border-slate-200 rounded-2xl pl-12 pr-4 outline-none text-[16px] text-slate-900 placeholder:text-slate-400 focus:border-green-600"
+                        />
                     </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="relative group w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={14} />
-                            <input
-                                type="text"
-                                placeholder="Search items..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value.trim())}
-                                className="w-full bg-slate-100 border border-slate-200 rounded-sm py-1.5 pl-9 pr-4 outline-none text-[11px] font-black text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 transition-all font-sans"
-                            />
-                        </div>
-                        <button className="p-1.5 border border-slate-200 rounded-sm hover:bg-slate-50 text-slate-400 transition-colors">
-                            <RefreshCw size={14} />
-                        </button>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-px bg-slate-200 no-scrollbar content-start">
-                    {inventoryLoading && inventory.length === 0 ? (
-                        <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
-                            <RefreshCw className="animate-spin mb-4" size={32} />
-                            <p className="text-[10px] font-black uppercase tracking-widest">Loading products...</p>
-                        </div>
-                    ) : filteredItems.length === 0 ? (
-                        <div className="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
-                            <Package size={48} strokeWidth={1} className="mb-4 opacity-20" />
-                            <p className="text-[10px] font-black uppercase tracking-widest">No items found</p>
-                        </div>
-                    ) :
-                        filteredItems.map((item) => (
-                            <div
-                                key={item.id}
-                                onClick={() => (item.unit === 'Kg' || item.unit === 'kg') ? setSelectedItemForScale(item) : addToCart(item)}
-                                className="bg-white p-4 pb-6 border border-transparent hover:border-slate-900 transition-all cursor-pointer flex flex-col group relative overflow-hidden h-full min-h-[360px]"
-                            >
-                                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                    <Plus size={20} className="text-slate-900 bg-white rounded-full shadow-lg p-1" />
-                                </div>
-
-                                {/* Category Badge */}
-                                <div className="absolute top-3 left-3 z-10">
-                                    <span className="bg-slate-900/5 backdrop-blur-md text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-sm uppercase tracking-tighter">
-                                        {item.category}
-                                    </span>
-                                </div>
-
-                                <div className="w-full pt-[100%] bg-slate-50 mb-4 rounded-sm relative overflow-hidden">
-                                    <div className="absolute inset-0 flex items-center justify-center p-4 text-slate-300 transition-colors group-hover:bg-slate-100/50">
-                                        {item.image ? (
-                                            <img
-                                                src={item.image}
-                                                className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
-                                                alt={item.name}
-                                                loading="lazy"
-                                                onError={(e) => {
-                                                    e.target.onerror = null;
-                                                    e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600';
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="flex flex-col items-center gap-2">
-                                                <Package size={40} strokeWidth={1} />
-                                                <span className="text-[10px] uppercase tracking-widest font-black">No Preview</span>
-                                            </div>
-                                        )}
-
-                                        {/* Promo Badges (Unit moved to price section) */}
-                                        <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5 z-10">
-                                            {item.bestPrice > 0 && (
-                                                <div className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-sm shadow-sm uppercase tracking-tighter">
-                                                    Best Rate
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Dietary Type Indicator */}
-                                        {item.dietaryType && item.dietaryType !== 'none' && (
-                                            <div className="absolute bottom-3 left-3">
-                                                <div className={cn(
-                                                    "w-5 h-5 border-[1.5px] flex items-center justify-center rounded-[2px] bg-white shadow-sm",
-                                                    item.dietaryType === 'veg' ? "border-emerald-600" : "border-red-600"
-                                                )}>
-                                                    <div className={cn(
-                                                        "w-[7px] h-[7px] rounded-full",
-                                                        item.dietaryType === 'veg' ? "bg-emerald-600" : "bg-red-600"
-                                                    )} />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-1 flex-1">
-                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight line-clamp-2 leading-tight mb-2">{item.name}</h4>
-
-                                    <div className="mt-auto flex flex-col gap-1">
-                                        <div className="flex items-baseline gap-1.5">
-                                            <span className="text-lg font-black text-slate-900 tabular-nums">₹{(item.price || 0).toLocaleString()}</span>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                                                / {item.unitValue} {item.unit}
-                                            </span>
-                                            {item.comparePrice > item.price && (
-                                                <span className="text-xs text-slate-400 line-through font-bold ml-1">₹{item.comparePrice}</span>
-                                            )}
-                                        </div>
-
-                                        <div className={cn(
-                                            "text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 mb-1",
-                                            item.currentStock <= 0 ? "text-rose-500" :
-                                                item.currentStock <= 5 ? "text-amber-500" : "text-emerald-600/70"
-                                        )}>
-                                            <div className={cn(
-                                                "w-1.5 h-1.5 rounded-full animate-pulse",
-                                                item.currentStock <= 0 ? "bg-rose-500" :
-                                                    item.currentStock <= 5 ? "bg-amber-500" : "bg-emerald-500"
-                                            )} />
-                                            Stock: {item.currentStock} {item.unit}
-                                        </div>
-                                    </div>
-                                </div>
-                                {(item.unit === 'Kg' || item.unit === 'kg') && (
-                                    <div className="mt-2 pt-1 border-t border-slate-50 flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600 tracking-widest">
-                                        <Scale size={10} />
-                                        Sold by weight
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    }
-                </div>
-            </div>
-
-            {/* Right: Cart & Summary */}
-            <div className="w-full lg:w-[440px] bg-white flex flex-col h-full shadow-2xl relative z-20">
-                <div className="h-14 border-b border-slate-200 px-6 flex items-center justify-between bg-slate-50/50">
-                    <div className="flex items-center gap-2">
-                        <ShoppingBasket className="text-slate-900" size={16} />
-                        <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Cart</h2>
-                    </div>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums">{cart.length} ITEMS</span>
-                </div>
-
-                <div className="flex-1 overflow-y-auto no-scrollbar">
-                    <div className="divide-y divide-slate-100">
-                        {cart.map((item) => (
-                            <div key={item.id} className="p-4 flex items-center gap-4 group hover:bg-slate-50 transition-colors">
-                                <div className="w-10 h-10 rounded-sm bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 shrink-0 overflow-hidden">
-                                    {item.image ? (
-                                        <img
-                                            src={item.image}
-                                            className="w-full h-full object-cover"
-                                            alt=""
-                                            onError={(e) => {
-                                                e.target.onerror = null;
-                                                e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200';
-                                            }}
-                                        />
-                                    ) : (
-                                        <Package size={16} />
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-[11px] font-black text-slate-900 uppercase truncate leading-none mb-1">{item.name}</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 tabular-nums">
-                                        {item.qty} {item.unit} × ₹{(item.price || 0).toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                    <div className="flex items-center bg-white border border-slate-200 rounded-sm p-0.5">
-                                        <button onClick={() => updateQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-900">
-                                            <Minus size={10} strokeWidth={3} />
-                                        </button>
-                                        <span className="w-8 text-center text-[11px] font-black tabular-nums">{item.qty}</span>
-                                        <button onClick={() => updateQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-900">
-                                            <Plus size={10} strokeWidth={3} />
-                                        </button>
-                                    </div>
-                                    <span className="text-[11px] font-black text-slate-900 tabular-nums">₹{((item.price || 0) * item.qty).toLocaleString()}</span>
-                                </div>
-                                <button onClick={() => removeFromCart(item.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        {GROUPS.map((g) => (
+                            <button key={g.id} onClick={() => setGroup(g.id)}
+                                className={cn('h-12 rounded-xl text-[15px] font-semibold flex items-center justify-center gap-2 transition-colors',
+                                    group === g.id ? 'bg-green-700 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50')}>
+                                <g.Icon size={20} className={group === g.id ? '' : g.cls} /> {g.label}
+                            </button>
                         ))}
                     </div>
 
-                    {cart.length === 0 && (
-                        <div className="py-32 flex flex-col items-center justify-center text-center px-10">
-                            <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-sm flex items-center justify-center text-slate-200 mb-6">
-                                <ShoppingBasket size={32} strokeWidth={1} />
-                            </div>
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Cart is empty</h3>
-                            <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-2">Add items to start a sale</p>
+                    {inventoryLoading && inventory.length === 0 ? (
+                        <div className="py-20 flex flex-col items-center text-slate-400">
+                            <RefreshCw className="animate-spin mb-3" size={30} />
+                            <p className="text-[15px]">सामान लोड हो रहा है...</p>
+                        </div>
+                    ) : filteredItems.length === 0 ? (
+                        <div className="bg-white rounded-3xl border border-slate-100 py-16 text-center text-slate-500">
+                            <Package size={40} className="mx-auto text-slate-300 mb-2" />
+                            <p className="text-[15px]">कोई सामान नहीं मिला</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-4">
+                            {filteredItems.map((item) => {
+                                const hi = hindiName(item.name);
+                                const inCart = cart.find((c) => c.id === item.id)?.qty || 0;
+                                const out = item.currentStock <= 0;
+                                const low = !out && item.currentStock <= 5;
+                                return (
+                                    <div key={item.id} className={cn('bg-white rounded-2xl border overflow-hidden flex flex-col', inCart ? 'border-green-500' : 'border-slate-100')}>
+                                        <div className="aspect-[4/3] bg-slate-50 overflow-hidden relative">
+                                            <img src={item.image || FALLBACK_IMG} alt={item.name} className="w-full h-full object-cover" loading="lazy"
+                                                onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} />
+                                            {inCart > 0 && <span className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-green-700 text-white text-[12px] font-bold">{inCart} {item.unit}</span>}
+                                        </div>
+                                        <div className="p-3 flex-1 flex flex-col gap-1">
+                                            <p className="text-[17px] font-bold text-slate-900 leading-tight">{hi || item.name}</p>
+                                            {hi && <p className="text-[13px] text-slate-500 -mt-0.5">{item.name}</p>}
+                                            <p className="text-[15px] text-slate-700 tabular-nums mt-1">
+                                                <b className="text-[18px] text-slate-900">₹ {(item.price || 0).toLocaleString('en-IN')}</b> / {item.unitValue > 1 ? `${item.unitValue} ` : ''}{item.unit}
+                                                {item.comparePrice > item.price && <span className="ml-1.5 text-[13px] text-slate-400 line-through">₹{item.comparePrice}</span>}
+                                            </p>
+                                            <p className={cn('text-[13px] font-semibold flex items-center gap-1.5', out || low ? 'text-rose-600' : 'text-green-700')}>
+                                                <Package size={14} /> स्टॉक: {item.currentStock} {item.unit}
+                                            </p>
+                                            <button onClick={() => addToCart(item)} disabled={out}
+                                                className="mt-2 h-11 rounded-xl bg-green-700 text-white text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-green-800 disabled:bg-slate-200 disabled:text-slate-500">
+                                                <ShoppingCart size={18} /> {out ? 'स्टॉक खत्म' : '+ जोड़ें'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
 
-                <div className="p-6 bg-slate-900 text-white">
-                    <div className="space-y-4 mb-8">
-                        <div className="flex justify-between items-center opacity-60">
-                            <span className="text-[10px] font-black uppercase tracking-widest">Subtotal</span>
-                            <span className="text-[11px] font-black tabular-nums">₹{(total || 0).toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between items-center opacity-60">
-                            <span className="text-[10px] font-black uppercase tracking-widest">Tax</span>
-                            <span className="text-[11px] font-black tabular-nums">₹0.00</span>
-                        </div>
-                        <div className="h-px bg-slate-800" />
-                        <div className="flex justify-between items-end">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.3em] mb-1">Total Amount</span>
-                                <span className="text-3xl font-black tracking-tighter tabular-nums leading-none">₹{(total || 0).toLocaleString()}</span>
-                            </div>
-                            <IndianRupee size={32} className="text-slate-800" />
-                        </div>
+                {/* Cart */}
+                <div id="pos-cart" className="xl:sticky xl:top-4 self-start bg-white rounded-3xl border border-slate-100 overflow-hidden">
+                    <div className="flex items-center gap-3 px-4 lg:px-5 py-4 bg-green-50/60">
+                        <ShoppingCart size={26} className="text-green-700" />
+                        <h2 className="flex-1 text-xl font-bold text-slate-900">बिक्री की सूची / Cart</h2>
+                        {cart.length > 0 && (
+                            <button onClick={() => setCart([])} className="text-[14px] font-semibold text-rose-600 flex items-center gap-1.5 hover:text-rose-700">
+                                <Trash2 size={16} /> सभी हटाएं
+                            </button>
+                        )}
                     </div>
 
-                    <button
-                        disabled={cart.length === 0}
-                        onClick={() => setShowCheckout(true)}
-                        className={cn(
-                            "w-full h-14 rounded-sm font-black uppercase text-[11px] tracking-[0.3em] transition-all flex items-center justify-center gap-3",
-                            cart.length > 0 ? "bg-white text-slate-900 hover:bg-slate-100 shadow-xl" : "bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700"
+                    <div className="px-4 lg:px-5">
+                        {cart.length > 0 ? (
+                            <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
+                                {cart.map((item) => {
+                                    const hi = hindiName(item.name);
+                                    return (
+                                        <div key={item.id} className="py-3 flex items-center gap-3">
+                                            <img src={item.image || FALLBACK_IMG} alt="" className="w-14 h-14 rounded-xl object-cover bg-slate-50 shrink-0"
+                                                onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[16px] font-bold text-slate-900 truncate">{hi || item.name}</p>
+                                                <p className="text-[13px] text-slate-500">₹ {(item.price || 0).toLocaleString('en-IN')} / {item.unit}</p>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    <button onClick={() => updateQty(item.id, -1)} className="w-9 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center hover:bg-slate-200" aria-label="Less"><Minus size={16} /></button>
+                                                    <input type="number" inputMode="decimal" min="0" step="any" value={item.qty}
+                                                        onChange={(e) => typeQty(item.id, e.target.value)}
+                                                        onBlur={() => setQty(item.id, item.qty)}
+                                                        className="w-14 h-10 rounded-lg border border-slate-200 text-center text-[15px] font-bold tabular-nums outline-none focus:border-green-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                                                        aria-label={`${item.name} quantity`} />
+                                                    <button onClick={() => updateQty(item.id, 1)} className="w-9 h-10 rounded-lg bg-green-700 text-white flex items-center justify-center hover:bg-green-800" aria-label="More"><Plus size={16} /></button>
+                                                    <button onClick={() => removeFromCart(item.id)} className="w-8 h-10 text-slate-400 hover:text-rose-600 flex items-center justify-center" aria-label={`Remove ${item.name}`}><X size={18} /></button>
+                                                </div>
+                                                <span className="text-[17px] font-bold text-green-700 tabular-nums">{rupees(item.price * (Number(item.qty) || 0))}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="py-12 text-center text-slate-500">
+                                <ShoppingBasket size={40} className="mx-auto text-slate-300 mb-2" />
+                                <p className="text-[15px] font-semibold">सूची खाली है</p>
+                                <p className="text-[13px]">सामान पर "+ जोड़ें" दबाएं</p>
+                            </div>
                         )}
-                    >
-                        Pay Now <ArrowRight size={16} />
-                    </button>
+                    </div>
+
+                    <div className="px-4 lg:px-5 pb-5 space-y-4 border-t border-slate-100 pt-4">
+                        <div className="space-y-1.5 text-[15px] text-slate-600">
+                            <div className="flex justify-between"><span>कुल आइटम</span><b className="text-slate-900">{cart.length}</b></div>
+                            <div className="flex justify-between"><span>कुल मात्रा</span><b className="text-slate-900">{totalQty} {units.length === 1 ? units[0] : ''}</b></div>
+                        </div>
+                        <div className="rounded-2xl bg-green-50 p-4">
+                            <p className="text-[15px] text-green-800">कुल राशि (Total Amount)</p>
+                            <p className="text-4xl font-bold text-green-800 tabular-nums">{rupees(total)}</p>
+                        </div>
+                        <div>
+                            <p className="text-[16px] font-bold text-slate-900 mb-2">भुगतान का तरीका (Payment Method)</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { id: 'Cash', label: 'कैश (Cash)', Icon: Banknote },
+                                    { id: 'UPI', label: 'UPI', Icon: Smartphone },
+                                ].map((m) => (
+                                    <button key={m.id} type="button" onClick={() => setPayMode(m.id)}
+                                        className={cn('h-14 rounded-2xl border-2 flex items-center gap-2 px-3 text-[15px] font-semibold transition-colors',
+                                            payMode === m.id ? 'border-green-600 bg-green-50/60 text-green-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50')}>
+                                        <span className={cn('w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0', payMode === m.id ? 'border-green-600 bg-green-600' : 'border-slate-300')}>
+                                            {payMode === m.id && <CheckCircle2 size={14} className="text-white" />}
+                                        </span>
+                                        <m.Icon size={20} /> {m.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <button onClick={checkout} disabled={cart.length === 0 || isSubmitting}
+                            className="w-full h-16 rounded-2xl bg-green-700 text-white text-[18px] font-bold flex items-center justify-center gap-3 hover:bg-green-800 disabled:opacity-50">
+                            {isSubmitting ? <RefreshCw size={22} className="animate-spin" /> : <Printer size={22} />}
+                            बिल बनाएं / Checkout <ChevronRight size={20} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Weighing Interface */}
-            <AnimatePresence>
-                {selectedItemForScale && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-                            onClick={() => setSelectedItemForScale(null)}
-                        />
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white w-full max-w-md rounded-sm p-8 shadow-2xl relative z-10"
-                        >
-                            <div className="flex items-center gap-4 mb-8">
-                                <div className="w-12 h-12 bg-slate-900 text-white rounded-sm flex items-center justify-center">
-                                    <Scale size={24} />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Weighing Scale</p>
-                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">{selectedItemForScale.name}</h3>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-50 border border-slate-200 rounded-sm p-8 text-center mb-8">
-                                <div className="text-5xl font-black text-slate-900 tracking-tighter mb-2 tabular-nums">
-                                    {weight.toFixed(3)} <span className="text-lg text-slate-400">KG</span>
-                                </div>
-                                <div className="flex items-center justify-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Weight ready</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="relative group">
-                                    <input
-                                        type="number"
-                                        step="0.001"
-                                        min="0"
-                                        autoFocus
-                                        value={weight === 0 ? '' : weight}
-                                        onChange={(e) => setWeight(parseFloat(e.target.value) || 0)}
-                                        placeholder="Enter weight in KG..."
-                                        className="w-full bg-slate-50 border-2 border-slate-200 rounded-sm py-4 px-6 text-2xl font-black text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all tabular-nums"
-                                    />
-                                    <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm uppercase tracking-widest pointer-events-none">
-                                        KG
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-4 gap-2">
-                                    {[0.25, 0.5, 1, 2, 5].map((val) => (
-                                        <button
-                                            key={val}
-                                            type="button"
-                                            onClick={() => setWeight(val)}
-                                            className="py-2.5 bg-slate-50 border border-slate-200 rounded-sm text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
-                                        >
-                                            {val}kg
-                                        </button>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={() => setWeight(0)}
-                                        className="py-2.5 bg-rose-50 border border-rose-100 rounded-sm text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-500 hover:text-white transition-all"
-                                    >
-                                        Clear
-                                    </button>
-                                </div>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setSelectedItemForScale(null)}
-                                        className="flex-1 h-12 rounded-sm border border-slate-200 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleScaleComplete}
-                                        className="flex-[2] h-12 rounded-sm bg-slate-900 text-white font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:bg-slate-800 transition-all"
-                                    >
-                                        Add Weight
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* Checkout Interface */}
-            <AnimatePresence>
-                {showCheckout && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-                        <motion.div
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-                            onClick={() => setShowCheckout(false)}
-                        />
-                        <motion.div
-                            initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
-                            className="bg-white w-full max-w-lg rounded-sm p-10 shadow-2xl relative z-10"
-                        >
-                            <h3 className="text-xs font-black text-slate-900 tracking-[0.3em] uppercase mb-12 text-center">Choose Payment Method</h3>
-
-                            <div className="grid grid-cols-2 gap-4 mb-12">
-                                <button
-                                    onClick={() => handleCheckout('Cash')}
-                                    disabled={isSubmitting}
-                                    className="p-8 border border-slate-200 rounded-sm flex flex-col items-center gap-4 hover:border-slate-900 hover:bg-slate-50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSubmitting ? (
-                                        <RefreshCw size={40} className="text-slate-900 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <Banknote size={40} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
-                                            <span className="font-black uppercase text-[10px] tracking-widest text-slate-400 group-hover:text-slate-900">Cash</span>
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setShowQRCodeModal(true)}
-                                    disabled={isSubmitting}
-                                    className="p-8 border border-slate-200 rounded-sm flex flex-col items-center gap-4 hover:border-slate-900 hover:bg-slate-50 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isSubmitting ? (
-                                        <RefreshCw size={40} className="text-slate-900 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <QrCode size={40} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
-                                            <span className="font-black uppercase text-[10px] tracking-widest text-slate-400 group-hover:text-slate-900">Online Payment</span>
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-
-                            <button onClick={() => setShowCheckout(false)} className="w-full text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Cancel</button>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* Phone: jump to the cart */}
+            {cart.length > 0 && (
+                <button onClick={() => document.getElementById('pos-cart')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="xl:hidden fixed bottom-20 left-4 right-4 z-40 h-14 rounded-2xl bg-green-700 text-white text-[16px] font-bold shadow-lg flex items-center justify-center gap-2">
+                    <ShoppingCart size={20} /> Cart ({cart.length}) — {rupees(total)}
+                </button>
+            )}
 
             {/* QR Code Scan Modal */}
             <AnimatePresence>
                 {showQRCodeModal && (
-                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-sm">
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white w-full max-w-sm rounded-sm p-8 shadow-2xl flex flex-col items-center"
+                            className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center"
                         >
-                            <h3 className="text-xs font-black text-slate-900 tracking-[0.3em] uppercase mb-8">Scan to Pay</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-4">Scan to Pay / स्कैन करके भुगतान</h3>
 
-                            <div className="w-full aspect-square border-2 border-slate-100 rounded-sm mb-8 flex items-center justify-center bg-slate-50 relative overflow-hidden p-4">
+                            <div className="w-full aspect-square border border-slate-100 rounded-2xl mb-5 flex items-center justify-center bg-slate-50 overflow-hidden p-4">
                                 {franchise?.storeQRCode ? (
                                     <img src={franchise.storeQRCode} className="w-full h-full object-contain" alt="Payment QR" />
                                 ) : (
-                                    <div className="flex flex-col items-center gap-3 text-slate-300">
+                                    <div className="flex flex-col items-center gap-3 text-slate-400">
                                         <QrCode size={64} strokeWidth={1} />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">No QR Set</span>
+                                        <span className="text-[14px] font-semibold">No QR set — add it in Payment Settings</span>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="text-center mb-10">
-                                <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight mb-1">Total Amount</p>
-                                <p className="text-2xl font-black text-slate-900 tabular-nums">₹{(total || 0).toLocaleString()}</p>
+                            <div className="text-center mb-6">
+                                <p className="text-[14px] text-slate-500">Total Amount</p>
+                                <p className="text-3xl font-bold text-slate-900 tabular-nums">{rupees(total)}</p>
                             </div>
 
-                            <div className="w-full flex flex-col gap-3">
+                            <div className="w-full flex flex-col gap-2">
                                 <button
                                     onClick={() => {
                                         handleCheckout('QR Scan');
                                         setShowQRCodeModal(false);
                                     }}
                                     disabled={isSubmitting || !franchise?.storeQRCode}
-                                    className="w-full h-12 bg-slate-900 text-white rounded-sm font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:bg-slate-800 transition-all disabled:bg-slate-200"
+                                    className="w-full h-14 bg-green-700 text-white rounded-2xl text-[16px] font-bold hover:bg-green-800 disabled:bg-slate-200 disabled:text-slate-500"
                                 >
-                                    {isSubmitting ? <RefreshCw size={16} className="animate-spin mx-auto" /> : 'Confirm Payment'}
+                                    {isSubmitting ? <RefreshCw size={18} className="animate-spin mx-auto" /> : 'पैसा मिल गया / Confirm Payment'}
                                 </button>
-                                <button
-                                    onClick={() => setShowQRCodeModal(false)}
-                                    className="w-full h-12 text-slate-400 font-black uppercase text-[10px] tracking-[0.2em] hover:text-slate-900 transition-colors"
-                                >
+                                <button onClick={() => setShowQRCodeModal(false)} className="w-full h-12 text-[15px] font-semibold text-slate-500 hover:text-slate-900">
                                     Go Back
                                 </button>
                             </div>
@@ -623,16 +428,12 @@ export default function POSScreen() {
                     <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-900/90 backdrop-blur-md cursor-pointer"
-                            onClick={() => {
-                                localStorage.removeItem('pos_cart');
-                                setCart([]);
-                                setIsReceiptShown(false);
-                            }}
+                            className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm cursor-pointer"
+                            onClick={closeReceipt}
                         />
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white w-[380px] rounded-sm p-0 shadow-2xl relative z-10 overflow-hidden"
+                            className="bg-white w-full max-w-[380px] rounded-3xl shadow-2xl relative z-10 overflow-hidden"
                         >
                             {/* Hidden printable receipt structure */}
                             <div id="printable-receipt" className="hidden">
@@ -663,46 +464,35 @@ export default function POSScreen() {
                                 </div>
                             </div>
 
-                            <div className="p-8 flex flex-col items-center border-b border-dashed border-slate-200">
-                                <div className="w-14 h-14 bg-slate-900 rounded-sm flex items-center justify-center text-white mb-6">
-                                    <CheckCircle2 size={28} />
-                                </div>
-                                <h2 className="text-xs font-black text-slate-900 uppercase tracking-[0.3em] mb-1">Payment Successful</h2>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receipt ready</p>
+                            <div className="p-6 flex flex-col items-center border-b border-dashed border-slate-200">
+                                <span className="w-16 h-16 bg-green-700 rounded-full flex items-center justify-center text-white mb-4"><CheckCircle2 size={32} /></span>
+                                <h2 className="text-xl font-bold text-slate-900">बिक्री पूरी हुई</h2>
+                                <p className="text-[14px] text-slate-500">Payment received · receipt ready</p>
                             </div>
 
-                            <div className="p-8 space-y-4">
-                                <div className="flex justify-between text-[11px] font-black uppercase text-slate-900 tracking-widest">
+                            <div className="p-6 space-y-3 text-[15px]">
+                                <div className="flex justify-between font-bold text-slate-900">
                                     <span>Total Received</span>
-                                    <span className="tabular-nums">₹{(lastSale?.total || 0).toLocaleString()}</span>
+                                    <span className="tabular-nums">{rupees(lastSale?.total)}</span>
                                 </div>
-                                <div className="h-px bg-slate-100" />
-                                <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest">
+                                <div className="flex justify-between text-slate-500">
                                     <span>Payment Method</span>
-                                    <span>Counter Sale (POS)</span>
+                                    <span>{lastSale?.paymentMethod === 'QR Scan' ? 'UPI' : lastSale?.paymentMethod}</span>
                                 </div>
-                                <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest">
+                                <div className="flex justify-between text-slate-500">
                                     <span>Time</span>
-                                    <span>{new Date().toLocaleTimeString()}</span>
+                                    <span>{new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}</span>
                                 </div>
                             </div>
 
-                            <div className="p-8 pt-0 space-y-3">
-                                <button
-                                    onClick={handlePrint}
-                                    className="w-full h-12 bg-slate-900 text-white rounded-sm font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
-                                >
-                                    <Printer size={16} /> Print Receipt
+                            <div className="p-6 pt-0 space-y-2">
+                                <button onClick={handlePrint}
+                                    className="w-full h-14 bg-green-700 text-white rounded-2xl text-[16px] font-bold flex items-center justify-center gap-2 hover:bg-green-800">
+                                    <Printer size={20} /> Print Receipt
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        localStorage.removeItem('pos_cart');
-                                        setCart([]);
-                                        setIsReceiptShown(false);
-                                    }}
-                                    className="w-full h-12 border border-slate-200 text-slate-600 rounded-sm font-black uppercase text-[10px] tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-slate-50 transition-all"
-                                >
-                                    Done & New Sale
+                                <button onClick={closeReceipt}
+                                    className="w-full h-12 border border-slate-200 text-slate-700 rounded-2xl text-[15px] font-semibold hover:bg-slate-50">
+                                    नई बिक्री / New Sale
                                 </button>
                             </div>
                         </motion.div>

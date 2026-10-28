@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Undo2, Loader2, RefreshCw, Plus, Send, CheckCircle2, XCircle, Search, PackageX, Camera, X } from 'lucide-react';
+import { Loader2, RefreshCw, Plus, Send, CheckCircle2, XCircle, Search, PackageX, Camera, X, Clock, Truck, Store, CalendarDays, FileText, Package, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
+import { FranchisePageHeader, PillTabs } from '../components/layout/FranchisePageHeader';
 
 // What is wrong with an item (the vendor sees this in Rejected Stock)
 const ISSUES = [
@@ -192,120 +193,194 @@ export default function StockReturnsScreen() {
 
     const canSubmit = kind && reason && chosen.length > 0 && (kind === 'from_stock' || sourceId) && (reason !== 'other' || note.trim());
 
-    const ReturnCard = ({ r, side }) => {
-        const st = STATUS[r.status] || STATUS.requested;
+
+    const [filter, setFilter] = useState('all');
+    const [search, setSearch] = useState('');
+    const [openId, setOpenId] = useState(null);
+
+    const STATE = {
+        requested: { icon: Clock, title: 'Pending Approval', sub: 'एडमिन से मंज़ूरी बाकी है', cls: 'bg-amber-50 text-amber-700', dot: 'bg-amber-500' },
+        approved: { icon: Send, title: 'Approved - send it', sub: 'मंज़ूर, भेजना बाकी है', cls: 'bg-blue-50 text-blue-700', dot: 'bg-blue-600' },
+        sent: { icon: Truck, title: 'On the way', sub: 'माल भेज दिया', cls: 'bg-violet-50 text-violet-700', dot: 'bg-violet-600' },
+        received: { icon: CheckCircle2, title: 'Received', sub: 'माल प्राप्त हुआ', cls: 'bg-green-50 text-green-800', dot: 'bg-green-600' },
+        rejected: { icon: XCircle, title: 'Not approved', sub: 'मंज़ूर नहीं हुआ', cls: 'bg-rose-50 text-rose-700', dot: 'bg-rose-600' },
+        cancelled: { icon: XCircle, title: 'Cancelled', sub: 'रद्द किया', cls: 'bg-slate-100 text-slate-600', dot: 'bg-slate-500' },
+    };
+
+    const list = tab === 'incoming' ? incoming : mine;
+    const countOf = (s) => mine.filter((r) => r.status === s).length;
+    const q = search.trim().toLowerCase();
+    const shown = list.filter((r) => {
+        if (tab === 'mine' && filter !== 'all' && r.status !== filter) return false;
+        if (!q) return true;
+        return (r.items || []).some((i) => String(i.name || '').toLowerCase().includes(q))
+            || destName(r).toLowerCase().includes(q)
+            || String(r.fromFranchiseId?.franchiseName || '').toLowerCase().includes(q)
+            || String(r._id).toLowerCase().includes(q);
+    });
+
+    const filterTabs = [
+        { id: 'all', label: 'सभी', icon: PackageX, count: mine.length },
+        { id: 'requested', label: 'मंज़ूरी बाकी', icon: Clock, count: countOf('requested') },
+        { id: 'approved', label: 'भेजने बाकी', icon: Send, count: countOf('approved') },
+        { id: 'sent', label: 'भेज दिए', icon: Truck, count: countOf('sent') },
+        { id: 'received', label: 'प्राप्त हुआ', icon: CheckCircle2, count: countOf('received') },
+    ];
+
+    const lineCredit = (r, i) => {
+        if (r.status !== 'received' || !(Number(i.price) > 0)) return null;
+        if (i.vendorDecision === 'rejected') return 0;
+        const q2 = i.acceptedQuantity != null ? Number(i.acceptedQuantity) : Number(i.quantity);
+        return Math.round(Number(i.price) * q2 * 100) / 100;
+    };
+
+    const returnCard = (r, side) => {
+        const st = STATE[r.status] || STATE.requested;
+        const open = openId === r._id;
+        const who = side === 'in' ? (r.fromFranchiseId?.franchiseName || 'Franchise') : (destName(r) || 'Admin will decide');
         return (
-            <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <p className="text-sm font-black text-slate-900">
-                            {side === 'in' ? `From: ${r.fromFranchiseId?.franchiseName || 'Franchise'}` : (destName(r) ? `To: ${destName(r)}` : 'Destination: admin will decide')}
-                        </p>
-                        <p className="text-[11px] text-slate-500">Return #{String(r._id).slice(-6).toUpperCase()} • {when(r.createdAt)}</p>
-                        <p className="text-[11px] text-slate-500">{REASON_LABEL[r.reason] || r.reason}{r.note ? ` • ${r.note}` : ''}</p>
-                    </div>
-                    <span className={cn('px-2 py-0.5 text-[10px] font-bold uppercase rounded border shrink-0', st.cls)}>{st.label}</span>
-                </div>
-                <div className="rounded-lg border border-slate-100 divide-y divide-slate-100">
-                    {r.items.map((i) => (
-                        <div key={i._id || i.productId} className="px-3 py-2 text-xs space-y-1.5">
-                            <div className="flex justify-between gap-2">
-                                <span className="font-bold text-slate-800">{i.name} <span className="font-semibold text-slate-400">({issueLabel(i.issue) || i.condition})</span></span>
-                                <span className="font-black text-slate-900 tabular-nums">{i.quantity} {i.unit}</span>
-                            </div>
-                            {i.vendorDecision && (
-                                <p className={cn('font-bold', i.vendorDecision === 'rejected' ? 'text-rose-600' : 'text-emerald-600')}>
-                                    {i.vendorDecision === 'rejected' ? 'Vendor rejected' : Number(i.acceptedQuantity) < Number(i.quantity) ? `Vendor accepted ${i.acceptedQuantity} ${i.unit}` : 'Vendor accepted'}
-                                </p>
-                            )}
-                            {i.photos?.length > 0 && (
-                                <div className="flex gap-1.5">{i.photos.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" className="w-10 h-10 rounded object-cover border border-slate-200" /></a>)}</div>
-                            )}
+            <div key={r._id} className="bg-white rounded-3xl border border-slate-100 p-4 lg:p-5">
+                <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_220px] gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                        <span className="w-14 h-14 rounded-full bg-green-50 text-green-700 flex items-center justify-center shrink-0"><Store size={24} /></span>
+                        <div className="min-w-0 space-y-1">
+                            <p className="text-[16px] font-bold text-slate-900 truncate">{who}</p>
+                            <p className="text-[13px] text-slate-500 truncate">{side === 'in' ? 'Returned to you' : `To: ${destName(r) || 'admin will decide'}`}</p>
+                            <p className="text-[13px] text-slate-500 flex items-center gap-1.5"><CalendarDays size={14} /> {when(r.createdAt)}</p>
+                            <p className="text-[13px] text-slate-500 flex items-center gap-1.5"><FileText size={14} /> Return #{String(r._id).slice(-6).toUpperCase()}</p>
                         </div>
-                    ))}
+                    </div>
+                    <div className="divide-y divide-slate-100 lg:border-l lg:border-slate-100 lg:pl-4 min-w-0">
+                        {r.items.map((i) => {
+                            const credit = lineCredit(r, i);
+                            return (
+                                <div key={i._id || i.productId} className="py-2 first:pt-0 last:pb-0 grid grid-cols-[56px_minmax(0,1fr)] sm:grid-cols-[56px_minmax(0,1fr)_80px_80px_100px] gap-x-3 gap-y-1 items-center">
+                                    {i.image
+                                        ? <img src={i.image} alt="" className="w-14 h-14 rounded-xl object-cover bg-slate-50 row-span-2 sm:row-span-1" loading="lazy" />
+                                        : <span className="w-14 h-14 rounded-xl bg-green-50 text-green-700 flex items-center justify-center row-span-2 sm:row-span-1"><Package size={22} /></span>}
+                                    <div className="min-w-0">
+                                        <p className="text-[15px] font-bold text-slate-900 truncate">{i.name}</p>
+                                        <p className="text-[13px] text-slate-500">Reason: {issueLabel(i.issue) || (i.condition === 'good' ? 'Good' : 'Damaged')} (खराब)</p>
+                                        {i.vendorDecision && (
+                                            <p className={cn('text-[12px] font-semibold', i.vendorDecision === 'rejected' ? 'text-rose-600' : 'text-green-700')}>
+                                                {i.vendorDecision === 'rejected' ? 'Vendor rejected' : Number(i.acceptedQuantity) < Number(i.quantity) ? `Vendor accepted ${i.acceptedQuantity} ${i.unit}` : 'Vendor accepted'}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="col-start-2 sm:col-start-auto flex sm:block gap-4 text-[13px]">
+                                        <span><span className="text-slate-500 sm:block">Quantity </span><b className="text-slate-900">{i.quantity} {i.unit}</b></span>
+                                    </div>
+                                    <div className="hidden sm:block text-[13px]"><span className="block text-slate-500">Rate</span><b className="text-slate-900">{Number(i.price) > 0 ? `₹${i.price}/${i.unit}` : '-'}</b></div>
+                                    <div className="hidden sm:block text-[13px]"><span className="block text-slate-500">Credit Amount</span><b className="text-slate-900">{credit == null ? '-' : money(credit)}</b></div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="space-y-2 lg:col-span-2 xl:col-span-1 xl:border-l xl:border-slate-100 xl:pl-4">
+                        <div className={cn('flex items-center gap-3 rounded-2xl p-3', st.cls)}>
+                            <span className={cn('w-9 h-9 rounded-full text-white flex items-center justify-center shrink-0', st.dot)}><st.icon size={18} /></span>
+                            <span><span className="block text-[15px] font-bold">{st.title}</span><span className="block text-[13px]">{st.sub}</span></span>
+                        </div>
+                        {side === 'mine' && r.status === 'approved' && (
+                            <button disabled={busyId === r._id} onClick={() => act(r._id, 'sent', 'Marked as sent')} className="w-full h-11 rounded-xl bg-green-700 text-white text-[14px] font-bold flex items-center justify-center gap-1.5 hover:bg-green-800 disabled:opacity-40">
+                                {busyId === r._id ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Handed over to {destName(r)}
+                            </button>
+                        )}
+                        {side === 'in' && r.status === 'sent' && (
+                            <button disabled={busyId === r._id} onClick={() => act(r._id, 'received', 'Return received')} className="w-full h-11 rounded-xl bg-green-700 text-white text-[14px] font-bold flex items-center justify-center gap-1.5 hover:bg-green-800 disabled:opacity-40">
+                                {busyId === r._id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />} Goods received
+                            </button>
+                        )}
+                        <button onClick={() => setOpenId(open ? null : r._id)} className="w-full h-11 rounded-xl border border-slate-200 bg-white text-[15px] font-semibold text-slate-800 flex items-center justify-center gap-2 hover:bg-slate-50">
+                            <Eye size={18} /> {open ? 'विवरण छुपाएं' : 'विवरण देखें'}
+                        </button>
+                    </div>
                 </div>
-                {r.status === 'rejected' && r.adminNote && <p className="text-[11px] font-semibold text-rose-600">Admin: {r.adminNote}</p>}
-                {r.status === 'approved' && r.adminNote && <p className="text-[11px] font-semibold text-slate-500">Admin note: {r.adminNote}</p>}
-                {r.creditNote?.number && (
-                    <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-                        <CheckCircle2 size={12} /> Credit note {r.creditNote.number}: {money(r.creditNote.amount)}
-                    </p>
+                {open && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-[14px] text-slate-700">
+                        <p><b>Reason:</b> {REASON_LABEL[r.reason] || r.reason}{r.note ? ` - ${r.note}` : ''}</p>
+                        {r.approvedAt && <p><b>Approved:</b> {when(r.approvedAt)}{r.adminNote ? ` - ${r.adminNote}` : ''}</p>}
+                        {r.status === 'rejected' && r.adminNote && <p className="text-rose-600"><b>Admin:</b> {r.adminNote}</p>}
+                        {r.sentAt && <p><b>Sent:</b> {when(r.sentAt)}</p>}
+                        {r.receivedAt && <p><b>Received:</b> {when(r.receivedAt)}</p>}
+                        {r.creditNote?.number && (
+                            <p className="text-green-700 font-semibold flex items-center gap-1.5"><CheckCircle2 size={16} /> Credit note {r.creditNote.number}: {money(r.creditNote.amount)}</p>
+                        )}
+                        {r.items.some((i) => i.photos?.length) && (
+                            <div className="flex flex-wrap gap-2">
+                                {r.items.flatMap((i) => (i.photos || []).map((u) => (
+                                    <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt={i.name} className="w-16 h-16 rounded-xl object-cover border border-slate-200" /></a>
+                                )))}
+                            </div>
+                        )}
+                        {side === 'mine' && r.status === 'requested' && (
+                            <button disabled={busyId === r._id} onClick={() => act(r._id, 'cancel', 'Return cancelled')} className="h-10 px-4 rounded-xl border border-rose-200 text-rose-600 text-[14px] font-semibold disabled:opacity-40">
+                                Cancel return
+                            </button>
+                        )}
+                        {side === 'in' && r.status === 'approved' && <p className="text-slate-500">Approved by admin. Waiting for the franchise to send it.</p>}
+                    </div>
                 )}
-                {side === 'mine' && r.status === 'requested' && (
-                    <button disabled={busyId === r._id} onClick={() => act(r._id, 'cancel', 'Return cancelled')} className="h-9 px-4 rounded-lg border border-slate-200 text-[11px] font-black uppercase text-slate-500 disabled:opacity-40">
-                        Cancel return
-                    </button>
-                )}
-                {side === 'mine' && r.status === 'approved' && (
-                    <button disabled={busyId === r._id} onClick={() => act(r._id, 'sent', 'Marked as sent')} className="w-full h-10 rounded-lg bg-slate-900 text-white text-[11px] font-black uppercase flex items-center justify-center gap-1.5 disabled:opacity-40">
-                        {busyId === r._id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} I have handed it over to {destName(r)}
-                    </button>
-                )}
-                {side === 'in' && r.status === 'sent' && (
-                    <button disabled={busyId === r._id} onClick={() => act(r._id, 'received', 'Return received')} className="w-full h-10 rounded-lg bg-emerald-600 text-white text-[11px] font-black uppercase flex items-center justify-center gap-1.5 disabled:opacity-40">
-                        {busyId === r._id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Goods received
-                    </button>
-                )}
-                {side === 'in' && r.status === 'approved' && <p className="text-[11px] text-slate-500">Approved by admin. Waiting for the franchise to send it.</p>}
             </div>
         );
     };
 
-    const tabs = [
-        { key: 'mine', label: 'My returns' },
-        ...(isMother ? [{ key: 'incoming', label: `Returned to me${incoming.filter((x) => x.status === 'sent').length ? ` (${incoming.filter((x) => x.status === 'sent').length})` : ''}` }] : []),
-    ];
-
     return (
-        <div className="bg-slate-50 min-h-screen pb-24">
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-                <div className="px-4 py-3 flex items-center justify-between gap-3">
-                    <div>
-                        <h1 className="text-sm font-bold text-slate-900 flex items-center gap-2"><Undo2 size={14} /> Return to Supplier</h1>
-                        <p className="text-[11px] text-slate-500">Send goods back to the vendor or mother franchise. Every return is approved by the admin.</p>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                        <button onClick={load} className="px-3 py-1.5 border border-slate-200 bg-white rounded-sm text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-                        </button>
-                        <button onClick={openNew} className="px-3 py-1.5 bg-slate-900 text-white rounded-sm text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                            <Plus size={12} /> New return
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div className="bg-[#f6f8f7] min-h-screen pb-24 lg:pb-8">
+            <FranchisePageHeader
+                icon={Truck}
+                title="Return to Supplier / सप्लायर को वापस करें"
+                subtitle="खराब माल वापस भेजें और उसका हिसाब देखें"
+                right={
+                    <button onClick={load} className="h-14 w-14 rounded-2xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center hover:bg-slate-50" aria-label="Refresh">
+                        <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                }
+            />
 
             {tab !== 'new' && (
-                <div className="px-4 pt-4 flex gap-2">
-                    {tabs.map((t) => (
-                        <button key={t.key} onClick={() => setTab(t.key)} className={cn('px-3 py-1.5 rounded-full text-[11px] font-bold border', tab === t.key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200')}>
-                            {t.label}
+                <div className="px-4 lg:px-6 flex flex-wrap items-center gap-3">
+                    {tab === 'mine'
+                        ? <PillTabs tabs={filterTabs} active={filter} onChange={setFilter} />
+                        : <button onClick={() => setTab('mine')} className="h-11 px-4 rounded-xl bg-slate-100 text-[15px] font-semibold text-slate-700">← My returns</button>}
+                    {isMother && tab === 'mine' && (
+                        <button onClick={() => setTab('incoming')} className="h-11 px-4 rounded-xl border border-green-600 text-green-800 bg-green-50 text-[15px] font-semibold">
+                            Returned to me{incoming.filter((x) => x.status === 'sent').length ? ` (${incoming.filter((x) => x.status === 'sent').length})` : ''}
                         </button>
-                    ))}
+                    )}
+                    <div className="flex-1" />
+                    <div className="relative w-full sm:w-auto">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="उत्पाद का नाम या सप्लायर खोजें..."
+                            className="w-full sm:w-80 h-11 bg-white border border-slate-200 rounded-xl pl-11 pr-4 outline-none text-[15px] text-slate-900 placeholder:text-slate-400 focus:border-green-600" />
+                    </div>
+                    <button onClick={openNew} className="h-11 px-5 rounded-xl bg-green-700 text-white text-[15px] font-bold flex items-center gap-2 hover:bg-green-800">
+                        <Plus size={20} /> नया रिटर्न
+                    </button>
                 </div>
             )}
 
             {tab !== 'new' && (
-                <div className="p-4 space-y-3">
-                    {loading && <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>}
-                    {!loading && (tab === 'mine' ? mine : incoming).length === 0 && (
-                        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center">
-                            <PackageX className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                            <p className="text-xs font-bold text-slate-500">{tab === 'mine' ? 'No returns yet.' : 'Nothing has been returned to you.'}</p>
+                <div className="px-4 lg:px-6 mt-4 space-y-3">
+                    {loading && <div className="flex justify-center py-10"><Loader2 className="w-7 h-7 animate-spin text-slate-400" /></div>}
+                    {!loading && shown.length === 0 && (
+                        <div className="bg-white rounded-3xl border border-slate-100 py-16 text-center text-slate-500">
+                            <PackageX className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                            <p className="text-[15px]">{tab === 'mine' ? 'Yahan koi return nahi hai.' : 'Nothing has been returned to you.'}</p>
                         </div>
                     )}
-                    {!loading && (tab === 'mine' ? mine : incoming).map((r) => <ReturnCard key={r._id} r={r} side={tab === 'mine' ? 'mine' : 'in'} />)}
+                    {!loading && shown.map((r) => returnCard(r, tab === 'mine' ? 'mine' : 'in'))}
                 </div>
             )}
 
             {tab === 'new' && (
-                <div className="p-4 space-y-4 max-w-3xl">
+                <div className="px-4 lg:px-6 space-y-5 max-w-3xl">
                     {!options ? (
                         <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
                     ) : (
                         <>
                             <div className="space-y-2">
-                                <p className="text-[11px] font-black uppercase text-slate-500">1. What are you returning?</p>
+                                <p className="text-[13px] font-bold text-slate-500">1. What are you returning?</p>
                                 {SOURCES.filter((s) => !s.motherOnly || isMother).map((s) => {
                                     const count = s.key === 'from_delivery' ? options.deliveries.length : s.key === 'from_return' ? options.received.length : options.stock.length;
                                     return (
@@ -313,10 +388,10 @@ export default function StockReturnsScreen() {
                                             key={s.key}
                                             disabled={count === 0}
                                             onClick={() => { setKind(s.key); setSourceId(''); setQty({}); setReason(s.key === 'from_stock' ? '' : 'damaged_from_supplier'); }}
-                                            className={cn('w-full text-left p-3 rounded-xl border-2 bg-white disabled:opacity-40', kind === s.key ? 'border-slate-900' : 'border-slate-200')}
+                                            className={cn('w-full text-left p-3 rounded-xl border-2 bg-white disabled:opacity-40', kind === s.key ? 'border-green-600' : 'border-slate-200')}
                                         >
                                             <p className="text-sm font-black text-slate-900">{s.title}</p>
-                                            <p className="text-[11px] text-slate-500">{count === 0 ? 'Nothing to return here.' : s.desc}</p>
+                                            <p className="text-[13px] text-slate-500">{count === 0 ? 'Nothing to return here.' : s.desc}</p>
                                         </button>
                                     );
                                 })}
@@ -324,22 +399,22 @@ export default function StockReturnsScreen() {
 
                             {kind === 'from_delivery' && (
                                 <div className="space-y-2">
-                                    <p className="text-[11px] font-black uppercase text-slate-500">2. Which delivery?</p>
+                                    <p className="text-[13px] font-bold text-slate-500">2. Which delivery?</p>
                                     {options.deliveries.map((d) => (
-                                        <button key={d.requestId} onClick={() => { setSourceId(String(d.requestId)); setQty({}); }} className={cn('w-full text-left p-3 rounded-xl border-2 bg-white', sourceId === String(d.requestId) ? 'border-slate-900' : 'border-slate-200')}>
-                                            <p className="text-xs font-black text-slate-900">{d.ref} from {d.supplierName}</p>
-                                            <p className="text-[11px] text-slate-500">Received {when(d.receivedAt)} • {d.items.map((i) => `${i.name} ${i.returnable} ${i.unit}`).join(', ')}</p>
+                                        <button key={d.requestId} onClick={() => { setSourceId(String(d.requestId)); setQty({}); }} className={cn('w-full text-left p-3 rounded-xl border-2 bg-white', sourceId === String(d.requestId) ? 'border-green-600' : 'border-slate-200')}>
+                                            <p className="text-sm font-black text-slate-900">{d.ref} from {d.supplierName}</p>
+                                            <p className="text-[13px] text-slate-500">Received {when(d.receivedAt)} • {d.items.map((i) => `${i.name} ${i.returnable} ${i.unit}`).join(', ')}</p>
                                         </button>
                                     ))}
                                 </div>
                             )}
                             {kind === 'from_return' && (
                                 <div className="space-y-2">
-                                    <p className="text-[11px] font-black uppercase text-slate-500">2. Which returned goods?</p>
+                                    <p className="text-[13px] font-bold text-slate-500">2. Which returned goods?</p>
                                     {options.received.map((d) => (
-                                        <button key={d.returnId} onClick={() => { setSourceId(String(d.returnId)); setQty({}); }} className={cn('w-full text-left p-3 rounded-xl border-2 bg-white', sourceId === String(d.returnId) ? 'border-slate-900' : 'border-slate-200')}>
-                                            <p className="text-xs font-black text-slate-900">{d.ref} from {d.fromName}</p>
-                                            <p className="text-[11px] text-slate-500">{d.items.map((i) => `${i.name} ${i.returnable} ${i.unit}`).join(', ')}</p>
+                                        <button key={d.returnId} onClick={() => { setSourceId(String(d.returnId)); setQty({}); }} className={cn('w-full text-left p-3 rounded-xl border-2 bg-white', sourceId === String(d.returnId) ? 'border-green-600' : 'border-slate-200')}>
+                                            <p className="text-sm font-black text-slate-900">{d.ref} from {d.fromName}</p>
+                                            <p className="text-[13px] text-slate-500">{d.items.map((i) => `${i.name} ${i.returnable} ${i.unit}`).join(', ')}</p>
                                         </button>
                                     ))}
                                 </div>
@@ -347,19 +422,19 @@ export default function StockReturnsScreen() {
 
                             {kind && (kind === 'from_stock' || sourceId) && (
                                 <div className="space-y-2">
-                                    <p className="text-[11px] font-black uppercase text-slate-500">{kind === 'from_stock' ? '2' : '3'}. How much?</p>
+                                    <p className="text-[13px] font-bold text-slate-500">{kind === 'from_stock' ? '2' : '3'}. How much?</p>
                                     {kind === 'from_stock' && (
                                         <div className="relative">
                                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} placeholder="Search your stock..." className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold" />
+                                            <input value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} placeholder="Search your stock..." className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-xl text-sm font-semibold" />
                                         </div>
                                     )}
                                     <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-80 overflow-y-auto">
                                         {lines.map((l) => (
                                             <div key={l.productId} className="px-3 py-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                                                 <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-slate-800 truncate">{l.name}</p>
-                                                    <p className="text-[10px] text-slate-400">{l.hint} • rate {money(l.price)}/{l.unit}</p>
+                                                    <p className="text-sm font-bold text-slate-800 truncate">{l.name}</p>
+                                                    <p className="text-[12px] text-slate-400">{l.hint} • rate {money(l.price)}/{l.unit}</p>
                                                 </div>
                                                 <div className="flex items-center gap-1 shrink-0">
                                                     <input
@@ -373,26 +448,26 @@ export default function StockReturnsScreen() {
                                                             const v = e.target.value === '' ? '' : Math.max(0, Math.min(Number(l.max), Number(e.target.value)));
                                                             setQty((q) => ({ ...q, [l.productId]: v }));
                                                         }}
-                                                        className="w-20 h-8 border border-slate-200 rounded px-2 text-right text-xs font-bold"
+                                                        className="w-20 h-8 border border-slate-200 rounded px-2 text-right text-sm font-bold"
                                                     />
-                                                    <span className="text-[10px] text-slate-500 w-16">/ {l.max} {l.unit}</span>
+                                                    <span className="text-[12px] text-slate-500 w-16">/ {l.max} {l.unit}</span>
                                                 </div>
                                                 {Number(qty[l.productId]) > 0 && (
                                                     <div className="basis-full flex items-center gap-2 flex-wrap">
                                                         <select value={issues[l.productId] || ''} onChange={(e) => setIssues((x) => ({ ...x, [l.productId]: e.target.value }))}
-                                                            className="h-12 px-2 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700">
+                                                            className="h-12 px-2 rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-700">
                                                             <option value="">What's wrong?</option>
                                                             {ISSUES.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}
                                                         </select>
                                                         {(photos[l.productId] || []).map((u) => (
                                                             <span key={u} className="relative">
-                                                                <img src={u} alt="" className="w-12 h-12 rounded-lg object-cover border border-slate-200" />
+                                                                <img src={u} alt="" className="w-12 h-12 rounded-xl object-cover border border-slate-200" />
                                                                 <button type="button" onClick={() => setPhotos((p) => ({ ...p, [l.productId]: p[l.productId].filter((x) => x !== u) }))}
-                                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center" aria-label="Remove photo"><X size={12} /></button>
+                                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-green-700 text-white flex items-center justify-center" aria-label="Remove photo"><X size={12} /></button>
                                                             </span>
                                                         ))}
                                                         {(photos[l.productId] || []).length < 3 && (
-                                                            <label className={cn('h-12 px-3 rounded-lg border border-dashed border-slate-300 text-[11px] font-bold text-slate-600 flex items-center gap-1.5 cursor-pointer', uploading === l.productId && 'opacity-50 pointer-events-none')}>
+                                                            <label className={cn('h-12 px-3 rounded-xl border border-dashed border-slate-300 text-[13px] font-bold text-slate-600 flex items-center gap-1.5 cursor-pointer', uploading === l.productId && 'opacity-50 pointer-events-none')}>
                                                                 {uploading === l.productId ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />} Add photo
                                                                 <input type="file" accept="image/*" capture="environment" multiple className="hidden"
                                                                     onChange={(e) => { addPhotos(l.productId, e.target.files); e.target.value = ''; }} />
@@ -402,39 +477,39 @@ export default function StockReturnsScreen() {
                                                 )}
                                             </div>
                                         ))}
-                                        {lines.length === 0 && <p className="p-4 text-xs text-slate-400 text-center">No items</p>}
+                                        {lines.length === 0 && <p className="p-4 text-sm text-slate-400 text-center">No items</p>}
                                     </div>
                                 </div>
                             )}
 
                             {kind && chosen.length > 0 && (
                                 <div className="space-y-2">
-                                    <p className="text-[11px] font-black uppercase text-slate-500">Reason</p>
+                                    <p className="text-[13px] font-bold text-slate-500">Reason</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {reasonsFor.map((k) => (
-                                            <button key={k} onClick={() => setReason(k)} className={cn('p-2.5 rounded-lg border-2 text-left text-xs font-bold bg-white', reason === k ? 'border-slate-900 text-slate-900' : 'border-slate-200 text-slate-600')}>
+                                            <button key={k} onClick={() => setReason(k)} className={cn('p-2.5 rounded-xl border-2 text-left text-sm font-bold bg-white', reason === k ? 'border-green-600 text-slate-900' : 'border-slate-200 text-slate-600')}>
                                                 {REASON_LABEL[k]}
                                             </button>
                                         ))}
                                     </div>
                                     {reason === 'franchise_closing' && (
-                                        <p className="text-[11px] text-indigo-700 font-semibold">The admin can send good stock to a mother franchise.</p>
+                                        <p className="text-[13px] text-indigo-700 font-semibold">The admin can send good stock to a mother franchise.</p>
                                     )}
-                                    <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder={reason === 'other' ? 'Write what happened (required)' : 'Note (optional)'} className="w-full min-h-[64px] bg-white border border-slate-200 rounded-lg p-3 text-xs font-semibold" />
-                                    <div className="flex items-center justify-between text-xs font-bold text-slate-700 px-1">
+                                    <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder={reason === 'other' ? 'Write what happened (required)' : 'Note (optional)'} className="w-full min-h-[64px] bg-white border border-slate-200 rounded-xl p-3 text-sm font-semibold" />
+                                    <div className="flex items-center justify-between text-sm font-bold text-slate-700 px-1">
                                         <span>{chosen.length} item(s)</span>
                                         <span>Value about {money(total)}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => setTab('mine')} className="flex-1 h-11 rounded-lg border border-slate-200 bg-white text-[11px] font-black uppercase text-slate-500">Cancel</button>
-                                        <button disabled={!canSubmit || submitting} onClick={submit} className="flex-1 h-11 rounded-lg bg-slate-900 text-white text-[11px] font-black uppercase disabled:opacity-40 flex items-center justify-center gap-2">
+                                        <button onClick={() => setTab('mine')} className="flex-1 h-12 rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-500">Cancel</button>
+                                        <button disabled={!canSubmit || submitting} onClick={submit} className="flex-1 h-12 rounded-xl bg-green-700 text-white text-[13px] font-bold disabled:opacity-40 flex items-center justify-center gap-2">
                                             {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} Send to admin for approval
                                         </button>
                                     </div>
                                 </div>
                             )}
                             {!kind && (
-                                <button onClick={() => setTab('mine')} className="text-xs font-bold text-slate-500 flex items-center gap-1"><XCircle size={12} /> Back</button>
+                                <button onClick={() => setTab('mine')} className="text-sm font-bold text-slate-500 flex items-center gap-1"><XCircle size={12} /> Back</button>
                             )}
                         </>
                     )}
@@ -443,3 +518,4 @@ export default function StockReturnsScreen() {
         </div>
     );
 }
+
