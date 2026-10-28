@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CalendarDays, Languages, Leaf, UserCircle } from 'lucide-react';
+import { Bell, CalendarDays, Languages, UserCircle } from 'lucide-react';
+import BrandLogo from '@/components/BrandLogo';
 import { useVendorAuth } from '../../contexts/VendorAuthContext';
 import { PORTAL_LANGUAGES, useVendorLanguage } from '../../contexts/VendorLanguageContext';
 import LanguagePickerModal from '../modals/LanguagePickerModal';
@@ -46,13 +47,7 @@ export function VendorMobileTopBar() {
     const navigate = useNavigate();
     return (
         <div className="lg:hidden flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2.5">
-                <Leaf size={38} className="text-green-600 fill-green-600" strokeWidth={1.5} />
-                <div className="leading-tight" translate="no">
-                    <p className="text-xl font-bold text-slate-900">Vendor Portal</p>
-                    <p className="text-xs font-semibold tracking-wider text-slate-500">KISAANKART</p>
-                </div>
-            </div>
+            <BrandLogo label={<>Vendor<br />Portal</>} size="sm" />
             <div className="flex items-center gap-2">
                 <LanguageButton compact />
                 <button

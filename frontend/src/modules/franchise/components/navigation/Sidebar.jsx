@@ -27,18 +27,9 @@ import { cn } from '@/lib/utils';
 import { useFranchiseAuth } from '@/modules/franchise/contexts/FranchiseAuthContext';
 import { PORTAL_LANGUAGES, useFranchiseLanguage } from '@/modules/franchise/contexts/FranchiseLanguageContext';
 import LanguagePickerModal from '../modals/LanguagePickerModal';
+import BrandLogo from '@/components/BrandLogo';
 
 const DOC_PATH = '/franchise/documentation';
-
-/** Kisaankart leaf mark (green), used in the franchise portal header. */
-export function KisaanLeaf({ size = 36 }) {
-    return (
-        <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
-            <path d="M24 42C10 36 6 22 10 8c9 2 17 8 18 20-1-9-6-15-12-18 3 9 4 20 8 32z" fill="#15803d" />
-            <path d="M24 42c14-6 18-20 14-34-9 2-17 8-18 20 1-9 6-15 12-18-3 9-4 20-8 32z" fill="#22c55e" />
-        </svg>
-    );
-}
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
     const navigate = useNavigate();
@@ -105,14 +96,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
             isCollapsed ? 'w-20' : 'w-64',
         )}>
             {/* Brand */}
-            <div translate="no" className={cn('h-20 flex items-center gap-2.5 border-b border-slate-100', isCollapsed ? 'justify-center px-2' : 'px-5')}>
-                <KisaanLeaf size={isCollapsed ? 32 : 38} />
-                {!isCollapsed && (
-                    <div className="leading-tight">
-                        <p className="font-extrabold text-[17px] tracking-wide text-slate-900">KISAANKART</p>
-                        <p className="text-[11px] font-semibold tracking-wider text-green-700">FRANCHISE PORTAL</p>
-                    </div>
-                )}
+            <div className={cn('h-20 flex items-center border-b border-slate-100', isCollapsed ? 'justify-center px-2' : 'px-5')}>
+                <BrandLogo label={<>Franchise<br />Portal</>} collapsed={isCollapsed} />
             </div>
 
             <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-scrollbar">

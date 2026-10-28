@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Leaf, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import BrandLogo from '@/components/BrandLogo';
 import { useVendorAuth } from '../../contexts/VendorAuthContext';
 import { useVendorLanguage } from '../../contexts/VendorLanguageContext';
 import { vendorNavItems, isVendorNavActive } from './vendorNavConfig';
@@ -13,12 +14,8 @@ export default function Sidebar() {
 
     return (
         <div className="h-full bg-white border-r border-slate-100 flex flex-col px-4 py-6">
-            <div className="flex items-center gap-3 px-3 mb-8">
-                <Leaf size={44} className="text-green-600 fill-green-600 shrink-0" strokeWidth={1.5} />
-                <div translate="no">
-                    <h2 className="text-2xl font-bold tracking-tight leading-none text-slate-900">Vendor Portal</h2>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-[0.15em] mt-1.5">KisaanKart</p>
-                </div>
+            <div className="px-3 mb-8">
+                <BrandLogo label={<>Vendor<br />Portal</>} />
             </div>
 
             <nav className="flex-1 space-y-1.5 overflow-y-auto">

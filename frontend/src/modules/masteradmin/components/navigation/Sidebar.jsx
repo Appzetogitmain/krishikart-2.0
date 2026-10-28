@@ -45,6 +45,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMasterAdminAuth } from "../../contexts/MasterAdminAuthContext";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function Sidebar({ isCollapsed, setIsCollapsed }) {
   const navigate = useNavigate();
@@ -361,28 +362,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
         isCollapsed ? "w-20" : "w-64",
       )}>
       {/* Header / Brand */}
-      <div className="h-14 flex items-center justify-between px-6 border-b border-slate-100">
-        {!isCollapsed ? (
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-slate-900 rounded-sm flex items-center justify-center">
-              <span className="text-white font-black text-sm">K</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-black text-[13px] tracking-tight text-slate-900 leading-none">
-                KISAANKART
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Admin Panel
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full flex justify-center">
-            <div className="w-7 h-7 bg-slate-900 rounded-sm flex items-center justify-center">
-              <span className="text-white font-black text-sm">K</span>
-            </div>
-          </div>
-        )}
+      <div className={cn("h-14 flex items-center border-b border-slate-100", isCollapsed ? "justify-center px-2" : "px-6")}>
+        <BrandLogo label={<>Admin<br />Panel</>} collapsed={isCollapsed} size="sm" />
       </div>
 
       {/* Nav Selection Engine */}
