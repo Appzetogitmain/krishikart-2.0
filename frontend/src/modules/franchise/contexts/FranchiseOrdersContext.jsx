@@ -253,6 +253,10 @@ export function FranchiseOrdersProvider({ children }) {
                 }))
             ].sort((a, b) => new Date(a.time) - new Date(b.time)),
             date: o.date,
+            createdAt: o.createdAt,
+            customerMobile: o.userId?.mobile || o.user?.mobile || "",
+            customerName: o.userId?.fullName || o.user?.fullName || "",
+            city: o.shippingLocation?.city || o.shippingLocation?.area || "",
             time: o.time,
             scheduledDate: o.scheduledDate,
             scheduledDateFormatted: o.scheduledDateFormatted,

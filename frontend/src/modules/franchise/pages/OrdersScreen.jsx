@@ -1,43 +1,40 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Search,
     ShoppingBag,
     Truck,
     CheckCircle2,
     Zap,
     History,
-    Home,
     ChevronRight,
     Search as SearchIcon,
-    Settings2,
+    SlidersHorizontal,
     ArrowUpRight,
     ArrowDownRight,
-    MoreHorizontal,
-    IndianRupee,
     RefreshCw,
     Info,
     Package,
     Clock,
-    Undo2
+    Undo2,
+    ClipboardList,
+    MapPin,
+    Phone,
+    CalendarDays,
+    ShoppingCart,
+    Eye,
+    Box,
+    X,
+    UserCircle2,
+    Check
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { cn } from '@/lib/utils';
 import { useInventory } from '../contexts/InventoryContext';
-import {
-    X,
-    UserCircle2,
-    Check
-} from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
-
-// Enterprise Components
-import MetricRow from '../components/cards/MetricRow';
-import DataGrid from '../components/tables/DataGrid';
-import FilterBar from '../components/tables/FilterBar';
 import OrderHistoryModal from '../components/modals/OrderHistoryModal';
+import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/FranchisePageHeader';
 
 /**
  * The same product across all orders in the list, added up (e.g. Potato 85 KG from 4 hotels), with the
@@ -61,41 +58,50 @@ function ProductTotals({ orders, inventory }) {
     if (!list.length) return null;
     const stockOf = (pid) => (inventory || []).find((s) => String(s.productId || s.id) === pid)?.currentStock;
     return (
-        <div className="border-b border-slate-200">
-            <button type="button" onClick={() => setOpen((v) => !v)} className="w-full flex items-center justify-between px-4 py-2.5 bg-emerald-50/60 text-left">
-                <span className="text-[11px] font-black uppercase tracking-widest text-slate-900">
-                    Product-wise total <span className="text-slate-500 normal-case tracking-normal font-bold">({list.length} products from {orders.length} orders)</span>
-                </span>
-                <span className="text-[10px] font-black uppercase text-emerald-700">{open ? 'Hide' : 'Show'}</span>
-            </button>
+        <div className="bg-white rounded-3xl border border-slate-100 p-4 lg:p-5">
+            <div className="flex flex-wrap items-center gap-3">
+                <span className="w-11 h-11 rounded-xl bg-green-50 text-green-700 flex items-center justify-center"><ShoppingCart size={22} /></span>
+                <div className="flex-1 min-w-[200px]">
+                    <h2 className="text-lg lg:text-xl font-bold text-slate-900">Total items needed</h2>
+                    <p className="text-[14px] text-slate-500">{list.length} products from {orders.length} orders, added up</p>
+                </div>
+                <button type="button" onClick={() => setOpen((v) => !v)} className="h-10 px-4 rounded-xl border border-slate-200 text-[14px] font-semibold text-slate-700 hover:bg-slate-50">
+                    {open ? 'Hide' : 'Show'}
+                </button>
+            </div>
             {open && (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
+                <div className="overflow-x-auto mt-4 rounded-2xl border border-slate-100">
+                    <table className="w-full text-[15px]">
                         <thead>
-                            <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                <th className="text-left px-4 py-2">Product</th>
-                                <th className="text-right px-4 py-2">Total needed</th>
-                                <th className="text-right px-4 py-2">Orders</th>
-                                <th className="text-right px-4 py-2">In stock</th>
-                                <th className="text-right px-4 py-2">Short</th>
+                            <tr className="bg-slate-50 text-[13px] font-semibold text-slate-500">
+                                <th className="text-left px-4 py-3">Product</th>
+                                <th className="text-right px-4 py-3">Total needed</th>
+                                <th className="text-right px-4 py-3">Orders</th>
+                                <th className="text-right px-4 py-3">In stock</th>
+                                <th className="text-right px-4 py-3">Need to buy</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {list.map((r) => {
                                 const stock = stockOf(r.pid);
                                 const short = stock === undefined ? null : Math.max(0, Math.round((r.qty - stock) * 100) / 100);
+                                const unit = String(r.unit || '').toUpperCase();
                                 return (
                                     <tr key={r.key}>
-                                        <td className="px-4 py-2">
-                                            <span className="flex items-center gap-2">
-                                                {r.image ? <img src={r.image} alt="" className="w-7 h-7 object-contain" /> : null}
-                                                <span className="font-bold text-slate-900">{r.name}</span>
+                                        <td className="px-4 py-3">
+                                            <span className="flex items-center gap-3">
+                                                {r.image ? <img src={r.image} alt="" className="w-10 h-10 rounded-lg object-cover bg-slate-50" /> : <span className="w-10 h-10 rounded-lg bg-green-50 text-green-700 flex items-center justify-center"><Package size={18} /></span>}
+                                                <span className="font-semibold text-slate-900">{r.name}</span>
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2 text-right font-black text-slate-900 tabular-nums whitespace-nowrap">{r.qty} {String(r.unit || '').toUpperCase()}</td>
-                                        <td className="px-4 py-2 text-right text-slate-600 tabular-nums">{r.orders}</td>
-                                        <td className="px-4 py-2 text-right text-slate-600 tabular-nums">{stock === undefined ? '—' : stock}</td>
-                                        <td className={cn('px-4 py-2 text-right font-black tabular-nums', short > 0 ? 'text-rose-600' : 'text-emerald-600')}>{short === null ? '—' : short > 0 ? short : 'OK'}</td>
+                                        <td className="px-4 py-3 text-right font-bold text-slate-900 tabular-nums whitespace-nowrap">{r.qty} {unit}</td>
+                                        <td className="px-4 py-3 text-right text-slate-600 tabular-nums">{r.orders}</td>
+                                        <td className="px-4 py-3 text-right text-slate-600 tabular-nums whitespace-nowrap">{stock === undefined ? '—' : `${stock} ${unit}`}</td>
+                                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                                            {short === null ? <span className="text-slate-400">—</span> : short > 0
+                                                ? <span className="inline-block px-3 py-1 rounded-lg bg-rose-50 text-rose-600 font-bold tabular-nums">{short} {unit}</span>
+                                                : <span className="inline-block px-3 py-1 rounded-lg bg-green-50 text-green-700 font-bold">Enough</span>}
+                                        </td>
                                     </tr>
                                 );
                             })}
@@ -106,6 +112,32 @@ function ProductTotals({ orders, inventory }) {
         </div>
     );
 }
+
+const paymentLabel = (val) => {
+    const m = String(val || 'COD').toUpperCase();
+    if (m === 'COD') return { text: 'Cash on Delivery', cls: 'bg-amber-50 text-amber-700' };
+    if (m.includes('WALLET')) return { text: 'Wallet', cls: 'bg-violet-50 text-violet-700' };
+    if (m.includes('CREDIT')) return { text: 'KK Credit', cls: 'bg-rose-50 text-rose-600' };
+    if (m === 'UPI' || m === 'ONLINE' || m === 'PREPAID') return { text: 'Paid online', cls: 'bg-blue-50 text-blue-700' };
+    return { text: m, cls: 'bg-slate-100 text-slate-600' };
+};
+
+const STATUS_PILL = {
+    placed: ['New order', 'bg-orange-50 text-orange-600'],
+    pending: ['New order', 'bg-orange-50 text-orange-600'],
+    new: ['New order', 'bg-orange-50 text-orange-600'],
+    assigned: ['New order', 'bg-orange-50 text-orange-600'],
+    accepted: ['To prepare', 'bg-amber-50 text-amber-700'],
+    procuring: ['Waiting for stock', 'bg-amber-50 text-amber-700'],
+    packed: ['Ready to send', 'bg-yellow-50 text-yellow-700'],
+    ready: ['Ready to send', 'bg-yellow-50 text-yellow-700'],
+    dispatched: ['On the way', 'bg-violet-50 text-violet-700'],
+    'out for delivery': ['On the way', 'bg-violet-50 text-violet-700'],
+    delivered: ['Delivered', 'bg-green-50 text-green-700'],
+    received: ['Delivered', 'bg-green-50 text-green-700'],
+    completed: ['Delivered', 'bg-green-50 text-green-700'],
+    cancelled: ['Cancelled', 'bg-rose-50 text-rose-600'],
+};
 
 export default function OrdersScreen() {
     const navigate = useNavigate();
@@ -263,9 +295,9 @@ export default function OrdersScreen() {
 
     const tabs = [
         { id: 'new', label: 'New', icon: ShoppingBag },
-        { id: 'ready', label: 'Ready to Dispatch', icon: Zap },
+        { id: 'ready', label: 'Ready to Send', icon: Zap },
         { id: 'completed', label: 'Completed', icon: History },
-        { id: 'refused', label: 'Returned at door', icon: Undo2 }
+        { id: 'refused', label: 'Returned', icon: Undo2 }
     ];
 
     const filteredOrders = allOrders.filter(order => {
@@ -311,426 +343,315 @@ export default function OrdersScreen() {
 
     const activeFilterLabel = filterOptions.find((option) => option.id === quickFilter)?.label || 'All Orders';
 
-    const orderColumns = [
-        {
-            header: 'Customer Name',
-            key: 'hotelName',
-            render: (val, row) => (
-                <div className="flex flex-col">
-                    <span className="font-bold text-slate-900 text-sm tracking-tight">{val}</span>
-                    <span className="text-xs text-slate-400 font-bold uppercase tracking-[0.05em] mt-0.5">Order #{row.id}</span>
-                </div>
-            )
-        },
-        {
-            header: 'Date & Time',
-            key: 'dateTime',
-            render: (val, row) => {
-                const safeDate = (dateStr) => {
-                    const d = new Date(dateStr);
-                    return isNaN(d.getTime()) ? new Date() : d;
-                };
+    const tabStatuses = {
+        new: ['placed', 'pending', 'new', 'procuring', 'assigned', 'accepted'],
+        ready: ['packed', 'dispatched', 'ready'],
+        completed: ['delivered', 'received', 'completed'],
+    };
+    const tabCount = (id) => allOrders.filter((o) => {
+        const s = (o.status || '').toLowerCase();
+        return id === 'refused' ? ((s === 'cancelled' && !!o.deliveryRefusal) || !!o.partialReturn) : tabStatuses[id].includes(s);
+    }).length;
+    const switchTab = (id) => { setIsLoading(true); setActiveTab(id); };
 
-                const displayDate = row.date || safeDate(row.timeline?.[0]?.time || Date.now()).toLocaleDateString();
-                const displayTime = row.time || safeDate(row.timeline?.[0]?.time || Date.now()).toLocaleTimeString();
+    const btn = 'inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl text-[14px] font-semibold transition-colors disabled:opacity-50 whitespace-nowrap';
 
-                return (
-                    <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-sm tracking-tight">{displayDate}</span>
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-[0.05em] mt-0.5">{displayTime}</span>
-                        {row.scheduledDateFormatted || row.scheduledDate ? (
-                             <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded-md mt-2 w-fit border-2 border-amber-200 shadow-sm flex items-center gap-1.5 animate-pulse uppercase tracking-wider">
-                                <Clock size={10} strokeWidth={3} />
-                                Target: {row.scheduledDateFormatted || new Date(row.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
-                             </span>
-                        ) : null}
-                    </div>
-                );
-            }
-        },
-        {
-            header: 'Delivery Slot',
-            key: 'deliverySlot',
-            render: (val, row) => (
-                <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{val}</span>
-                    {row.scheduledDateFormatted || row.scheduledDate ? (
-                        <div className="flex items-center gap-1 mt-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest border-b border-amber-200">
-                                ADVANCE BOOKING
-                            </span>
-                        </div>
-                    ) : null}
-                </div>
-            )
-        },
-        {
-            header: 'Amount',
-            key: 'total',
-            align: 'right',
-            render: (val) => <span className="text-sm font-bold text-slate-900 tabular-nums">₹{(val || 0).toLocaleString()}</span>
-        },
-        {
-            header: 'Total Items',
-            key: 'items',
-            render: (items) => <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{items.length} units</span>
-        },
-        {
-            header: 'Payment',
-            key: 'paymentMode',
-            render: (val) => {
-                const method = (val || 'COD').toUpperCase();
-                const isCOD = method === 'COD';
-                const isUPI = method === 'UPI';
-                const isWallet = method.includes('WALLET');
-                const isCredit = method.includes('CREDIT');
-                return (
-                    <span className={cn(
-                        'inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border',
-                        isCOD ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                        isUPI ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        isWallet ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                        isCredit ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                        'bg-slate-100 text-slate-600 border-slate-200'
-                    )}>
-                        {isCOD ? '💵' : isUPI ? '📲' : isWallet ? '👛' : '💳'} {method}
-                    </span>
-                );
-            }
-        },
-        {
-            header: 'Action',
-            key: 'actions',
-            align: 'right',
-            render: (_, row) => (
-                <div className="flex items-center justify-end gap-2">
-                    {row.status === 'procuring' && (
-                        <div className="flex items-center gap-2 mr-4 bg-amber-50 px-2 py-1 rounded-sm border border-amber-200">
-                            <RefreshCw size={12} className="text-amber-600 animate-spin" />
-                            <span className="text-[10px] font-black text-amber-700 uppercase">Waiting for Stock</span>
-                        </div>
-                    )}
-                    {activeTab === 'ready' && row.status === 'dispatched' && row.deliveryPartner && (
-                        <div className="flex items-center gap-2 mr-4 bg-emerald-50 px-2 py-1 rounded-sm border border-emerald-100">
-                            <UserCircle2 size={12} className="text-emerald-600" />
-                            <span className="text-[10px] font-bold text-emerald-700 uppercase">{row.deliveryPartner?.fullName}</span>
-                        </div>
-                    )}
-                    {activeTab === 'new' && (
-                        (row.status === 'placed' || row.status === 'assigned' || row.status === 'new') ? (
-                            <button
-                                onClick={() => handleAction(row.id, 'accept')}
-                                disabled={processingOrderId === row.id}
-                                className="p-1.5 px-3 text-[10px] font-black uppercase text-slate-900 border-2 border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all disabled:opacity-50"
-                            >
-                                Accept Order
-                            </button>
-                        ) : row.status === 'accepted' && (
-                            <>
-                                {row.franchiseAutoAccepted && (
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            setRejectingOrderId(row.id);
-                                            await rejectFranchiseOrder(row.id);
-                                            setRejectingOrderId(null);
-                                            refreshOrders();
-                                        }}
-                                        disabled={rejectingOrderId === row.id}
-                                        className="p-1.5 px-3 text-[10px] font-black uppercase text-rose-600 border-2 border-rose-600 rounded-sm hover:bg-rose-600 hover:text-white transition-all disabled:opacity-50"
-                                    >
-                                        {rejectingOrderId === row.id ? '…' : 'Reject'}
-                                    </button>
-                                )}
-                                {row.items.some(i => i.isShortage) && !row.allowPartialFulfillment ? (
-                                    <button
-                                        onClick={() => handleAction(row.id, 'procure')}
-                                        className="p-1.5 px-3 text-[10px] font-black uppercase text-amber-600 border-2 border-amber-600 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"
-                                    >
-                                        <Info size={12} /> Request Stock
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => handleAction(row.id, 'Packed')}
-                                        disabled={processingOrderId === row.id}
-                                        className="p-1.5 px-3 text-[10px] font-black uppercase text-emerald-600 border-2 border-emerald-600 rounded-sm hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-50 shadow-sm"
-                                    >
-                                        {row.allowPartialFulfillment ? 'Pack Available Stock' : 'Mark Packed'}
-                                    </button>
-                                )}
-                            </>
-                        )
-                    )}
-                    {activeTab === 'refused' && (row.deliveryRefusal || row.partialReturn) && (() => {
-                        const back = row.deliveryRefusal || row.partialReturn;
-                        return (
-                        <div className="flex flex-col items-end gap-1">
-                            <span className="text-[10px] font-bold text-rose-600 max-w-[240px] text-right">
-                                {row.deliveryRefusal
-                                    ? <>{row.deliveryRefusal.reasonLabel || 'Not accepted'}{row.deliveryRefusal.note ? ` - ${row.deliveryRefusal.note}` : ''}</>
-                                    : <>Partly delivered{row.partialReturn.reason ? ` - ${row.partialReturn.reason}` : ''}</>}
-                            </span>
-                            {row.partialReturn && !row.deliveryRefusal && (
-                                <span className="text-[10px] font-semibold text-slate-600 max-w-[240px] text-right">
-                                    Given back: {(row.partialReturn.items || []).map((i) => `${i.name} ${i.quantity} ${i.unit || ''}`.trim()).join(', ')}
-                                </span>
-                            )}
-                            {back.goodsStatus === 'with_delivery' && row.returnOtpCode ? (
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold text-slate-500">Return code - tell the delivery partner when they bring the goods back</p>
-                                    <p className="text-lg font-black tracking-[0.3em] text-slate-900 tabular-nums">{row.returnOtpCode}</p>
-                                </div>
-                            ) : back.goodsStatus === 'with_delivery' ? (
-                                <button
-                                    onClick={() => setReturnedGoodsOrder({ id: row.id, name: row.hotelName || row.userId?.fullName || 'this order' })}
-                                    className="p-1.5 px-3 text-xs font-bold uppercase text-amber-700 border border-amber-600 bg-amber-50 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"
-                                >
-                                    <Package size={12} /> Goods received back
-                                </button>
-                            ) : (
-                                <span className="text-[10px] font-black uppercase text-slate-500">
-                                    {back.goodsStatus === 'restocked' ? 'Added back to stock' : 'Written off'}
-                                </span>
-                            )}
-                        </div>
-                        );
-                    })()}
-                    {activeTab === 'ready' && row.status === 'packed' && !(row.numberOfPackages > 0) && (
-                        <button
-                            onClick={() => {
-                                setSelectedOrderForPacking(row.id);
-                                setPackageModalMode('count');
-                                setPackageCount(0);
-                                setIsPackageModalOpen(true);
-                            }}
-                            className="p-1.5 px-3 text-xs font-bold uppercase text-amber-700 border border-amber-600 bg-amber-50 rounded-sm hover:bg-amber-600 hover:text-white transition-all flex items-center gap-1.5"
-                            title="Enter how many boxes/bags this order is packed in. Needed before you can assign a delivery partner."
-                        >
-                            <Package size={12} /> Enter package count
-                        </button>
-                    )}
-                    {activeTab === 'ready' && row.status === 'packed' && row.numberOfPackages > 0 && (
-                        <button
-                            onClick={() => {
-                                setSelectedOrderForDispatch(row.id);
-                                setIsAssignModalOpen(true);
-                            }}
-                            className="p-1.5 px-3 text-xs font-bold uppercase text-orange-600 border border-orange-600 rounded-sm hover:bg-orange-600 hover:text-white transition-all flex items-center gap-1.5"
-                        >
-                            <Truck size={12} /> Assign & Dispatch
-                        </button>
-                    )}
+    const renderActions = (row) => (
+        <>
+            {activeTab === 'new' && (
+                (row.status === 'placed' || row.status === 'assigned' || row.status === 'new') ? (
                     <button
-                        onClick={() => navigate(`/franchise/orders/${row.id}`)}
-                        className="p-1.5 px-3 text-xs font-bold uppercase text-slate-900 border border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all"
+                        onClick={() => handleAction(row.id, 'accept')}
+                        disabled={processingOrderId === row.id}
+                        className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
                     >
-                        View
+                        <Check size={18} /> Accept Order
                     </button>
+                ) : row.status === 'accepted' && (
+                    <>
+                        {row.franchiseAutoAccepted && (
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setRejectingOrderId(row.id);
+                                    await rejectFranchiseOrder(row.id);
+                                    setRejectingOrderId(null);
+                                    refreshOrders();
+                                }}
+                                disabled={rejectingOrderId === row.id}
+                                className={cn(btn, 'border border-rose-300 text-rose-600 bg-white hover:bg-rose-50')}
+                            >
+                                <X size={18} /> {rejectingOrderId === row.id ? '…' : 'Reject'}
+                            </button>
+                        )}
+                        {row.items.some(i => i.isShortage) && !row.allowPartialFulfillment ? (
+                            <button
+                                onClick={() => handleAction(row.id, 'procure')}
+                                className={cn(btn, 'bg-amber-500 text-white hover:bg-amber-600')}
+                            >
+                                <Info size={18} /> Request Stock
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleAction(row.id, 'Packed')}
+                                disabled={processingOrderId === row.id}
+                                className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
+                            >
+                                <CheckCircle2 size={18} /> {row.allowPartialFulfillment ? 'Pack Available Stock' : 'Mark Ready'}
+                            </button>
+                        )}
+                    </>
+                )
+            )}
+            {activeTab === 'ready' && row.status === 'packed' && !(row.numberOfPackages > 0) && (
+                <button
+                    onClick={() => {
+                        setSelectedOrderForPacking(row.id);
+                        setPackageModalMode('count');
+                        setPackageCount(0);
+                        setIsPackageModalOpen(true);
+                    }}
+                    className={cn(btn, 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100')}
+                    title="Enter how many boxes/bags this order is packed in. Needed before you can assign a delivery partner."
+                >
+                    <Package size={18} /> Enter package count
+                </button>
+            )}
+            {activeTab === 'ready' && row.status === 'packed' && row.numberOfPackages > 0 && (
+                <button
+                    onClick={() => {
+                        setSelectedOrderForDispatch(row.id);
+                        setIsAssignModalOpen(true);
+                    }}
+                    className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
+                >
+                    <Truck size={18} /> Assign & Send
+                </button>
+            )}
+            <button
+                onClick={() => navigate(`/franchise/orders/${row.id}`)}
+                className={cn(btn, 'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+            >
+                <Eye size={18} /> View Details
+            </button>
+        </>
+    );
+
+    // What came back at the door, and what to do with it (Returned tab)
+    const renderReturn = (row) => {
+        const back = row.deliveryRefusal || row.partialReturn;
+        if (activeTab !== 'refused' || !back) return null;
+        return (
+            <div className="rounded-2xl bg-rose-50/60 border border-rose-100 p-3 flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[200px]">
+                    <p className="text-[14px] font-semibold text-rose-700">
+                        {row.deliveryRefusal
+                            ? <>{row.deliveryRefusal.reasonLabel || 'Not accepted'}{row.deliveryRefusal.note ? ` - ${row.deliveryRefusal.note}` : ''}</>
+                            : <>Partly delivered{row.partialReturn.reason ? ` - ${row.partialReturn.reason}` : ''}</>}
+                    </p>
+                    {row.partialReturn && !row.deliveryRefusal && (
+                        <p className="text-[13px] text-slate-600">
+                            Given back: {(row.partialReturn.items || []).map((i) => `${i.name} ${i.quantity} ${i.unit || ''}`.trim()).join(', ')}
+                        </p>
+                    )}
                 </div>
-            )
-        }
-    ];
+                {back.goodsStatus === 'with_delivery' && row.returnOtpCode ? (
+                    <div className="text-right">
+                        <p className="text-[12px] text-slate-500">Return code - tell the delivery partner when they bring the goods back</p>
+                        <p className="text-xl font-bold tracking-[0.3em] text-slate-900 tabular-nums">{row.returnOtpCode}</p>
+                    </div>
+                ) : back.goodsStatus === 'with_delivery' ? (
+                    <button
+                        onClick={() => setReturnedGoodsOrder({ id: row.id, name: row.hotelName || row.userId?.fullName || 'this order' })}
+                        className={cn(btn, 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100')}
+                    >
+                        <Package size={18} /> Goods received back
+                    </button>
+                ) : (
+                    <span className="px-3 py-1.5 rounded-lg bg-white text-[13px] font-semibold text-slate-600">
+                        {back.goodsStatus === 'restocked' ? 'Added back to stock' : 'Written off'}
+                    </span>
+                )}
+            </div>
+        );
+    };
+
+    const orderCard = (row) => {
+        const [label, cls] = STATUS_PILL[(row.status || '').toLowerCase()] || [row.status, 'bg-slate-100 text-slate-600'];
+        const pay = paymentLabel(row.paymentMode);
+        const items = row.items || [];
+        const day = row.scheduledDate || row.createdAt;
+        return (
+            <div key={row.id} className="bg-white rounded-3xl border border-slate-100 p-4 lg:p-5 space-y-4 hover:shadow-sm transition-shadow">
+                <div className="flex flex-wrap items-start gap-4">
+                    {items[0]?.image
+                        ? <img src={items[0].image} alt="" className="w-16 h-16 rounded-xl object-cover bg-slate-50 shrink-0" loading="lazy" />
+                        : <span className="w-16 h-16 rounded-xl bg-green-50 text-green-700 flex items-center justify-center shrink-0"><Package size={26} /></span>}
+                    <div className="flex-1 min-w-[180px]">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[16px] font-bold text-slate-900">Order #{String(row.id).slice(-6).toUpperCase()}</p>
+                            <span className={cn('px-3 py-1 rounded-lg text-[13px] font-semibold', cls)}>{label}</span>
+                            {row.status === 'procuring' && <RefreshCw size={14} className="text-amber-600 animate-spin" />}
+                        </div>
+                        <p className="text-[16px] font-semibold text-slate-800 mt-0.5">{row.hotelName}</p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[13px] text-slate-500">
+                            {row.customerMobile && <span className="flex items-center gap-1"><Phone size={13} /> {row.customerMobile}</span>}
+                            {row.city && <span className="flex items-center gap-1"><MapPin size={13} /> {row.city}</span>}
+                        </div>
+                    </div>
+                    <div className="min-w-[130px]">
+                        <p className="text-[12px] text-slate-500">Delivery</p>
+                        <p className="text-[15px] font-bold text-slate-900">{row.deliverySlot}</p>
+                        {day && <p className="text-[13px] text-slate-500 flex items-center gap-1"><CalendarDays size={13} /> {new Date(day).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>}
+                        {(row.scheduledDateFormatted || row.scheduledDate) && <p className="text-[12px] font-semibold text-amber-700 flex items-center gap-1"><Clock size={12} /> Advance booking</p>}
+                    </div>
+                    <div className="min-w-[110px] text-right">
+                        <p className="text-[12px] text-slate-500">Order value</p>
+                        <p className="text-[18px] font-bold text-slate-900 tabular-nums">₹{Number(row.total || 0).toLocaleString('en-IN')}</p>
+                        <span className={cn('inline-block mt-1 px-2.5 py-0.5 rounded-md text-[12px] font-semibold', pay.cls)}>{pay.text}</span>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {items.slice(0, 6).map((i, idx) => (
+                        <span key={idx} className="px-3 py-1.5 rounded-lg bg-slate-50 text-[13px] text-slate-700">
+                            {i.name} <b className="text-slate-900 tabular-nums">{i.quantity} {i.unit}</b>
+                            {i.isShortage && !row.allowPartialFulfillment && <span className="ml-1 text-rose-600 font-semibold">(short)</span>}
+                        </span>
+                    ))}
+                    {items.length > 6 && <span className="px-3 py-1.5 rounded-lg bg-slate-50 text-[13px] text-slate-500">+{items.length - 6} more</span>}
+                </div>
+                {renderReturn(row)}
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-1 border-t border-slate-50">
+                    {activeTab === 'ready' && row.status === 'dispatched' && row.deliveryPartner && (
+                        <span className="mr-auto inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700">
+                            <UserCircle2 size={18} /> {row.deliveryPartner?.fullName}
+                        </span>
+                    )}
+                    {renderActions(row)}
+                </div>
+            </div>
+        );
+    };
 
     if (isLoading && !filteredOrders.length) {
         return (
-            <div className="p-4 space-y-4 animate-pulse bg-slate-50 min-h-screen">
-                <div className="h-4 w-48 bg-slate-200 rounded" />
-                <div className="h-16 bg-white border border-slate-200" />
-                <div className="h-[500px] bg-white border border-slate-200" />
+            <div className="p-4 lg:p-6 space-y-4 animate-pulse bg-[#f6f8f7] min-h-screen">
+                <div className="h-14 w-72 bg-slate-200 rounded-2xl" />
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-white rounded-2xl" />)}</div>
+                <div className="h-[400px] bg-white rounded-3xl" />
             </div>
         );
     }
 
     return (
-        <div className="bg-slate-50 min-h-screen">
-            {/* Enterprise Header */}
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-                <div className="px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
-                            <Home size={14} />
-                            <ChevronRight size={12} />
-                            <span>Franchise</span>
-                            <ChevronRight size={12} />
-                            <span className="text-slate-900 uppercase tracking-widest">Orders</span>
-                        </div>
-                        <h1 className="text-xl font-bold text-slate-900">Order Management</h1>
-                    </div>
+        <div className="bg-[#f6f8f7] min-h-screen pb-24 lg:pb-8">
+            <FranchisePageHeader
+                icon={ClipboardList}
+                title="Hotel Orders"
+                subtitle="Check new orders, get them ready and send them for delivery"
+                right={
+                    <button
+                        onClick={() => setIsHistoryModalOpen(true)}
+                        className="h-14 px-5 rounded-2xl border border-slate-200 bg-white text-[15px] font-semibold text-slate-800 flex items-center gap-2 hover:bg-slate-50"
+                    >
+                        <History size={20} /> Order History
+                    </button>
+                }
+            />
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => {
-                                refreshOrders();
-                                refreshInventory();
-                                toast.info("Loading orders...");
-                            }}
-                            className="p-2 text-slate-400 hover:text-slate-900 transition-colors border border-slate-200 rounded-sm bg-white"
-                        >
-                            <RefreshCw size={16} className={cn(isLoading && "animate-spin")} />
-                        </button>
-                        <div className="relative" ref={filterMenuRef}>
-                            <button
-                                type="button"
-                                onClick={() => setIsFilterMenuOpen((prev) => !prev)}
-                                aria-label="Open order filters"
-                                title={quickFilter === 'all' ? 'Filter orders' : `Filter active: ${activeFilterLabel}`}
-                                className={cn(
-                                    "p-2 transition-colors border border-slate-200 rounded-sm bg-white",
-                                    quickFilter === 'all'
-                                        ? "text-slate-400 hover:text-slate-900"
-                                        : "text-slate-900 border-slate-300 bg-slate-50"
-                                )}
-                            >
-                                <Settings2 size={16} />
-                            </button>
-                            <AnimatePresence>
-                                {isFilterMenuOpen && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -6 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -6 }}
-                                        className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-sm shadow-xl z-40 overflow-hidden"
-                                    >
-                                        <div className="px-3 py-2 border-b border-slate-100">
-                                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Quick Filters</p>
-                                        </div>
-                                        <div className="p-1">
-                                            {filterOptions.map((option) => (
-                                                <button
-                                                    key={option.id}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setQuickFilter(option.id);
-                                                        setIsFilterMenuOpen(false);
-                                                    }}
-                                                    className={cn(
-                                                        "w-full text-left px-3 py-2 rounded-sm text-[11px] font-black uppercase tracking-wide transition-colors",
-                                                        quickFilter === option.id
-                                                            ? "bg-slate-900 text-white"
-                                                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                                                    )}
-                                                >
-                                                    {option.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                        <button
-                            onClick={() => setIsHistoryModalOpen(true)}
-                            className="bg-slate-900 text-white px-4 py-2 rounded-sm text-xs font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm uppercase tracking-widest"
-                        >
-                            <History size={14} />
-                            Order History
-                        </button>
-                    </div>
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 px-4 lg:px-6">
+                <StatTile tone="blue" icon={ShoppingBag} label="New Orders" value={stats.newOrders} note="To accept and prepare" onClick={() => switchTab('new')} active={activeTab === 'new'} />
+                <StatTile tone="orange" icon={Zap} label="Ready to Send" value={stats.readyToDispatch} note="Packed, waiting for delivery" onClick={() => switchTab('ready')} active={activeTab === 'ready'} />
+                <StatTile tone="green" icon={CheckCircle2} label="Completed" value={stats.completedCount} note="Delivered to hotels" onClick={() => switchTab('completed')} active={activeTab === 'completed'} />
+                <StatTile tone="red" icon={Undo2} label="Returned" value={tabCount('refused')} note="Came back at the door" onClick={() => switchTab('refused')} active={activeTab === 'refused'} />
+            </div>
+
+            <div className="px-4 lg:px-6 mt-5 flex flex-wrap items-center gap-3">
+                <PillTabs
+                    tabs={tabs.map((t) => ({ ...t, count: tabCount(t.id) }))}
+                    active={activeTab}
+                    onChange={switchTab}
+                />
+                <div className="flex-1" />
+                <div className="relative w-full sm:w-auto">
+                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Search order no. or hotel"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value.trim())}
+                        className="w-full sm:w-72 h-11 bg-white border border-slate-200 rounded-xl pl-11 pr-4 outline-none text-[15px] text-slate-900 placeholder:text-slate-400 focus:border-green-600"
+                    />
                 </div>
-            </div>
-
-            {/* Performance Strip */}
-            <div className="bg-white border-b border-slate-200 grid grid-cols-1 md:grid-cols-5">
-                <MetricRow
-                    label="New Orders"
-                    value={stats.newOrders}
-                    icon={ShoppingBag}
-                />
-                <MetricRow
-                    label="Ready to Dispatch"
-                    value={stats.readyToDispatch}
-                    icon={CheckCircle2}
-                />
-                <MetricRow
-                    label="Out for Delivery"
-                    value={stats.outForDelivery}
-                    icon={Truck}
-                />
-                <MetricRow
-                    label="Completed"
-                    value={stats.completedCount}
-                    icon={History}
-                />
-                <MetricRow
-                    label="Total Revenue"
-                    value={`₹${stats.revenue.toLocaleString()}`}
-                    trend="Stable"
-                    icon={IndianRupee}
-                />
-            </div>
-
-            <div className="p-px bg-slate-200">
-                <FilterBar
-                    actions={
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center bg-slate-100 p-0.5 rounded-sm mr-4">
-                                {tabs.map((tab) => (
+                <div className="relative" ref={filterMenuRef}>
+                    <button
+                        type="button"
+                        onClick={() => setIsFilterMenuOpen((prev) => !prev)}
+                        aria-label="Open order filters"
+                        title={quickFilter === 'all' ? 'Filter orders' : `Filter active: ${activeFilterLabel}`}
+                        className={cn(
+                            'h-11 px-4 rounded-xl border flex items-center gap-2 text-[14px] font-semibold',
+                            quickFilter === 'all' ? 'border-slate-200 bg-white text-slate-700' : 'border-green-600 bg-green-50 text-green-800'
+                        )}
+                    >
+                        <SlidersHorizontal size={18} /> {quickFilter === 'all' ? 'Filter' : activeFilterLabel}
+                    </button>
+                    <AnimatePresence>
+                        {isFilterMenuOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                className="absolute right-0 mt-2 w-60 bg-white border border-slate-200 rounded-2xl shadow-xl z-40 overflow-hidden p-1"
+                            >
+                                {filterOptions.map((option) => (
                                     <button
-                                        key={tab.id}
+                                        key={option.id}
+                                        type="button"
                                         onClick={() => {
-                                            setIsLoading(true);
-                                            setActiveTab(tab.id);
+                                            setQuickFilter(option.id);
+                                            setIsFilterMenuOpen(false);
                                         }}
                                         className={cn(
-                                            "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all",
-                                            activeTab === tab.id
-                                                ? "bg-white text-slate-900 shadow-sm rounded-sm"
-                                                : "text-slate-500 hover:text-slate-900"
+                                            'w-full text-left px-3 py-2.5 rounded-xl text-[14px] font-semibold transition-colors',
+                                            quickFilter === option.id ? 'bg-green-700 text-white' : 'text-slate-700 hover:bg-slate-50'
                                         )}
                                     >
-                                        <tab.icon size={12} />
-                                        {tab.label}
+                                        {option.label}
                                     </button>
                                 ))}
-                            </div>
-                            <div className="relative group w-full max-w-xs">
-                                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={14} />
-                                <input
-                                    type="text"
-                                    placeholder="Search by Order ID or Customer..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value.trim())}
-                                    className="bg-white border border-slate-200 rounded-sm py-1.5 pl-9 pr-4 outline-none text-[11px] font-black text-slate-900 placeholder:text-slate-400 focus:border-slate-400 transition-all font-sans min-w-[240px]"
-                                />
-                            </div>
-                        </div>
-                    }
-                />
-
-                <div className="bg-white border-t border-slate-200">
-                    <AnimatePresence mode="wait">
-                        {isLoading ? (
-                            <motion.div
-                                key="loading"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="p-8 space-y-4"
-                            >
-                                {[1, 2, 3, 4, 5].map(i => (
-                                    <div key={i} className="h-12 bg-slate-50 rounded-sm animate-pulse" />
-                                ))}
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key="grid"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {['new', 'ready'].includes(activeTab) && <ProductTotals orders={filteredOrders} inventory={inventory} />}
-                                <DataGrid
-                                    columns={orderColumns}
-                                    data={filteredOrders}
-                                    density="compact"
-                                    showSearch={false}
-                                />
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
+                <button
+                    onClick={() => {
+                        refreshOrders();
+                        refreshInventory();
+                        toast.info("Loading orders...");
+                    }}
+                    className="h-11 w-11 rounded-xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center hover:bg-slate-50"
+                    aria-label="Refresh"
+                >
+                    <RefreshCw size={18} className={cn(isLoading && "animate-spin")} />
+                </button>
+            </div>
+
+            <div className="px-4 lg:px-6 mt-4 space-y-4">
+                {isLoading ? (
+                    <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-40 bg-white rounded-3xl animate-pulse" />)}</div>
+                ) : (
+                    <>
+                        {['new', 'ready'].includes(activeTab) && <ProductTotals orders={filteredOrders} inventory={inventory} />}
+                        {!filteredOrders.length && (
+                            <div className="bg-white rounded-3xl border border-slate-100 py-16 text-center text-slate-500">
+                                <Box size={40} className="mx-auto text-slate-300 mb-2" />
+                                <p className="text-[15px]">No orders here right now</p>
+                            </div>
+                        )}
+                        {filteredOrders.map((row) => orderCard(row))}
+                    </>
+                )}
             </div>
 
             {/* Delivery Assignment Modal */}
@@ -748,15 +669,15 @@ export default function OrdersScreen() {
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-md bg-white rounded-sm shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
                         >
-                            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+                            <div className="bg-green-700 p-6 text-white flex justify-between items-center">
                                 <div>
                                     <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                                        <Truck size={16} className="text-emerald-400" />
+                                        <Truck size={16} className="text-green-200" />
                                         Assign Delivery Partner
                                     </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Order #{selectedOrderForDispatch?.slice(-6)}</p>
+                                    <p className="text-[10px] font-bold text-green-100 uppercase tracking-widest mt-1">Order #{selectedOrderForDispatch?.slice(-6)}</p>
                                 </div>
                                 <button onClick={() => setIsAssignModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <X size={20} />
@@ -775,10 +696,10 @@ export default function OrdersScreen() {
                                                 key={partner._id}
                                                 onClick={() => handleAssignDelivery(partner._id)}
                                                 disabled={isAssigning}
-                                                className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-sm hover:border-slate-900 hover:bg-white transition-all group"
+                                                className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-900 hover:bg-white transition-all group"
                                             >
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-slate-200 rounded-sm flex items-center justify-center text-slate-500 font-black text-xs uppercase">
+                                                    <div className="w-10 h-10 bg-slate-200 rounded-2xl flex items-center justify-center text-slate-500 font-black text-xs uppercase">
                                                         {partner.fullName.slice(0, 2)}
                                                     </div>
                                                     <div className="text-left">
@@ -812,10 +733,10 @@ export default function OrdersScreen() {
                 {returnedGoodsOrder && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !savingGoods && setReturnedGoodsOrder(null)} />
-                        <div className="relative w-full max-w-sm bg-white rounded-sm shadow-2xl overflow-hidden">
-                            <div className="bg-slate-900 p-6 text-white">
+                        <div className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+                            <div className="bg-green-700 p-6 text-white">
                                 <h3 className="text-sm font-black uppercase tracking-widest">Goods received back</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Customer did not accept the order</p>
+                                <p className="text-[10px] font-bold text-green-100 uppercase tracking-widest mt-1">Customer did not accept the order</p>
                             </div>
                             <div className="p-6 space-y-3">
                                 <p className="text-xs font-semibold text-slate-600">
@@ -824,14 +745,14 @@ export default function OrdersScreen() {
                                 <button
                                     disabled={savingGoods}
                                     onClick={() => settleReturnedGoods('restock')}
-                                    className="w-full h-12 bg-emerald-600 text-white rounded-sm font-black uppercase text-[11px] tracking-widest disabled:opacity-50"
+                                    className="w-full h-12 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-widest disabled:opacity-50"
                                 >
                                     Good - add back to stock
                                 </button>
                                 <button
                                     disabled={savingGoods}
                                     onClick={() => settleReturnedGoods('write_off')}
-                                    className="w-full h-12 border border-rose-300 text-rose-600 rounded-sm font-black uppercase text-[11px] tracking-widest disabled:opacity-50"
+                                    className="w-full h-12 border border-rose-300 text-rose-600 rounded-2xl font-black uppercase text-[11px] tracking-widest disabled:opacity-50"
                                 >
                                     Damaged - do not add to stock
                                 </button>
@@ -860,15 +781,15 @@ export default function OrdersScreen() {
                             initial={{ scale: 0.95, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-sm bg-white rounded-sm shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden"
                         >
-                            <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
+                            <div className="bg-green-700 p-6 text-white flex justify-between items-center">
                                 <div>
                                     <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-                                        <Package size={16} className="text-emerald-400" />
+                                        <Package size={16} className="text-green-200" />
                                         {packageModalMode === 'count' ? 'Package Count' : 'Pack Order'}
                                     </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{packageModalMode === 'count' ? 'This order is already packed' : 'Enter package count'}</p>
+                                    <p className="text-[10px] font-bold text-green-100 uppercase tracking-widest mt-1">{packageModalMode === 'count' ? 'This order is already packed' : 'Enter package count'}</p>
                                 </div>
                                 <button onClick={() => setIsPackageModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <X size={20} />
@@ -878,7 +799,7 @@ export default function OrdersScreen() {
                             <div className="p-8 space-y-6">
                                 <div className="space-y-4">
                                     {packingOrder && (
-                                        <div className="rounded-sm border border-slate-200 bg-slate-50 p-3 space-y-1">
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-1">
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                                 {packageModalMode === 'count' ? 'Order contents' : 'You are packing exactly what the customer ordered'}
                                             </p>
@@ -904,7 +825,7 @@ export default function OrdersScreen() {
                                                 if (v === '') setPackageCount(0);
                                                 else setPackageCount(Math.min(maxPackages, Math.max(0, parseInt(v, 10) || 0)));
                                             }}
-                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-sm py-4 px-6 text-3xl font-black text-slate-900 outline-none focus:border-slate-900 transition-all text-center tabular-nums"
+                                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 px-6 text-3xl font-black text-slate-900 outline-none focus:border-slate-900 transition-all text-center tabular-nums"
                                             placeholder="0"
                                             autoFocus
                                         />
@@ -922,10 +843,10 @@ export default function OrdersScreen() {
                                     onClick={handleConfirmPacking}
                                     disabled={packageCount < 1 || processingOrderId === selectedOrderForPacking}
                                     title={packageCount < 1 ? 'Enter at least 1 package' : ''}
-                                    className="w-full h-14 bg-slate-900 text-white rounded-sm font-black uppercase text-[11px] tracking-[0.2em] shadow-lg hover:bg-slate-800 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    className="w-full h-14 bg-green-700 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-lg hover:bg-green-800 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
                                     {packageModalMode === 'count' ? 'Save Package Count' : 'Confirm & Mark Packed'}
-                                    <Check size={16} className="text-emerald-400" />
+                                    <Check size={16} className="text-green-200" />
                                 </button>
                             </div>
                         </motion.div>

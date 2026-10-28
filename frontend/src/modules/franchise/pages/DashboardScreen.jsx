@@ -1,432 +1,224 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    ShoppingBag,
-    Truck,
-    TrendingUp,
-    PackageCheck,
-    Bell,
-    ChevronRight,
-    Zap,
-    Wallet,
-    AlertTriangle,
-    ArrowUpRight,
-    Clock,
-    Home,
-    Download,
-    RefreshCw,
-    MoreHorizontal,
-    Search,
-    IndianRupee,
-    Briefcase,
-    History,
-    ShieldCheck,
-    Monitor,
-    CheckCircle2,
-    Calendar
+    ArrowRight, Bell, CalendarDays, CheckCircle2, ChevronRight, Clock, FileText, ListChecks, MapPin, Package,
+    ShieldCheck, Store, Sun, Truck,
 } from 'lucide-react';
-import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
-import { useInventory } from '../contexts/InventoryContext';
 import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
-import { toast } from 'sonner';
-import api from '@/lib/axios';
-import { getSocket } from '@/lib/socket';
+import { StatTile } from '../components/layout/FranchisePageHeader';
 
-// Enterprise Components
-import MetricRow from '../components/cards/MetricRow';
-import ChartPanel from '../components/cards/ChartPanel';
-import DataGrid from '../components/tables/DataGrid';
-import FilterBar from '../components/tables/FilterBar';
-import OrderHistoryModal from '../components/modals/OrderHistoryModal';
+/*
+ * Franchise Home, built to the client's mockup: today's counts, today's orders, and the three daily jobs.
+ * Text is in Hindi like the mockup; numbers and names stay as they are.
+ */
+
+const NEW = ['placed', 'pending', 'new', 'assigned'];
+const TO_PACK = ['accepted', 'procuring'];
+const ON_THE_WAY = ['dispatched', 'out for delivery'];
+const DONE = ['delivered', 'received', 'completed'];
+
+const STATUS = {
+    new: { label: 'नया ऑर्डर', cls: 'bg-orange-50 text-orange-600' },
+    pack: { label: 'तैयार करना है', cls: 'bg-amber-50 text-amber-700' },
+    ready: { label: 'तैयार है', cls: 'bg-yellow-50 text-yellow-700' },
+    way: { label: 'रास्ते में', cls: 'bg-violet-50 text-violet-700' },
+    done: { label: 'डिलीवर हो गया', cls: 'bg-green-50 text-green-700' },
+    cancelled: { label: 'रद्द हुआ', cls: 'bg-rose-50 text-rose-600' },
+};
+const statusOf = (s) => (NEW.includes(s) ? STATUS.new : TO_PACK.includes(s) ? STATUS.pack : ['packed', 'ready'].includes(s) ? STATUS.ready
+    : ON_THE_WAY.includes(s) ? STATUS.way : DONE.includes(s) ? STATUS.done : s === 'cancelled' ? STATUS.cancelled : { label: s, cls: 'bg-slate-100 text-slate-600' });
+
+const dayKey = (d) => { const x = new Date(d); return isNaN(x) ? '' : `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+const hiDate = (d) => new Date(d).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+const hiDay = (d) => new Date(d).toLocaleDateString('hi-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+// The order's day: its delivery date for advance orders, else when it was placed
+const orderDay = (o) => o.scheduledDate || o.createdAt;
+
+function Thumb({ src }) {
+    return src
+        ? <img src={src} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0 bg-slate-50" loading="lazy" />
+        : <span className="w-14 h-14 rounded-xl bg-green-50 text-green-700 flex items-center justify-center shrink-0"><Package size={24} /></span>;
+}
 
 export default function DashboardScreen() {
     const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
-    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const { franchise } = useFranchiseAuth();
-    const { stats, orders, refreshOrders } = useFranchiseOrders();
-    const { getStockStats, refreshInventory } = useInventory();
+    const { orders } = useFranchiseOrders();
     const [showKYCModal, setShowKYCModal] = useState(false);
-    const [sendingPush, setSendingPush] = useState(false);
-
-    const handleTestPush = async () => {
-        setSendingPush(true);
-        let token = localStorage.getItem(`fcm_token_franchise`);
-
-        if (!token) {
-            toast.info("Setting up notifications...");
-            const { requestFCMToken } = await import('@/lib/firebase');
-            token = await requestFCMToken();
-            if (token) {
-                localStorage.setItem(`fcm_token_franchise`, token);
-                await api.post(`/franchise/fcm-token`, { token });
-            }
-        }
-
-        if (!token) {
-            toast.error("Notifications are blocked. Please allow notifications in your browser settings.");
-            setSendingPush(false);
-            return;
-        }
-
-        try {
-            const response = await api.post('/franchise/test-notification', {
-                fcm_token: token,
-                plateform: 'Web Dashboard'
-            });
-
-            if (response.data.success) {
-                toast.success("Test notification triggered!");
-            } else {
-                toast.error(response.data.message || "Failed to trigger");
-            }
-        } catch (error) {
-            console.error("Test Push Error:", error);
-            toast.error(error.response?.data?.message || "Something went wrong. Please try again.");
-        } finally {
-            setSendingPush(false);
-        }
-    };
+    const [day, setDay] = useState(dayKey(new Date()));
 
     useEffect(() => {
-        if (franchise && !franchise.isVerified) {
-            setShowKYCModal(true);
-        }
+        if (franchise && !franchise.isVerified) setShowKYCModal(true);
     }, [franchise]);
 
-    const [isSocketConnected, setIsSocketConnected] = useState(false);
+    const today = dayKey(new Date());
+    const count = useMemo(() => ({
+        new: orders.filter((o) => NEW.includes(o.status)).length,
+        pack: orders.filter((o) => TO_PACK.includes(o.status)).length,
+        way: orders.filter((o) => ON_THE_WAY.includes(o.status)).length,
+        doneToday: orders.filter((o) => DONE.includes(o.status) && dayKey(orderDay(o)) === today).length,
+    }), [orders, today]);
 
-    useEffect(() => {
-        const socket = getSocket();
-        setIsSocketConnected(socket.connected);
-        const handleConnect = () => setIsSocketConnected(true);
-        const handleDisconnect = () => setIsSocketConnected(false);
-        socket.on('connect', handleConnect);
-        socket.on('disconnect', handleDisconnect);
-        return () => {
-            socket.off('connect', handleConnect);
-            socket.off('disconnect', handleDisconnect);
-        };
-    }, []);
+    const dayOrders = useMemo(() => orders
+        .filter((o) => dayKey(orderDay(o)) === day)
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)), [orders, day]);
 
-    const inventoryStats = getStockStats();
-    const recentOrders = orders.slice(0, 10);
-
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 800);
-        return () => clearTimeout(timer);
-    }, []);
-
-    const orderColumns = [
-        {
-            header: 'Customer Name',
-            key: 'hotelName',
-            render: (val, row) => (
-                <div className="flex flex-col">
-                    <span className="font-black text-slate-900 text-[11px] tracking-tight">{val}</span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">Order #{row.id}</span>
-                </div>
-            )
-        },
-        {
-            header: 'Status',
-            key: 'status',
-            render: (val) => (
-                <div className={cn(
-                    "px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-widest border w-fit",
-                    (val === 'delivered' || val === 'received') ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                        val === 'cancelled' ? "bg-rose-50 text-rose-600 border-rose-100" :
-                            "bg-amber-50 text-amber-600 border-amber-100"
-                )}>
-                    {val === 'received' ? 'Received' : val === 'delivered' ? 'Delivered' : val}
-                </div>
-            )
-        },
-        {
-            header: 'Amount',
-            key: 'total',
-            align: 'right',
-            render: (val) => <span className="text-[11px] font-black text-slate-900 tabular-nums">₹{Number(val || 0).toLocaleString()}</span>
-        },
-        {
-            header: 'Delivery Slot',
-            key: 'deliverySlot',
-            render: (val, row) => (
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{val}</span>
-                    {row.scheduledDate && !isNaN(new Date(row.scheduledDate).getTime()) && (
-                        <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md mt-1 w-fit border border-amber-200 animate-pulse shadow-sm">
-                            Target: {new Date(row.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' })}
-                        </span>
-                    )}
-                </div>
-            )
-        },
-        {
-            header: 'Action',
-            key: 'actions',
-            align: 'right',
-            render: (_, row) => (
-                <button
-                    onClick={() => (row?.id && navigate(`/franchise/orders/${row.id}`))}
-                    className="p-1 px-2 text-[10px] font-black uppercase text-slate-900 border border-slate-900 rounded-sm hover:bg-slate-900 hover:text-white transition-all"
-                >
-                    View Details
-                </button>
-            )
-        }
+    const tasks = [
+        { n: 1, tone: 'bg-blue-600', iconTone: 'bg-blue-50 text-blue-600', icon: FileText, title: 'नए ऑर्डर देखें', text: 'आज मिले नए होटल ऑर्डर चेक करें और तैयारी शुरू करें', go: '/franchise/orders' },
+        { n: 2, tone: 'bg-amber-500', iconTone: 'bg-amber-50 text-amber-500', icon: Package, title: 'सामान और स्टॉक चेक करें', text: 'स्टॉक देखें और कमी होने पर वेंडर को भेजें', go: '/franchise/inventory' },
+        { n: 3, tone: 'bg-violet-600', iconTone: 'bg-violet-50 text-violet-600', icon: Truck, title: 'डिलीवरी की स्थिति देखें', text: 'तैयार और डिलीवर हुए ऑर्डर की स्थिति चेक करें', go: '/franchise/dispatch' },
     ];
 
-    if (isLoading) {
-        return (
-            <div className="p-4 space-y-4 animate-pulse bg-slate-50 min-h-screen">
-                <div className="h-4 w-48 bg-slate-200 rounded" />
-                <div className="h-16 bg-white border border-slate-200" />
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-1 bg-slate-200">
-                    <div className="h-20 bg-white" />
-                    <div className="h-20 bg-white" />
-                    <div className="h-20 bg-white" />
-                </div>
-                <div className="h-[500px] bg-white border border-slate-200" />
-            </div>
-        );
-    }
-
     return (
-        <div className="bg-slate-50 min-h-screen">
-            {/* Enterprise Header */}
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-                <div className="px-4 py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-200 pr-4">
-                            <Home size={12} />
-                            <ChevronRight size={10} />
-                            <span>Franchise</span>
-                            <ChevronRight size={10} />
-                            <span className="text-slate-900 uppercase tracking-widest">Dashboard</span>
-                        </div>
-                        <h1 className="text-sm font-bold text-slate-900">{franchise?.shopName || 'Franchise Portal'}</h1>
+        <div className="min-h-full bg-[#f6f8f7] pb-24 lg:pb-8">
+            {/* Header */}
+            <div className="flex flex-wrap items-center gap-4 px-4 lg:px-6 pt-5 pb-4">
+                <Sun size={44} className="text-amber-400 shrink-0" />
+                <div className="flex-1 min-w-[220px]">
+                    <h1 className="text-2xl lg:text-[30px] font-bold text-slate-900 leading-tight">नमस्ते! आज का काम</h1>
+                    <div className="flex flex-wrap items-center gap-3 mt-1">
+                        <span className="text-[15px] text-slate-500">{hiDay(new Date())}</span>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-800">
+                            <CheckCircle2 size={16} className="text-green-600" /> आज के ऑर्डर समय पर पूरा करें
+                        </span>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center bg-slate-100 p-0.5 rounded-sm mr-2">
-                            <button
-                                type="button"
-                                onClick={() => setIsHistoryModalOpen(false)}
-                                className={cn(
-                                    "px-3 py-1 text-[10px] font-bold rounded-sm uppercase tracking-widest transition-colors",
-                                    !isHistoryModalOpen ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-900"
-                                )}
-                            >
-                                Today
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setIsHistoryModalOpen(true)}
-                                className={cn(
-                                    "px-3 py-1 text-[10px] font-bold rounded-sm uppercase tracking-widest transition-colors",
-                                    isHistoryModalOpen ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-900"
-                                )}
-                            >
-                                History
-                            </button>
-                        </div>
-                        <button
-                            onClick={() => {
-                                refreshInventory();
-                                refreshOrders();
-                                toast.info("Refreshing dashboard data...");
-                            }}
-                            className="p-1.5 border border-slate-200 rounded-sm hover:bg-slate-50 text-slate-400">
-                            <RefreshCw size={14} />
-                        </button>
-                        <button
-                            onClick={handleTestPush}
-                            disabled={sendingPush}
-                            className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm uppercase tracking-widest disabled:opacity-50"
-                        >
-                            <Bell size={14} className={sendingPush ? "animate-pulse text-purple-500" : "text-purple-500"} />
-                            {sendingPush ? 'Testing...' : 'Test Notification'}
-                        </button>
-                        <button className="bg-slate-900 text-white px-3 py-1.5 rounded-sm text-[11px] font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-sm uppercase tracking-widest">
-                            <Monitor size={14} />
-                            Counter Sale (POS)
-                        </button>
-                    </div>
+                </div>
+                <button type="button" onClick={() => navigate('/franchise/orders')} className="relative w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center" aria-label="New orders">
+                    <Bell size={22} className="text-slate-700" />
+                    {count.new > 0 && <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">{count.new}</span>}
+                </button>
+                <div className="hidden md:flex items-center gap-3 h-14 pl-2 pr-4 rounded-2xl border border-slate-200 bg-white">
+                    <span className="w-10 h-10 rounded-xl bg-green-50 text-green-700 flex items-center justify-center overflow-hidden">
+                        {franchise?.profilePicture ? <img src={franchise.profilePicture} alt="" className="w-full h-full object-cover" /> : <Store size={20} />}
+                    </span>
+                    <span className="leading-tight max-w-[180px]">
+                        <span className="block text-[15px] font-bold text-slate-900 truncate">{franchise?.franchiseName || 'My Store'}</span>
+                        <span className="block text-xs text-slate-500 truncate">{franchise?.city || ''}</span>
+                    </span>
                 </div>
             </div>
 
-            <div className="bg-white border-b border-slate-200 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5">
-                <MetricRow
-                    label="Waiting Orders"
-                    value={stats.newOrders}
-                    icon={ShoppingBag}
-                />
-                <MetricRow
-                    label="Scheduled"
-                    value={stats.scheduledOrders}
-                    icon={Calendar}
-                    sub="Future Date"
-                />
-                <MetricRow
-                    label="Active Dispatch"
-                    value={stats.outForDelivery}
-                    icon={Truck}
-                />
-                <MetricRow
-                    label="Completed"
-                    value={stats.completedCount}
-                    icon={CheckCircle2}
-                />
-                <MetricRow
-                    label="Est. Commission"
-                    value={`₹${(stats.revenue * 0.1).toLocaleString()}`}
-                    sub="10% of revenue"
-                    icon={TrendingUp}
-                />
+            {/* Today's counts */}
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 px-4 lg:px-6">
+                <StatTile tone="blue" icon={FileText} label="नए ऑर्डर" value={count.new} note="आज मिले नए ऑर्डर" onClick={() => navigate('/franchise/orders')} />
+                <StatTile tone="orange" icon={Package} label="तैयार करने हैं" value={count.pack} note="पैकिंग के लिए तैयार करें" onClick={() => navigate('/franchise/orders')} />
+                <StatTile tone="purple" icon={Truck} label="डिलीवरी में" value={count.way} note="रास्ते में हैं" onClick={() => navigate('/franchise/dispatch')} />
+                <StatTile tone="green" icon={CheckCircle2} label="पूरे हुए" value={count.doneToday} note="आज डिलीवर हो गए" onClick={() => navigate('/franchise/orders')} />
             </div>
 
-            <div className="p-px bg-slate-200">
-                {/* Advanced Task Grid */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 bg-slate-200 gap-px">
-                    <div className="xl:col-span-2 bg-white min-h-[500px]">
-                        <FilterBar
-                            actions={
-                                <div className="flex items-center gap-4">
-                                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Recent Orders</h2>
-                                    <div className="h-4 w-px bg-slate-200" />
-                                    <div className={cn(
-                                        "flex items-center gap-1.5 px-2 py-0.5 rounded-sm transition-colors",
-                                        isSocketConnected ? "bg-emerald-50 border border-emerald-100" : "bg-amber-50 border border-amber-100"
-                                    )}>
-                                        <div className={cn("w-1.5 h-1.5 rounded-full", isSocketConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
-                                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", isSocketConnected ? "text-emerald-600" : "text-amber-600")}>
-                                            {isSocketConnected ? "System Online" : "Updating"}
-                                        </span>
-                                    </div>
-                                </div>
-                            }
-                        />
-
-                        <DataGrid
-                            columns={orderColumns}
-                            data={recentOrders}
-                            density="compact"
-                        />
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 lg:gap-5 px-4 lg:px-6 mt-5">
+                {/* Today's orders */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-4 lg:p-5">
+                    <div className="flex flex-wrap items-start gap-3 mb-4">
+                        <ListChecks size={28} className="text-slate-700 mt-1" />
+                        <div className="flex-1 min-w-[180px]">
+                            <h2 className="text-xl lg:text-2xl font-bold text-slate-900">आज के ऑर्डर</h2>
+                            <p className="text-[15px] text-slate-500">आज मिले सभी होटल ऑर्डर की सूची</p>
+                        </div>
+                        <label className="flex items-center gap-2 h-12 px-3 rounded-xl border border-slate-200 bg-white">
+                            <CalendarDays size={18} className="text-slate-600" />
+                            <input type="date" value={day} onChange={(e) => setDay(e.target.value || today)}
+                                className="text-[15px] font-semibold text-slate-900 bg-transparent outline-none" aria-label="Date" />
+                        </label>
                     </div>
-
-                    <div className="bg-white h-full">
-                        {/* Stock Health Panel */}
-                        <ChartPanel
-                            title="Stock distribution"
-                            subtitle="Current inventory split"
-                            height={220}
-                            className="bg-white border-b border-slate-100"
-                        >
-                            <div className="space-y-6 pt-2">
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest mb-1">
-                                        <span className="text-slate-500">Stock Availability</span>
-                                        <span className="text-emerald-600">{inventoryStats.healthPercentage}%</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-emerald-500" style={{ width: `${inventoryStats.healthPercentage}%` }} />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest mb-1">
-                                        <span className="text-slate-500">Critical Alerts</span>
-                                        <span className="text-rose-600">{inventoryStats.lowStockCount} SKUs</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-rose-500" style={{ width: `${(inventoryStats.lowStockCount / (inventoryStats.totalItems || 1)) * 100}%` }} />
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={() => navigate('/franchise/inventory')}
-                                    className="w-full py-2.5 border border-slate-900 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 hover:bg-slate-900 hover:text-white transition-all mt-4"
-                                >
-                                    Manage Stock
-                                </button>
+                    <div className="space-y-3">
+                        {!dayOrders.length && (
+                            <div className="text-center py-14 text-slate-500">
+                                <Package size={40} className="mx-auto text-slate-300 mb-2" />
+                                <p className="text-[15px]">{hiDate(day)} को कोई ऑर्डर नहीं</p>
                             </div>
-                        </ChartPanel>
+                        )}
+                        {dayOrders.slice(0, 8).map((o) => {
+                            const st = statusOf(o.status);
+                            return (
+                                <div key={o.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 p-3 hover:shadow-sm transition-shadow lg:grid lg:grid-cols-[56px_minmax(0,1fr)_104px_84px_auto_auto]">
+                                    <Thumb src={o.items?.[0]?.image} />
+                                    <div className="min-w-[140px] flex-1 lg:min-w-0">
+                                        <p className="text-[15px] font-bold text-slate-900">ऑर्डर #{String(o.id).slice(-4).toUpperCase()}</p>
+                                        <p className="text-[15px] text-slate-700 truncate">{o.hotelName}</p>
+                                        {o.city && <p className="text-[13px] text-slate-500 flex items-center gap-1"><MapPin size={13} /> {o.city}</p>}
+                                    </div>
+                                    <div className="min-w-[104px]">
+                                        <p className="text-[12px] text-slate-500">डिलीवरी समय</p>
+                                        <p className="text-[15px] font-bold text-slate-900">{o.deliverySlot}</p>
+                                        <p className="text-[13px] text-slate-500 flex items-center gap-1"><Clock size={13} /> {new Date(orderDay(o)).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long' })}</p>
+                                    </div>
+                                    <div className="min-w-[84px]">
+                                        <p className="text-[12px] text-slate-500">कुल राशि</p>
+                                        <p className="text-[15px] font-bold text-slate-900 tabular-nums">₹ {Number(o.total || 0).toLocaleString('en-IN')}</p>
+                                    </div>
+                                    <span className={cn('px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap text-center', st.cls)}>{st.label}</span>
+                                    <button type="button" onClick={() => navigate(`/franchise/orders/${o.id}`)}
+                                        className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-green-700 text-white text-[15px] font-semibold hover:bg-green-800 whitespace-nowrap">
+                                        ऑर्डर देखें <ArrowRight size={18} />
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <button type="button" onClick={() => navigate('/franchise/orders')}
+                        className="mt-4 w-full h-14 rounded-2xl bg-green-50 text-green-800 text-[17px] font-bold flex items-center justify-center gap-2 hover:bg-green-100">
+                        सभी ऑर्डर देखें <ArrowRight size={20} />
+                    </button>
+                </div>
+
+                {/* Daily jobs */}
+                <div className="space-y-4">
+                    <div className="bg-green-50/60 rounded-3xl border border-green-100 p-4 lg:p-5">
+                        <div className="flex items-start gap-3 mb-4">
+                            <span className="w-11 h-11 rounded-full bg-green-700 text-white flex items-center justify-center shrink-0"><CheckCircle2 size={24} /></span>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-900">आज के जरूरी काम</h2>
+                                <p className="text-[14px] text-slate-600">दिन का काम जल्दी और आसान तरीके से पूरा करें</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            {tasks.map((t) => (
+                                <button key={t.n} type="button" onClick={() => navigate(t.go)}
+                                    className="w-full flex items-center gap-3 rounded-2xl bg-white p-3 text-left hover:shadow-sm transition-shadow">
+                                    <span className={cn('w-9 h-9 rounded-full text-white text-base font-bold flex items-center justify-center shrink-0', t.tone)}>{t.n}</span>
+                                    <span className={cn('w-12 h-12 rounded-xl flex items-center justify-center shrink-0', t.iconTone)}><t.icon size={22} /></span>
+                                    <span className="flex-1 min-w-0">
+                                        <span className="block text-[16px] font-bold text-slate-900">{t.title}</span>
+                                        <span className="block text-[13px] text-slate-600 leading-snug">{t.text}</span>
+                                    </span>
+                                    <ChevronRight size={20} className="text-slate-400 shrink-0" />
+                                </button>
+                            ))}
+                        </div>
+                        <button type="button" onClick={() => navigate('/franchise/orders')}
+                            className="mt-4 w-full h-14 rounded-2xl bg-green-700 text-white text-[17px] font-bold flex items-center justify-center gap-2 hover:bg-green-800">
+                            नए ऑर्डर देखें <ArrowRight size={20} />
+                        </button>
+                    </div>
+                    <div className="rounded-3xl bg-gradient-to-r from-green-50 to-lime-50 border border-green-100 p-5 flex items-center justify-between gap-3">
+                        <p className="text-xl font-bold text-slate-800 leading-snug">ताजा माल, खुश ग्राहक<br />मजबूत कारोबार</p>
+                        <span className="text-5xl" aria-hidden>🥦🍅</span>
                     </div>
                 </div>
             </div>
 
-            {/* Tactical Quick Actions */}
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-1.5 bg-slate-900 shadow-2xl rounded-sm border border-slate-700 lg:hidden">
-                {[
-                    { icon: PackageCheck, path: '/franchise/receiving' },
-                    { icon: Zap, path: '/franchise/inventory' },
-                    { icon: Truck, path: '/franchise/dispatch' },
-                    { icon: Wallet, path: '/franchise/cash' },
-                    { icon: Monitor, path: '/franchise/pos' }
-                ].map((btn, i) => (
-                    <button
-                        key={i}
-                        onClick={() => navigate(btn.path)}
-                        className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-sm transition-all"
-                    >
-                        <btn.icon size={18} />
-                    </button>
-                ))}
-            </div>
-
-            {/* KYC Pending Modal */}
+            {/* Account not verified yet */}
             <AnimatePresence>
                 {showKYCModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-                        />
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-white rounded-sm shadow-2xl w-full max-w-md relative z-10 overflow-hidden"
-                        >
-                            <div className="p-8 text-center space-y-6">
-                                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto border border-amber-100">
-                                    <ShieldCheck size={40} className="text-amber-500" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Account Verification Required</h3>
-                                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                                        Your franchise account is currently <span className="text-amber-600 font-black">UNVERIFIED</span>. Please upload your documents so you can start receiving orders and payments.
-                                    </p>
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        onClick={() => navigate('/franchise/documentation')}
-                                        className="w-full py-4 bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-sm hover:bg-emerald-600 transition-all shadow-xl shadow-slate-100"
-                                    >
-                                        Go to Documentation
-                                    </button>
-                                    <button
-                                        onClick={() => setShowKYCModal(false)}
-                                        className="w-full py-3 bg-white text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-slate-900 transition-colors"
-                                    >
-                                        I'll do it later
-                                    </button>
-                                </div>
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60" />
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white rounded-3xl shadow-2xl w-full max-w-md relative z-10 p-8 text-center space-y-5">
+                            <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto"><ShieldCheck size={40} className="text-amber-500" /></div>
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-900">Account verification required</h3>
+                                <p className="text-[15px] text-slate-600 mt-2">Your franchise account is not verified yet. Please upload your documents so you can start receiving orders and payments.</p>
                             </div>
+                            <button type="button" onClick={() => navigate('/franchise/documentation')} className="w-full h-14 rounded-2xl bg-green-700 text-white text-[16px] font-bold">Go to Documentation</button>
+                            <button type="button" onClick={() => setShowKYCModal(false)} className="w-full text-[15px] font-semibold text-slate-500">I'll do it later</button>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-
-            <OrderHistoryModal
-                isOpen={isHistoryModalOpen}
-                onClose={() => setIsHistoryModalOpen(false)}
-            />
         </div>
     );
 }
