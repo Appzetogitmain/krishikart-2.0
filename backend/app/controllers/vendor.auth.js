@@ -293,7 +293,7 @@ export const translatePortalText = async (req, res) => {
         const { texts, lang } = req.body || {};
         if (!Array.isArray(texts)) return handleResponse(res, 400, "texts must be a list");
         if (!PORTAL_LANGUAGES.includes(lang)) return handleResponse(res, 400, "Unsupported language");
-        const translations = await translateTexts(texts, lang);
+        const translations = await translateTexts(texts, lang, { keepMissing: false });
         return handleResponse(res, 200, "Translated", { lang, translations });
     } catch (error) {
         console.error("Translate error:", error);

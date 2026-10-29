@@ -10,7 +10,7 @@ export { PORTAL_LANGUAGES };
 
 const { Provider, useLanguage } = createPortalLanguage({
     portal: 'franchise',
-    cacheVersion: 1, // bump when server wording (glossary) changes
+    cacheVersion: 2, // bump when server wording (glossary) changes; v2 drops caches poisoned with English (Oct 2026)
     useUser: () => useFranchiseAuth().franchise,
     dataKey: 'franchiseData',
     translatePath: '/franchise/translate',

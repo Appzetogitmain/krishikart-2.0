@@ -269,9 +269,11 @@ const KEEP = new Set(["KG"]);
 
 /**
  * Translate English texts into `lang`. Returns { [text]: translated }.
- * Cached in memory and in Mongo; if Google can't be reached the original text is returned (and not cached).
+ * Cached in memory and in Mongo. A text Google could not translate is returned as the original English,
+ * unless `keepMissing` is false: then it is left out, so a portal can ask again later instead of caching
+ * the English as if it were the translation (that cache made the franchise language switch look broken).
  */
-export async function translateTexts(texts, lang) {
+export async function translateTexts(texts, lang, { keepMissing = true } = {}) {
     const unique = [...new Set((texts || [])
         .filter((t) => typeof t === "string")
         .map((t) => t.trim())
@@ -287,7 +289,7 @@ export async function translateTexts(texts, lang) {
     if (withKg.length) {
         const parts = withKg.map((t) => t.split(/(\bKG\b)/));
         const words = parts.flat().filter((s) => s !== "KG" && /[A-Za-z]/.test(s)).map((s) => s.trim());
-        const done = words.length ? await translateTexts(words, lang) : {};
+        const done = words.length ? await translateTexts(words, lang, { keepMissing }) : {};
         withKg.forEach((t, k) => {
             out[t] = parts[k].map((s) => (s === "KG" || !/[A-Za-z]/.test(s) ? s : s.replace(s.trim(), done[s.trim()] ?? s.trim()))).join("");
         });
@@ -309,24 +311,41 @@ export async function translateTexts(texts, lang) {
         missing = missing.filter((t) => out[t] === undefined);
     }
 
+    const save = async (pairs) => {
+        if (!pairs.length) return;
+        await TranslationCache.bulkWrite(pairs.map(([text, translated]) => (
+            { updateOne: { filter: { lang, text }, update: { $set: { translated } }, upsert: true } }
+        )), { ordered: false });
+    };
+    const keep = (t, translated) => { out[t] = translated; memory.set(key(lang, t), translated); };
+
     for (let i = 0; i < missing.length; i += BATCH) {
         const chunk = missing.slice(i, i + BATCH);
         try {
-            const res = await translate(chunk, { from: "en", to: lang, forceBatch: true });
-            const docs = [];
+            // One phrase Google rejects must not fail the whole batch (it comes back null instead)
+            const res = await translate(chunk, { from: "en", to: lang, forceBatch: true, rejectOnPartialFail: false });
+            const pairs = [];
             chunk.forEach((t, j) => {
-                const translated = res[j]?.text;
-                if (!translated) return;
-                out[t] = translated;
-                memory.set(key(lang, t), translated);
-                docs.push({ updateOne: { filter: { lang, text: t }, update: { $set: { translated } }, upsert: true } });
+                const translated = res?.[j]?.text;
+                if (translated) { keep(t, translated); pairs.push([t, translated]); }
             });
-            if (docs.length) await TranslationCache.bulkWrite(docs, { ordered: false });
+            await save(pairs);
         } catch (err) {
-            console.error("[translate] Google Translate failed:", err.message);
+            console.error("[translate] Google Translate batch failed:", err.message);
         }
     }
 
-    unique.forEach((t) => { if (out[t] === undefined) out[t] = t; });
+    // Whatever the batch could not do: one at a time (a few, so a Google outage doesn't stall the request)
+    const retry = missing.filter((t) => out[t] === undefined).slice(0, 15);
+    for (const t of retry) {
+        try {
+            const res = await translate(t, { from: "en", to: lang, forceBatch: false });
+            if (res?.text) { keep(t, res.text); await save([[t, res.text]]); }
+        } catch (err) {
+            console.error("[translate] Google Translate failed for one text:", err.message);
+        }
+    }
+
+    if (keepMissing) unique.forEach((t) => { if (out[t] === undefined) out[t] = t; });
     return out;
 }

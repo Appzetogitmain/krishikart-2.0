@@ -207,6 +207,10 @@ export function createPortalLanguage({ portal, cacheVersion, useUser, dataKey, t
                         try { localStorage.setItem(cacheKey(lang), JSON.stringify(next)); } catch { /* storage full */ }
                         return next;
                     });
+                    // The server leaves out what Google could not translate this time: ask again later
+                    // (never cache the English for it, or it stays English on this device for good)
+                    const failed = chunk.filter((t) => found[t] === undefined);
+                    if (failed.length) setTimeout(() => failed.forEach((t) => requested.current.delete(t)), 20000);
                 } catch {
                     // show English for now; try again on a later render
                     chunk.forEach((t) => requested.current.delete(t));
