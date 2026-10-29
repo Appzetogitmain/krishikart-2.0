@@ -17,7 +17,9 @@ import {
     Ticket,
     CheckCircle2,
     Percent,
-    LocateFixed
+    LocateFixed,
+    CalendarDays,
+    ArrowRight
 } from 'lucide-react'
 import PageTransition from '../components/layout/PageTransition'
 import { Button } from '@/components/ui/button'
@@ -141,7 +143,7 @@ const getNext7Days = () => {
 
 export default function CheckoutScreen() {
     const navigate = useNavigate()
-    const { cartItems, cartTotal, clearCart, deliveryConstraints } = useCart()
+    const { cartItems, cartTotal, clearCart, deliveryConstraints, getActivePrice } = useCart()
     const locationCtx = useLocation()
     const ctxDeliveryAddress = locationCtx?.deliveryAddress
     const ctxDeliveryLocation = locationCtx?.deliveryLocation
@@ -935,29 +937,38 @@ export default function CheckoutScreen() {
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto md:px-8">
-                    <div className="md:flex md:gap-8 md:py-12">
-                        <div className="flex-1 space-y-10 md:space-y-10 px-4 md:px-0 min-w-0">
-                            <div className="hidden md:flex items-center justify-between mb-4">
-                                <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Checkout</h1>
-                                <div className="flex items-center gap-3">
-                                    <div className={cn("flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all", step >= 1 ? "bg-primary text-white" : "bg-slate-100 text-slate-400")}>
-                                        <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span> Address
-                                    </div>
-                                    <div className="w-8 h-px bg-slate-200" />
-                                    <div className={cn("flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all", step >= 2 ? "bg-primary text-white" : "bg-slate-100 text-slate-400")}>
-                                        <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">2</span> Payment
-                                    </div>
+                <div className="max-w-7xl md:max-w-[1440px] mx-auto md:px-8">
+                    <div className="md:flex md:gap-8 md:pt-1 md:pb-12">
+                        <div className="flex-1 space-y-10 md:space-y-5 px-4 md:px-0 min-w-0">
+                            <div className="hidden md:flex items-start justify-between gap-6">
+                                <div>
+                                    <h1 className="text-[42px] font-bold text-slate-900 tracking-tight leading-tight">Checkout</h1>
+                                    <p className="text-[18px] text-slate-600">Complete your order in 2 easy steps</p>
+                                </div>
+                                <div className="flex items-center gap-4 pt-3">
+                                    {[[1, 'Address'], [2, 'Payment']].map(([n, label], i) => (
+                                        <div key={n} className="flex items-center gap-4">
+                                            {i > 0 && <span className={cn("w-16 h-[3px] rounded-full", step >= n ? "bg-green-600" : "bg-slate-200")} />}
+                                            <span className="flex items-center gap-2.5">
+                                                <span className={cn("w-10 h-10 rounded-full flex items-center justify-center text-[17px] font-bold", step >= n ? "bg-green-700 text-white" : "bg-slate-200 text-slate-600")}>{n}</span>
+                                                <span className={cn("text-[18px] font-semibold", step >= n ? "text-green-800" : "text-slate-500")}>{label}</span>
+                                            </span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
                             {/* Delivery Address */}
-                            <section>
+                            <section className="md:bg-white md:rounded-2xl md:border md:border-slate-200 md:shadow-sm md:p-6">
                                 <div className="mb-3 md:mb-4">
                                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest md:text-sm md:normal-case md:tracking-normal md:text-slate-900 md:text-base md:font-bold">
-                                            Delivery Address
-                                        </h2>
+                                        <div>
+                                            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest md:normal-case md:tracking-normal md:text-slate-900 md:text-[22px] md:font-bold md:flex md:items-center md:gap-3">
+                                                <MapPin size={26} className="hidden md:block text-green-700" />
+                                                Delivery Address
+                                            </h2>
+                                            <p className="hidden md:block text-[15px] text-slate-500 pl-[38px]">Choose where you want to receive your order</p>
+                                        </div>
                                         <div className="hidden md:flex items-center gap-3 flex-wrap justify-end">
                                             {ctxHasDeliveryPinned && !isManualAddress && (
                                                 <div className="flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 px-3 py-1">
@@ -970,11 +981,11 @@ export default function CheckoutScreen() {
                                                 onClick={handlePinCurrentLocation}
                                                 disabled={isPlacingOrder}
                                                 className={cn(
-                                                    "flex items-center gap-1 text-[11px] font-bold uppercase transition-colors",
-                                                    isPlacingOrder ? "text-slate-300 cursor-not-allowed" : "text-slate-400 hover:text-primary"
+                                                    "flex items-center gap-1.5 text-[15px] font-semibold transition-colors",
+                                                    isPlacingOrder ? "text-slate-300 cursor-not-allowed" : "text-green-700 hover:text-green-800"
                                                 )}
                                             >
-                                                <MapPin size={12} />
+                                                <MapPin size={17} />
                                                 <span>{ctxHasDeliveryPinned ? 'Re-pin my location' : 'Pin my location'}</span>
                                             </button>
                                             <button
@@ -987,11 +998,11 @@ export default function CheckoutScreen() {
                                                 }}
                                                 disabled={isPlacingOrder}
                                                 className={cn(
-                                                    "flex items-center gap-1 text-[11px] font-bold uppercase transition-colors",
-                                                    isPlacingOrder ? "text-slate-300 cursor-not-allowed" : "text-slate-400 hover:text-primary"
+                                                    "flex items-center gap-1.5 text-[15px] font-semibold transition-colors",
+                                                    isPlacingOrder ? "text-slate-300 cursor-not-allowed" : "text-green-700 hover:text-green-800"
                                                 )}
                                             >
-                                                <MapPin size={12} />
+                                                <MapPin size={17} />
                                                 <span>Pin on map</span>
                                             </button>
                                             <button
@@ -999,8 +1010,8 @@ export default function CheckoutScreen() {
                                                 onClick={() => setIsEditingAddress(true)}
                                                 disabled={isPlacingOrder}
                                                 className={cn(
-                                                    "text-[11px] font-bold uppercase transition-colors",
-                                                    isPlacingOrder ? "text-slate-300 cursor-not-allowed" : "text-primary hover:text-primary/80"
+                                                    "text-[15px] font-bold transition-colors",
+                                                    isPlacingOrder ? "text-slate-300 cursor-not-allowed" : "text-green-700 hover:text-green-800"
                                                 )}
                                             >
                                                 Change
@@ -1046,14 +1057,14 @@ export default function CheckoutScreen() {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="bg-white rounded-2xl md:rounded-xl p-4 md:p-6 border border-slate-100 shadow-sm">
+                                <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm md:p-0 md:mt-5 md:border-0 md:shadow-none">
                                     <div className="flex items-start gap-3 md:gap-4 min-w-0">
                                         <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl md:rounded-lg bg-primary/5 flex items-center justify-center text-primary shrink-0">
                                             <MapPin size={24} />
                                         </div>
                                         <div className="flex-1 min-w-0 pr-1">
-                                            <h3 className="text-sm md:text-base font-black text-slate-900 md:font-bold">{user?.fullName || 'My Home'}</h3>
-                                            <p className="text-xs md:text-sm text-slate-500 font-medium leading-relaxed mt-1 break-words">
+                                            <h3 className="text-sm md:text-[18px] font-black text-slate-900 md:font-bold">{user?.fullName || 'My Home'}</h3>
+                                            <p className="text-xs md:text-[16px] text-slate-500 font-medium leading-relaxed mt-1 break-words">
                                                 {displayAddress || 'No address provided. Tap the pencil to add your address.'}
                                             </p>
                                         </div>
@@ -1073,7 +1084,7 @@ export default function CheckoutScreen() {
                                     <div className="mt-4 pt-4 border-t border-slate-100">
                                         {savedAddresses.length > 0 && (
                                             <>
-                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                                <p className="text-[11px] md:text-[14px] font-bold text-slate-500 uppercase tracking-wider mb-2">
                                                     {savedAddresses.length === 1 ? 'Your saved address' : 'Choose from your saved addresses'}
                                                 </p>
                                                 <div className="space-y-2">
@@ -1087,19 +1098,19 @@ export default function CheckoutScreen() {
                                                                 disabled={isPlacingOrder}
                                                                 onClick={() => handleSelectSavedAddress(saved)}
                                                                 className={cn(
-                                                                    "w-full text-left flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-all",
+                                                                    "w-full text-left flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-all md:px-5 md:py-4 md:rounded-2xl md:gap-4",
                                                                     active ? "border-primary bg-primary/5" : "border-slate-200 bg-white hover:border-slate-300"
                                                                 )}
                                                             >
                                                                 <span className={cn(
-                                                                    "mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0",
+                                                                    "mt-0.5 w-4 h-4 md:w-5 md:h-5 rounded-full border-2 flex items-center justify-center shrink-0",
                                                                     active ? "border-primary bg-primary" : "border-slate-300"
                                                                 )}>
                                                                     {active && <Check size={10} strokeWidth={4} className="text-white" />}
                                                                 </span>
                                                                 <span className="min-w-0">
-                                                                    <span className="block text-xs font-bold text-slate-900">{saved.label || 'Saved address'}</span>
-                                                                    <span className="block text-[11px] text-slate-500 leading-snug line-clamp-2 break-words">{saved.fullAddress}</span>
+                                                                    <span className="block text-xs md:text-[17px] font-bold text-slate-900">{saved.label || 'Saved address'}</span>
+                                                                    <span className="block text-[11px] md:text-[15px] text-slate-500 leading-snug line-clamp-2 break-words">{saved.fullAddress}</span>
                                                                 </span>
                                                             </button>
                                                         )
@@ -1111,7 +1122,7 @@ export default function CheckoutScreen() {
                                             type="button"
                                             disabled={isPlacingOrder}
                                             onClick={openNewAddressForm}
-                                            className="mt-3 text-xs font-bold text-primary hover:text-primary/80"
+                                            className="mt-3 text-xs font-bold text-primary hover:text-primary/80 md:w-full md:h-14 md:px-5 md:mt-4 md:rounded-2xl md:border md:border-dashed md:border-slate-300 md:text-[16px] md:text-left md:text-green-700 md:hover:bg-green-50"
                                         >
                                             + Add a new address
                                         </button>
@@ -1121,16 +1132,17 @@ export default function CheckoutScreen() {
 
 
                             {/* Delivery Date Selection */}
-                            <section className="mt-8">
+                            <section className="mt-8 md:mt-0 md:bg-white md:rounded-2xl md:border md:border-slate-200 md:shadow-sm md:p-6">
                                 <div className="mb-3">
-                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:text-sm md:normal-case md:tracking-normal md:text-slate-900 md:text-base md:font-bold">
+                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:normal-case md:tracking-normal md:text-slate-900 md:text-[22px] md:font-bold md:flex md:items-center md:gap-3">
+                                        <CalendarDays size={26} className="hidden md:block text-green-700" />
                                         Select Delivery Date
                                     </h2>
-                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium">
+                                    <p className="text-[10px] md:text-[15px] text-slate-400 md:text-slate-500 font-medium md:pl-[38px]">
                                         Choose when you want your fresh harvest delivered.
                                     </p>
                                 </div>
-                                <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                                <div className="flex gap-2 md:gap-3 md:mt-4 overflow-x-auto pb-2 custom-scrollbar">
                                     {availableDates.map((date, idx) => {
                                         const isSelected = selectedDate.toDateString() === date.toDateString();
                                         const isToday = getISTDate().toDateString() === date.toDateString();
@@ -1143,12 +1155,12 @@ export default function CheckoutScreen() {
                                                     disabled
                                                     aria-disabled
                                                     title={`No delivery: ${offReason}`}
-                                                    className="shrink-0 w-16 h-20 md:w-20 md:h-24 rounded-2xl md:rounded-xl border border-dashed border-rose-200 bg-rose-50/60 text-slate-400 flex flex-col items-center justify-center gap-1 cursor-not-allowed"
+                                                    className="shrink-0 w-16 h-20 md:w-[104px] md:h-[112px] rounded-2xl border border-dashed border-rose-200 bg-rose-50/60 text-slate-400 flex flex-col items-center justify-center gap-1 cursor-not-allowed"
                                                 >
                                                     <span className="text-[10px] font-black uppercase tracking-tighter">
                                                         {date.toLocaleDateString('en-US', { weekday: 'short' })}
                                                     </span>
-                                                    <span className="text-lg md:text-xl font-black tabular-nums leading-none line-through">
+                                                    <span className="text-lg md:text-[30px] font-black tabular-nums leading-none line-through">
                                                         {date.getDate()}
                                                     </span>
                                                     <span className="text-[9px] font-black uppercase text-rose-500 leading-tight text-center px-1 line-clamp-2">
@@ -1163,16 +1175,16 @@ export default function CheckoutScreen() {
                                                 type="button"
                                                 onClick={() => setSelectedDate(date)}
                                                 className={cn(
-                                                    "shrink-0 w-16 h-20 md:w-20 md:h-24 rounded-2xl md:rounded-xl border flex flex-col items-center justify-center gap-1 transition-all",
+                                                    "shrink-0 w-16 h-20 md:w-[104px] md:h-[112px] rounded-2xl border flex flex-col items-center justify-center gap-1 transition-all",
                                                     isSelected
                                                         ? "bg-primary border-primary text-white shadow-lg shadow-emerald-100"
                                                         : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
                                                 )}
                                             >
-                                                <span className={cn("text-[10px] md:text-[10px] font-black uppercase tracking-tighter", isSelected ? "text-emerald-100" : "text-slate-400")}>
+                                                <span className={cn("text-[10px] md:text-[15px] font-black md:font-semibold uppercase md:normal-case tracking-tighter md:tracking-normal", isSelected ? "text-emerald-100" : "text-slate-400")}>
                                                     {date.toLocaleDateString('en-US', { weekday: 'short' })}
                                                 </span>
-                                                <span className="text-lg md:text-xl font-black tabular-nums leading-none">
+                                                <span className="text-lg md:text-[30px] font-black tabular-nums leading-none">
                                                     {date.getDate()}
                                                 </span>
                                                 {getPartDay(date, offDays) ? (
@@ -1183,7 +1195,7 @@ export default function CheckoutScreen() {
                                                         Half day
                                                     </span>
                                                 ) : (
-                                                    <span className={cn("text-[10px] md:text-[10px] font-black uppercase", isSelected ? "text-emerald-100" : "text-slate-400")}>
+                                                    <span className={cn("text-[10px] md:text-[14px] font-black md:font-semibold uppercase md:normal-case", isSelected ? "text-emerald-100" : "text-slate-400")}>
                                                         {isToday ? 'Today' : date.toLocaleDateString('en-US', { month: 'short' })}
                                                     </span>
                                                 )}
@@ -1195,12 +1207,13 @@ export default function CheckoutScreen() {
 
 
                             {/* Shift Timing */}
-                            <section className="mt-6 md:mt-10 pt-2 md:pt-0 border-t border-slate-200/60 md:border-0">
+                            <section className="mt-6 md:mt-0 pt-2 border-t border-slate-200/60 md:bg-white md:rounded-2xl md:border md:border-slate-200 md:shadow-sm md:p-6">
                                 <div className="mb-2 md:mb-3 space-y-1">
-                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:text-sm md:normal-case md:tracking-normal md:text-slate-900 md:text-base md:font-bold">
+                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:normal-case md:tracking-normal md:text-slate-900 md:text-[22px] md:font-bold md:flex md:items-center md:gap-3">
+                                        <Clock size={26} className="hidden md:block text-green-700" />
                                         Delivery Time Slot
                                     </h2>
-                                    <p className="text-[10px] md:text-xs text-slate-400 font-medium leading-snug">
+                                    <p className="text-[10px] md:text-[15px] text-slate-400 md:text-slate-500 font-medium leading-snug md:pl-[38px]">
                                         You can only choose time slots that haven’t started yet. After 6 PM, slots open for the next day.
                                     </p>
                                 </div>
@@ -1221,7 +1234,7 @@ export default function CheckoutScreen() {
                                                     setDeliveryShift(shift)
                                                 }}
                                                 className={cn(
-                                                    'rounded-lg md:rounded-xl border flex items-center justify-center gap-1.5 px-2 py-2.5 md:p-3 text-[11px] md:text-sm font-bold leading-tight text-center transition-all min-h-[2.75rem] md:min-h-0',
+                                                    'rounded-lg md:rounded-xl border flex items-center justify-center gap-1.5 px-2 py-2.5 md:p-4 text-[11px] md:text-[16px] font-bold leading-tight text-center transition-all min-h-[2.75rem] md:min-h-0',
                                                     !selectable &&
                                                         'cursor-not-allowed opacity-45 border-slate-100 bg-slate-50 text-slate-400 shadow-none',
                                                     selectable &&
@@ -1256,19 +1269,19 @@ export default function CheckoutScreen() {
 
 
                             {/* Promo Code */}
-                            <section className="mt-4 md:mt-0">
+                            <section className="mt-4 md:mt-0 md:bg-white md:rounded-2xl md:border md:border-slate-200 md:shadow-sm md:p-6">
                                 <div className="flex items-center justify-between mb-3">
-                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:normal-case md:tracking-normal md:text-slate-900 md:text-base">Apply Coupon</h2>
+                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:normal-case md:tracking-normal md:text-slate-900 md:text-[22px]">Apply Coupon</h2>
                                     {availableCoupons.length > 0 && (
                                         <button
                                             onClick={() => setShowCouponList(prev => !prev)}
-                                            className="text-primary text-[11px] font-bold uppercase"
+                                            className="text-primary text-[11px] md:text-[15px] font-bold uppercase md:normal-case"
                                         >
                                             {showCouponList ? 'Hide Offers' : 'View Offers'}
                                         </button>
                                     )}
                                 </div>
-                                <div className="bg-white rounded-4xl md:rounded-xl p-4 border border-slate-100 shadow-sm space-y-4">
+                                <div className="bg-white rounded-4xl p-4 border border-slate-100 shadow-sm space-y-4 md:p-0 md:border-0 md:shadow-none">
                                     <div className="flex gap-2">
                                         <div className="relative flex-1">
                                             <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -1277,7 +1290,7 @@ export default function CheckoutScreen() {
                                                 value={couponCode}
                                                 onChange={(e) => setCouponCode(e.target.value.replace(/\s/g, '').toUpperCase())}
                                                 placeholder="Enter Code"
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:outline-none focus:border-primary transition-all uppercase"
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl pl-10 pr-4 py-3 md:py-4 text-sm md:text-[16px] font-bold focus:outline-none focus:border-primary transition-all uppercase"
                                             />
                                         </div>
                                         <Button
@@ -1368,9 +1381,9 @@ export default function CheckoutScreen() {
 
 
                             {/* Payment Method */}
-                            <section className="mt-4 md:mt-0">
+                            <section className="mt-4 md:mt-0 md:bg-white md:rounded-2xl md:border md:border-slate-200 md:shadow-sm md:p-6">
                                 <div className="flex items-center justify-between mb-3">
-                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:normal-case md:tracking-normal md:text-slate-900 md:text-base">Select Payment Method</h2>
+                                    <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest md:normal-case md:tracking-normal md:text-slate-900 md:text-[22px]">Select Payment Method</h2>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     {(() => {
@@ -1406,7 +1419,7 @@ export default function CheckoutScreen() {
                                                 disabled={method.disabled}
                                                 onClick={() => { if (!method.disabled) setSelectedMethod(method.id) }}
                                                 className={cn(
-                                                    "w-full p-4 rounded-[28px] md:rounded-xl bg-white border flex items-center justify-between transition-all outline-none text-left",
+                                                    "w-full p-4 rounded-[28px] md:p-5 md:rounded-2xl bg-white border flex items-center justify-between transition-all outline-none text-left",
                                                     selectedMethod === method.id ? "border-primary bg-primary/2 shadow-sm" : "border-slate-100 hover:border-slate-200",
                                                     method.disabled && "opacity-50 cursor-not-allowed"
                                                 )}
@@ -1416,8 +1429,8 @@ export default function CheckoutScreen() {
                                                         <method.icon size={22} />
                                                     </div>
                                                     <div className="text-left">
-                                                        <span className="text-sm font-bold text-slate-900 leading-none">{method.name}</span>
-                                                        {method.subtitle && <p className="text-[10px] font-medium text-primary mt-1">{method.subtitle}</p>}
+                                                        <span className="text-sm md:text-[17px] font-bold text-slate-900 leading-none">{method.name}</span>
+                                                        {method.subtitle && <p className="text-[10px] md:text-[14px] font-medium text-primary mt-1">{method.subtitle}</p>}
                                                     </div>
                                                 </div>
                                                 <div className={cn(
@@ -1434,22 +1447,43 @@ export default function CheckoutScreen() {
                         </div>
 
                         {/* Order Summary Sidebar */}
-                        <div className="w-full md:w-100 shrink-0 mt-8 md:mt-0 px-4 md:px-0">
-                            <div className="bg-white rounded-[32px] md:rounded-xl p-6 space-y-4 border border-slate-100 shadow-sm sticky top-24">
-                                <h3 className="text-base font-bold text-slate-900 mb-2">Checkout Summary</h3>
+                        <div className="w-full md:w-[440px] shrink-0 mt-8 md:mt-0 px-4 md:px-0">
+                            <div className="bg-white rounded-[32px] md:rounded-2xl p-6 md:p-7 space-y-4 border border-slate-100 md:border-slate-200 shadow-sm sticky top-24 md:top-28">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-base md:text-[24px] font-bold text-slate-900">Order Summary</h3>
+                                    <span className="hidden md:inline-flex h-8 px-3 rounded-full bg-green-100 text-green-800 text-[14px] font-semibold items-center">{cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}</span>
+                                </div>
+                                {/* Desktop: what is being ordered */}
+                                <div className="hidden md:block space-y-3 max-h-[220px] overflow-y-auto pr-1 pb-3 border-b border-slate-100">
+                                    {cartItems.map((item) => {
+                                        const size = Number(item.unitValue)
+                                        const pack = size > 0 ? `${size} ${item.unit || ''}`.trim() : (item.unit || '')
+                                        const unitPrice = getActivePrice ? getActivePrice(item) : Number(item.price) || 0
+                                        return (
+                                            <div key={item.id} className="flex items-center gap-3">
+                                                <img src={item.primaryImage || item.image} alt="" className="w-14 h-14 rounded-xl object-cover bg-slate-50 shrink-0" onError={(e) => { e.target.style.visibility = 'hidden' }} />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[16px] font-bold text-slate-900 truncate">{item.name}</p>
+                                                    <p className="text-[14px] text-slate-600">₹{unitPrice} / {pack}</p>
+                                                </div>
+                                                <p className="text-[14px] text-slate-600 text-right tabular-nums">{item.quantity} × {pack}</p>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
 
                                 <div className="space-y-4 pt-2">
-                                    <div className="flex justify-between items-center text-sm font-medium text-slate-500">
+                                    <div className="flex justify-between items-center text-sm md:text-[17px] font-medium text-slate-500">
                                         <span>Order Value</span>
                                         <span>₹{cartTotal}</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-sm font-medium text-slate-500">
+                                    <div className="flex justify-between items-center text-sm md:text-[17px] font-medium text-slate-500">
                                         <span>Delivery Fee</span>
                                         <span className={finalDeliveryFee === 0 ? "text-green-600 font-bold" : ""}>
                                             {finalDeliveryFee === 0 ? 'FREE' : `₹${finalDeliveryFee}`}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between items-center text-sm font-medium text-slate-500">
+                                    <div className="flex justify-between items-center text-sm md:text-[17px] font-medium text-slate-500">
                                         <span>Taxes & Charges ({taxRateString}%)</span>
                                         <span title={`GST applied to total order amount`}>₹{tax}</span>
                                     </div>
@@ -1462,35 +1496,35 @@ export default function CheckoutScreen() {
                                 </div>
 
                                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2">
-                                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
+                                    <div className="flex items-center justify-between text-[11px] md:text-[15px] font-bold text-slate-600">
                                         <span>KK Wallet Balance</span>
                                         <span className="tabular-nums">₹{balance.toLocaleString()}</span>
                                     </div>
                                     {selectedMethod === 'wallet' && (
-                                        <div className="flex items-center justify-between text-[11px] font-bold text-primary">
+                                        <div className="flex items-center justify-between text-[11px] md:text-[15px] font-bold text-primary">
                                             <span>{walletShortfall > 0 ? 'Wallet Used Now' : 'Wallet Covers'}</span>
                                             <span className="tabular-nums">₹{walletContribution.toLocaleString()}</span>
                                         </div>
                                     )}
                                     {isWalletShort && (
-                                        <div className="flex items-center justify-between text-[11px] font-bold text-blue-600">
+                                        <div className="flex items-center justify-between text-[11px] md:text-[15px] font-bold text-blue-600">
                                             <span>Online Remaining</span>
                                             <span className="tabular-nums">₹{walletShortfall.toLocaleString()}</span>
                                         </div>
                                     )}
                                     {selectedMethod === 'credit' && (
-                                        <div className="flex items-center justify-between text-[11px] font-bold text-amber-700">
+                                        <div className="flex items-center justify-between text-[11px] md:text-[15px] font-bold text-amber-700">
                                             <span>{creditShortfall > 0 ? 'Credit Used Now' : 'Credit Covers'}</span>
                                             <span className="tabular-nums">₹{creditContribution.toLocaleString()}</span>
                                         </div>
                                     )}
                                     {isCreditShort && (
-                                        <div className="flex items-center justify-between text-[11px] font-bold text-blue-600">
+                                        <div className="flex items-center justify-between text-[11px] md:text-[15px] font-bold text-blue-600">
                                             <span>Online Remaining</span>
                                             <span className="tabular-nums">₹{creditShortfall.toLocaleString()}</span>
                                         </div>
                                     )}
-                                    <div className="flex items-center justify-between text-[11px] font-bold text-amber-700">
+                                    <div className="flex items-center justify-between text-[11px] md:text-[15px] font-bold text-amber-700">
                                         <span>KK Credit Available</span>
                                         <span className="tabular-nums">₹{availableCredit.toLocaleString()}</span>
                                     </div>
@@ -1509,21 +1543,21 @@ export default function CheckoutScreen() {
 
                                 <div className="border-t border-slate-100 pt-6">
                                     <div className="hidden md:flex justify-between items-center mb-8">
-                                        <span className="text-xl font-bold text-slate-900">Total Payable</span>
-                                        <span className="text-3xl font-bold text-primary tracking-tight">₹{total}</span>
+                                        <span className="text-[24px] font-bold text-slate-900">Total Payable</span>
+                                        <span className="text-[34px] font-bold text-green-700 tracking-tight tabular-nums">₹{total}</span>
                                     </div>
 
                                     <Button
                                         onClick={handlePlaceOrder}
                                         disabled={isPlacingOrder || cartItems.length === 0}
-                                        className="hidden md:flex w-full h-14 rounded-lg bg-primary hover:bg-primary/90 text-lg font-bold shadow-lg shadow-green-100 transition-all active:scale-[0.98] items-center justify-center"
+                                        className="hidden md:flex w-full h-16 rounded-2xl bg-green-700 hover:bg-green-800 text-[20px] font-bold shadow-lg shadow-green-700/20 transition-all active:scale-[0.98] items-center justify-center gap-3"
                                     >
-                                        {isPlacingOrder ? <Loader2 className="animate-spin mr-2" /> : 'Place Order Now'}
+                                        {isPlacingOrder ? <Loader2 className="animate-spin mr-2" /> : <>Place Order Now <ArrowRight size={22} /></>}
                                     </Button>
 
-                                    <div className="mt-4 md:mt-6 flex items-center justify-center gap-2 text-slate-400">
-                                        <ShieldCheck size={16} />
-                                        <span className="text-[11px] font-medium">Safe & Secure Transactions</span>
+                                    <div className="mt-4 md:mt-6 flex items-center justify-center gap-2 text-slate-400 md:rounded-xl md:bg-green-50 md:py-3 md:text-green-800">
+                                        <ShieldCheck size={16} className="md:w-6 md:h-6 md:text-green-700" />
+                                        <span className="text-[11px] md:text-[15px] font-medium md:font-semibold">Safe & Secure Transactions</span>
                                     </div>
                                 </div>
                             </div>

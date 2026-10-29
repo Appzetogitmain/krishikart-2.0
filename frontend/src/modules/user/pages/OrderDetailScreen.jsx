@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { useRequireAuth } from '../hooks/useRequireAuth'
 import { joinOrderRoom } from '@/lib/socket'
 import DeliveryCodeCard from '../components/common/DeliveryCodeCard'
+import DesktopOrderDetail from '../components/orders/DesktopOrderDetail'
 
 export default function OrderDetailScreen() {
     const navigate = useNavigate()
@@ -134,7 +135,9 @@ export default function OrderDetailScreen() {
 
     return (
         <PageTransition>
-            <div className="bg-[#f8fafc] min-h-screen pb-32">
+            {/* Desktop layout (client mockup, Oct 2026); phones keep the layout below */}
+            <div className="hidden md:block"><DesktopOrderDetail order={order} isOrderActive={isOrderActive} onReorder={handleReorder} /></div>
+            <div className="md:hidden bg-[#f8fafc] min-h-screen pb-32">
                 {/* Header */}
                 <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-xl border-b border-slate-100 px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">

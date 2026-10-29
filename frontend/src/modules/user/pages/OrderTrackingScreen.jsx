@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useOrders } from '@/modules/user/contexts/OrderContext'
 import { joinOrderRoom } from '@/lib/socket'
 import DeliveryCodeCard from '../components/common/DeliveryCodeCard'
+import DesktopTracking from '../components/orders/DesktopTracking'
 
 const stepMappings = [
     { label: 'Placed', matchStatuses: ['placed', 'pending'], icon: ShoppingBag, desc: 'We have received your order.' },
@@ -116,7 +117,11 @@ export default function OrderTrackingScreen() {
 
     return (
         <PageTransition>
-            <div className="bg-[#f8fafc] min-h-screen pb-32">
+            {/* Desktop layout (client mockup, Oct 2026); phones keep the layout below */}
+            <div className="hidden md:block">
+                <DesktopTracking order={order} isTerminal={isTerminal} isUpdating={isUpdating} onConfirmReceived={handleConfirmReceived} />
+            </div>
+            <div className="md:hidden bg-[#f8fafc] min-h-screen pb-32">
                 {/* Header */}
                 <div className="bg-white/90 backdrop-blur-xl px-4 py-2 pt-3 border-b border-slate-100/80 sticky top-0 z-40 flex items-center justify-between">
                     <div className="flex items-center gap-3 py-1">

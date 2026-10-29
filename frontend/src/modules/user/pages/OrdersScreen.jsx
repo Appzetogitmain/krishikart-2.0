@@ -6,6 +6,7 @@ import PageTransition from '../components/layout/PageTransition'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useOrders } from '@/modules/user/contexts/OrderContext'
+import DesktopOrders from '../components/orders/DesktopOrders'
 
 export default function OrdersScreen() {
     const navigate = useNavigate()
@@ -64,7 +65,9 @@ export default function OrdersScreen() {
 
     return (
         <PageTransition>
-            <div className="bg-white min-h-screen pb-24">
+            {/* Desktop layout (client mockup, Oct 2026); phones keep the list below */}
+            <div className="hidden md:block"><DesktopOrders orders={orders} /></div>
+            <div className="md:hidden bg-white min-h-screen pb-24">
                 {/* Header */}
                 <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md px-4 py-3 border-b border-slate-50 flex items-center gap-3">
                     <button
