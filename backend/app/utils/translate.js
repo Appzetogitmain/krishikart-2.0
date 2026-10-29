@@ -276,6 +276,7 @@ const FROM_HINDI = {
     en: {
         "नमस्ते! आज का काम": "Namaste! Today's work",
         "तैयार करने हैं": "To prepare",
+        "तैयार करना है": "To prepare",
         "रास्ते में हैं": "On the way",
         "दोबारा मंगवाएँ": "Reorder",
         "सामान पर \"+ जोड़ें\" दबाएं": "Tap \"+ Add\" on an item",

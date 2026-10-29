@@ -136,16 +136,16 @@ export default function DashboardScreen() {
                         {dayOrders.slice(0, 8).map((o) => {
                             const st = statusOf(o.status);
                             return (
-                                <div key={o.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 p-3 hover:shadow-sm transition-shadow lg:grid lg:grid-cols-[56px_minmax(0,1fr)_104px_84px_auto_auto]">
+                                <div key={o.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 p-3 hover:shadow-sm transition-shadow 2xl:grid 2xl:grid-cols-[56px_minmax(150px,1fr)_112px_96px_auto_auto]">
                                     <Thumb src={o.items?.[0]?.image} />
-                                    <div className="min-w-[140px] flex-1 lg:min-w-0">
-                                        <p className="text-[15px] font-bold text-slate-900">ऑर्डर #{String(o.id).slice(-4).toUpperCase()}</p>
+                                    <div className="min-w-[150px] flex-1 2xl:min-w-0">
+                                        <p className="text-[15px] font-bold text-slate-900 whitespace-nowrap">ऑर्डर #{String(o.id).slice(-4).toUpperCase()}</p>
                                         <p translate="no" className="text-[15px] text-slate-700 truncate">{o.hotelName}</p>
                                         {o.city && <p className="text-[13px] text-slate-500 flex items-center gap-1"><MapPin size={13} /> {o.city}</p>}
                                     </div>
                                     <div className="min-w-[104px]">
                                         <p className="text-[12px] text-slate-500">डिलीवरी समय</p>
-                                        <p className="text-[15px] font-bold text-slate-900">{o.deliverySlot}</p>
+                                        <p className="text-[15px] font-bold text-slate-900 whitespace-nowrap">{o.deliverySlot}</p>
                                         <p className="text-[13px] text-slate-500 flex items-center gap-1"><Clock size={13} /> {new Date(orderDay(o)).toLocaleDateString(locale, { day: 'numeric', month: 'long' })}</p>
                                     </div>
                                     <div className="min-w-[84px]">
