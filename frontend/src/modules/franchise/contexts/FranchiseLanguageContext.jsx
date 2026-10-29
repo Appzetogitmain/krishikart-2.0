@@ -4,7 +4,9 @@ import { useFranchiseAuth } from './FranchiseAuthContext';
 /**
  * Franchise portal language (asked for by the client, Oct 2026): the owner picks a language on first
  * login and can change it from My Profile. Same engine as the vendor portal (src/lib/portalLanguage.jsx);
- * English text on the pages is translated through /franchise/translate, Hindi text stays as written.
+ * Pages mix English and Hindi (the redesign follows the client's Hindi mockups), so both are translated
+ * through /franchise/translate - Hindi too, including into English - and "English / हिन्दी" labels show
+ * only the chosen language's half.
  */
 export { PORTAL_LANGUAGES };
 
@@ -15,6 +17,7 @@ const { Provider, useLanguage } = createPortalLanguage({
     dataKey: 'franchiseData',
     translatePath: '/franchise/translate',
     languagePath: '/franchise/language',
+    hindiSource: true,
 });
 
 export const FranchiseLanguageProvider = Provider;

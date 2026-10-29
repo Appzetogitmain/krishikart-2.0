@@ -35,6 +35,21 @@ const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', '
 // Worth translating: has a real word, and isn't a code/ID/amount like "#436EF218", "INV-2026-0099", "30426m"
 const translatable = (s) => /[A-Za-z]{2,}/.test(s) && !/^[#₹]?[\w./:@-]*\d[\w./:@-]*$/.test(s) && !/\S+@\S+\.\S+/.test(s) && !/^https?:/.test(s);
 
+// Pages written in Hindi (franchise, from the client's Hindi mockups) are translated from Hindi
+const isHindi = (s) => /[ऀ-ॿ]/.test(s);
+const onlyLatin = (s) => /[A-Za-z]/.test(s) && !isHindi(s);
+const onlyHindi = (s) => isHindi(s) && !/[A-Za-z]/.test(s);
+
+// "Counter Sale / काउंटर बिक्री", "कुल राशि (Total Amount)": one label in both languages -> { en, hi }
+function bilingual(s) {
+    const m = s.match(/^(.+?)\s*\((.+)\)$/) || s.match(/^(.+?)\s+\/\s+(.+)$/);
+    if (!m) return null;
+    const [a, b] = [m[1].trim(), m[2].trim()];
+    if (onlyLatin(a) && onlyHindi(b)) return { en: a, hi: b };
+    if (onlyHindi(a) && onlyLatin(b)) return { en: b, hi: a };
+    return null;
+}
+
 function skipped(el) {
     for (let n = el; n && n !== document.body; n = n.parentElement) {
         if (SKIP_TAGS.has(n.tagName?.toUpperCase())) return true;
@@ -43,7 +58,7 @@ function skipped(el) {
     return false;
 }
 
-function useAutoTranslate(lang, dict, request) {
+function useAutoTranslate(lang, dict, request, hindiSource) {
     const texts = useRef(new Map()); // text node -> { original, shown }
     const holders = useRef(new Map()); // element -> { original, shown } for placeholders
     const dictRef = useRef(dict);
@@ -61,17 +76,28 @@ function useAutoTranslate(lang, dict, request) {
             texts.current = new Map();
             holders.current = new Map();
         };
-        if (lang === 'en') { restore(); applyRef.current = () => {}; return undefined; }
+        if (lang === 'en' && !hindiSource) { restore(); applyRef.current = () => {}; return undefined; }
 
         const swap = (current, entry) => {
-            // React (or the page) wrote new text since our last swap: that is the new English
+            // React (or the page) wrote new text since our last swap: that is the new original
             const original = entry && current === entry.shown ? entry.original : current;
             const lead = original.match(/^\s*/)[0];
             const trail = original.match(/\s*$/)[0];
-            const core = original.trim();
-            if (!core || !translatable(core)) return { original, shown: original };
+            let core = original.trim();
+            const same = { original, shown: original };
+            if (hindiSource && core) {
+                const both = bilingual(core);
+                if (both) {
+                    // show only the chosen language's half; other languages translate the English half
+                    if (lang === 'en' || lang === 'hi') return { original, shown: lead + both[lang] + trail };
+                    core = both.en;
+                } else if (isHindi(core)) {
+                    if (lang === 'hi') return same;
+                } else if (lang === 'en') return same;
+            }
+            if (!core || !(translatable(core) || (hindiSource && isHindi(core)))) return same;
             const hit = dictRef.current[core];
-            if (hit === undefined) { request(core); return { original, shown: original }; }
+            if (hit === undefined) { request(core); return same; }
             return { original, shown: lead + hit + trail };
         };
 
@@ -140,7 +166,7 @@ function useAutoTranslate(lang, dict, request) {
             if (frame) cancelAnimationFrame(frame);
             restore();
         };
-    }, [lang, request]);
+    }, [lang, request, hindiSource]);
 }
 
 /**
@@ -152,8 +178,10 @@ function useAutoTranslate(lang, dict, request) {
  * @param {string} cfg.dataKey       localStorage key holding that user's cached profile
  * @param {string} cfg.translatePath API path that translates a list of texts
  * @param {string} cfg.languagePath  API path that saves the chosen language
+ * @param {boolean} [cfg.hindiSource] the pages also carry Hindi text: translate it too (into English as well)
  */
-export function createPortalLanguage({ portal, cacheVersion, useUser, dataKey, translatePath, languagePath }) {
+export function createPortalLanguage({ portal, cacheVersion, useUser, dataKey, translatePath, languagePath, hindiSource = false }) {
+    const plainEnglish = (lang) => lang === 'en' && !hindiSource; // nothing to translate
     const cacheKey = (lang) => `${portal}Tr:v${cacheVersion}:${lang}`;
     const langKey = (userId) => `${portal}Lang:${userId || ''}`;
     const Context = createContext({ lang: 'en', locale: 'en-IN', t: (s) => s, setLanguage: async () => {}, needsChoice: false });
@@ -169,7 +197,7 @@ export function createPortalLanguage({ portal, cacheVersion, useUser, dataKey, t
         };
         const [chosen, setChosen] = useState(initial);
         const lang = chosen || 'en';
-        const [dict, setDict] = useState(() => (lang === 'en' ? {} : readCache(cacheKey(lang))));
+        const [dict, setDict] = useState(() => (plainEnglish(lang) ? {} : readCache(cacheKey(lang))));
 
         const pending = useRef(new Set());
         const requested = useRef(new Set());
@@ -179,7 +207,7 @@ export function createPortalLanguage({ portal, cacheVersion, useUser, dataKey, t
         useEffect(() => { setChosen(initial()); }, [userId, user?.preferredLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
 
         useEffect(() => {
-            setDict(lang === 'en' ? {} : readCache(cacheKey(lang)));
+            setDict(plainEnglish(lang) ? {} : readCache(cacheKey(lang)));
             pending.current = new Set();
             requested.current = new Set();
         }, [lang]);
@@ -195,7 +223,7 @@ export function createPortalLanguage({ portal, cacheVersion, useUser, dataKey, t
             timer.current = null;
             const texts = [...pending.current];
             pending.current = new Set();
-            if (!texts.length || lang === 'en') return;
+            if (!texts.length || plainEnglish(lang)) return;
             // the server takes up to 200 phrases per call
             for (let i = 0; i < texts.length; i += 150) {
                 const chunk = texts.slice(i, i + 150);
@@ -235,7 +263,7 @@ export function createPortalLanguage({ portal, cacheVersion, useUser, dataKey, t
             return text;
         }, [lang, dict, request]);
 
-        useAutoTranslate(lang, dict, request);
+        useAutoTranslate(lang, dict, request, hindiSource);
 
         // Indian scripts break apart with the wide letter-spacing used on small headings (see index.css)
         useEffect(() => {

@@ -32,6 +32,7 @@ import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import { toast } from 'sonner';
 import { FranchisePageHeader } from '../components/layout/FranchisePageHeader';
 import { hindiName, hindiCategory } from '../utils/hindiNames';
+import { useFranchiseLanguage } from '../contexts/FranchiseLanguageContext';
 
 const STATUS_LABEL = {
     pending_assignment: 'Waiting for vendor',
@@ -132,6 +133,8 @@ export default function ProcurementScreen() {
     const navigate = useNavigate();
     const location = useLocation();
     const { franchise } = useFranchiseAuth();
+    const { lang } = useFranchiseLanguage();
+    const showHindi = lang === 'hi'; // Hindi product names only in Hindi; other languages translate the English name
     const { addRequest, cart, setCart, clearCart, procurementRequests, fetchRequests, isLoadingRequests, requestsError } = useProcurement();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('catalog');
@@ -391,8 +394,8 @@ export default function ProcurementScreen() {
                                         active ? 'bg-green-700 border-green-700 text-white' : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-50')}>
                                     <span className={cn('w-10 h-10 rounded-xl flex items-center justify-center', active ? 'bg-white/15' : cls)}><Icon size={20} /></span>
                                     <span className="leading-tight text-left">
-                                        <span className="block text-[14px] font-semibold">{cat === 'All' ? 'All Items' : cat}</span>
-                                        <span className={cn('block text-[12px]', active ? 'text-green-100' : 'text-slate-500')}>{cat === 'All' ? 'सभी सामान' : hindiCategory(cat)}</span>
+                                        <span translate={showHindi ? 'no' : undefined} className="block text-[14px] font-semibold">{cat === 'All' ? 'All Items' : cat}</span>
+                                        {showHindi && <span className={cn('block text-[12px]', active ? 'text-green-100' : 'text-slate-500')}>{cat === 'All' ? 'सभी सामान' : hindiCategory(cat)}</span>}
                                     </span>
                                 </button>
                             );
@@ -404,7 +407,7 @@ export default function ProcurementScreen() {
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-4">
                             {filteredProducts.map((p) => {
-                                const hi = hindiName(p.name);
+                                const hi = showHindi ? hindiName(p.name) : '';
                                 const qty = Number(cart[p._id]?.qty) || 0;
                                 return (
                                     <div key={p._id} className={cn('bg-white rounded-2xl border overflow-hidden flex flex-col transition-shadow hover:shadow-md', qty ? 'border-green-500' : 'border-slate-100')}>
@@ -414,7 +417,7 @@ export default function ProcurementScreen() {
                                         </div>
                                         <div className="p-3 flex-1 flex flex-col gap-2">
                                             <div className="min-h-[40px]">
-                                                <p className="text-[15px] font-bold text-slate-900 leading-tight line-clamp-2">{p.name}</p>
+                                                <p translate={hi ? 'no' : undefined} className="text-[15px] font-bold text-slate-900 leading-tight line-clamp-2">{p.name}</p>
                                                 {hi && <p className="text-[13px] text-slate-500">{hi}</p>}
                                             </div>
                                             <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
@@ -453,14 +456,14 @@ export default function ProcurementScreen() {
                     {cartItems.length > 0 ? (
                         <div className="divide-y divide-slate-100 max-h-[420px] overflow-y-auto -mx-1 px-1">
                             {cartItems.map((item) => {
-                                const hi = hindiName(item.name);
+                                const hi = showHindi ? hindiName(item.name) : '';
                                 const line = Number(item.price) > 0 ? round2(item.price * (Number(item.qty) || 0)) : null;
                                 return (
                                     <div key={item._id} className="py-3 flex items-center gap-3">
                                         <img src={item.primaryImage || FALLBACK_IMG} alt="" className="w-14 h-14 rounded-xl object-cover bg-slate-50 shrink-0"
                                             onError={(e) => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} />
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[15px] font-bold text-slate-900 truncate">{item.name}</p>
+                                            <p translate={hi ? 'no' : undefined} className="text-[15px] font-bold text-slate-900 truncate">{item.name}</p>
                                             {hi && <p className="text-[12px] text-slate-500">{hi}</p>}
                                             {Number(item.price) > 0 && <p className="text-[12px] text-slate-500">₹ {item.price} / {item.unit}</p>}
                                         </div>

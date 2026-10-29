@@ -1,6 +1,7 @@
 import { CalendarDays, ChevronRight, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFranchiseAuth } from '@/modules/franchise/contexts/FranchiseAuthContext';
+import { useFranchiseLanguage } from '@/modules/franchise/contexts/FranchiseLanguageContext';
 
 /*
  * Shared look for the franchise portal (client mockups, Oct 2026): a page header with a green icon tile,
@@ -40,6 +41,16 @@ export function FranchisePageHeader({ icon: Icon, title, subtitle, right, showDa
             </div>
         </div>
     );
+}
+
+/**
+ * A second line that belongs to the Hindi layout (an English hint under a Hindi label, or a Hindi line
+ * under an English title): shown, as written, only when the portal is in Hindi. In other languages the
+ * main line is translated and this one would only repeat it.
+ */
+export function HindiOnly({ as: Tag = 'span', className, children }) {
+    const { lang } = useFranchiseLanguage();
+    return lang === 'hi' ? <Tag translate="no" className={className}>{children}</Tag> : null;
 }
 
 const TONES = {

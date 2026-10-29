@@ -5,7 +5,7 @@ import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
-import { FranchisePageHeader, PillTabs } from '../components/layout/FranchisePageHeader';
+import { FranchisePageHeader, PillTabs, HindiOnly } from '../components/layout/FranchisePageHeader';
 
 // What is wrong with an item (the vendor sees this in Rejected Stock)
 const ISSUES = [
@@ -279,7 +279,7 @@ export default function StockReturnsScreen() {
                     <div className="space-y-2 lg:col-span-2 xl:col-span-1 xl:border-l xl:border-slate-100 xl:pl-4">
                         <div className={cn('flex items-center gap-3 rounded-2xl p-3', st.cls)}>
                             <span className={cn('w-9 h-9 rounded-full text-white flex items-center justify-center shrink-0', st.dot)}><st.icon size={18} /></span>
-                            <span><span className="block text-[15px] font-bold">{st.title}</span><span className="block text-[13px]">{st.sub}</span></span>
+                            <span><span className="block text-[15px] font-bold">{st.title}</span><HindiOnly className="block text-[13px]">{st.sub}</HindiOnly></span>
                         </div>
                         {side === 'mine' && r.status === 'approved' && (
                             <button disabled={busyId === r._id} onClick={() => act(r._id, 'sent', 'Marked as sent')} className="w-full h-11 rounded-xl bg-green-700 text-white text-[14px] font-bold flex items-center justify-center gap-1.5 hover:bg-green-800 disabled:opacity-40">
@@ -366,7 +366,7 @@ export default function StockReturnsScreen() {
                     {!loading && shown.length === 0 && (
                         <div className="bg-white rounded-3xl border border-slate-100 py-16 text-center text-slate-500">
                             <PackageX className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                            <p className="text-[15px]">{tab === 'mine' ? 'Yahan koi return nahi hai.' : 'Nothing has been returned to you.'}</p>
+                            <p className="text-[15px]">{tab === 'mine' ? 'यहाँ कोई रिटर्न नहीं है।' : 'Nothing has been returned to you.'}</p>
                         </div>
                     )}
                     {!loading && shown.map((r) => returnCard(r, tab === 'mine' ? 'mine' : 'in'))}

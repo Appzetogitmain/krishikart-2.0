@@ -267,8 +267,34 @@ const GLOSSARY = {
 // Kept as-is in every language: vendors read "KG" off the scale
 const KEEP = new Set(["KG"]);
 
+// Text written in Hindi (the franchise pages follow the client's Hindi mockups) is translated from Hindi
+const isHindi = (t) => /[ऀ-ॿ]/.test(t);
+const sourceOf = (t) => (isHindi(t) ? "hi" : "en");
+
+// Hindi page text where Google's English reads wrong ("सामान" -> "stuff", "तैयार करने हैं" -> "have to prepare")
+const FROM_HINDI = {
+    en: {
+        "नमस्ते! आज का काम": "Namaste! Today's work",
+        "तैयार करने हैं": "To prepare",
+        "रास्ते में हैं": "On the way",
+        "दोबारा मंगवाएँ": "Reorder",
+        "सामान पर \"+ जोड़ें\" दबाएं": "Tap \"+ Add\" on an item",
+        "खराब माल वापस भेजें और उसका हिसाब देखें": "Send back damaged goods and keep track of them",
+        "चेक करना है": "To check",
+        "+ जोड़ें": "+ Add",
+        "ज़रूरी:": "Important:",
+        "स्टॉक की कुल कीमत": "Total stock value",
+    },
+};
+// Words swapped before Google sees the Hindi, so they come out as the portal says them
+const HINDI_WORDS = { en: [[/सामान/g, "items"]] };
+const forGoogle = (t, from, lang) => (from === "hi" ? (HINDI_WORDS[lang] || []).reduce((s, [re, w]) => s.replace(re, w), t) : t);
+// Google gives "new orders" for "नए ऑर्डर": portal labels start with a capital
+const tidy = (text, from, lang) => (from === "hi" && lang === "en" ? text.charAt(0).toUpperCase() + text.slice(1) : text);
+
 /**
- * Translate English texts into `lang`. Returns { [text]: translated }.
+ * Translate portal texts into `lang`. Returns { [text]: translated }. Texts are English, or Hindi when
+ * they contain Devanagari; a text already in `lang` comes back as it is.
  * Cached in memory and in Mongo. A text Google could not translate is returned as the original English,
  * unless `keepMissing` is false: then it is left out, so a portal can ask again later instead of caching
  * the English as if it were the translation (that cache made the franchise language switch look broken).
@@ -279,13 +305,14 @@ export async function translateTexts(texts, lang, { keepMissing = true } = {}) {
         .map((t) => t.trim())
         .filter((t) => t && t.length <= MAX_LENGTH))].slice(0, MAX_TEXTS);
     const out = {};
-    if (lang === "en" || !PORTAL_LANGUAGES.includes(lang)) {
+    if (!PORTAL_LANGUAGES.includes(lang)) {
         unique.forEach((t) => { out[t] = t; });
         return out;
     }
+    unique.forEach((t) => { if (sourceOf(t) === lang) out[t] = t; });
 
     // "3 KG", "5 KG + 20 bundle": translate only the words around KG, so KG stays as on the scale
-    const withKg = unique.filter((t) => t !== "KG" && /\bKG\b/.test(t));
+    const withKg = unique.filter((t) => out[t] === undefined && sourceOf(t) === "en" && t !== "KG" && /\bKG\b/.test(t));
     if (withKg.length) {
         const parts = withKg.map((t) => t.split(/(\bKG\b)/));
         const words = parts.flat().filter((s) => s !== "KG" && /[A-Za-z]/.test(s)).map((s) => s.trim());
@@ -296,8 +323,8 @@ export async function translateTexts(texts, lang, { keepMissing = true } = {}) {
     }
 
     let missing = unique.filter((t) => {
-        if (out[t] !== undefined) return false; // done above (KG texts)
-        const hit = KEEP.has(t) ? t : GLOSSARY[lang]?.[t] ?? memory.get(key(lang, t));
+        if (out[t] !== undefined) return false; // already in this language, or done above (KG texts)
+        const hit = KEEP.has(t) ? t : (sourceOf(t) === "en" ? GLOSSARY : FROM_HINDI)[lang]?.[t] ?? memory.get(key(lang, t));
         if (hit !== undefined) out[t] = hit;
         return hit === undefined;
     });
@@ -319,14 +346,18 @@ export async function translateTexts(texts, lang, { keepMissing = true } = {}) {
     };
     const keep = (t, translated) => { out[t] = translated; memory.set(key(lang, t), translated); };
 
-    for (let i = 0; i < missing.length; i += BATCH) {
-        const chunk = missing.slice(i, i + BATCH);
+    const chunks = [];
+    for (const from of ["en", "hi"]) {
+        const list = missing.filter((t) => sourceOf(t) === from);
+        for (let i = 0; i < list.length; i += BATCH) chunks.push([from, list.slice(i, i + BATCH)]);
+    }
+    for (const [from, chunk] of chunks) {
         try {
             // One phrase Google rejects must not fail the whole batch (it comes back null instead)
-            const res = await translate(chunk, { from: "en", to: lang, forceBatch: true, rejectOnPartialFail: false });
+            const res = await translate(chunk.map((t) => forGoogle(t, from, lang)), { from, to: lang, forceBatch: true, rejectOnPartialFail: false });
             const pairs = [];
             chunk.forEach((t, j) => {
-                const translated = res?.[j]?.text;
+                const translated = res?.[j]?.text && tidy(res[j].text, from, lang);
                 if (translated) { keep(t, translated); pairs.push([t, translated]); }
             });
             await save(pairs);
@@ -339,8 +370,9 @@ export async function translateTexts(texts, lang, { keepMissing = true } = {}) {
     const retry = missing.filter((t) => out[t] === undefined).slice(0, 15);
     for (const t of retry) {
         try {
-            const res = await translate(t, { from: "en", to: lang, forceBatch: false });
-            if (res?.text) { keep(t, res.text); await save([[t, res.text]]); }
+            const from = sourceOf(t);
+            const res = await translate(forGoogle(t, from, lang), { from, to: lang, forceBatch: false });
+            if (res?.text) { const done = tidy(res.text, from, lang); keep(t, done); await save([[t, done]]); }
         } catch (err) {
             console.error("[translate] Google Translate failed for one text:", err.message);
         }

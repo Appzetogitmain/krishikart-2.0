@@ -76,7 +76,7 @@ export default function CashManagementScreen() {
     });
 
     const tabs = [
-        { id: 'submitted', label: 'Check karna hai', count: totals.awaitingCount },
+        { id: 'submitted', label: 'चेक करना है', count: totals.awaitingCount },
         { id: 'verified', label: 'Verified', count: totals.verifiedCount },
         { id: 'rejected', label: 'Rejected', count: totals.rejectedCount },
         { id: 'all', label: 'All', count: totals.allCount },
@@ -105,7 +105,7 @@ export default function CashManagementScreen() {
                     <textarea
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
-                        placeholder="Cash kyun nahi liya? (jaise amount kam hai)"
+                        placeholder="कैश क्यों नहीं लिया? (जैसे रकम कम है)"
                         className="w-full min-h-[72px] bg-white border border-slate-200 rounded-xl p-3 text-[14px] outline-none focus:border-rose-400"
                         autoFocus
                     />
@@ -129,8 +129,8 @@ export default function CashManagementScreen() {
         }
         return (
             <div className="space-y-2">
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-50 text-amber-700 text-[14px] font-bold"><Clock size={18} /> Check karna hai</span>
-                <p className="text-[13px] text-slate-500">Partner ne cash handover kiya hai</p>
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-amber-50 text-amber-700 text-[14px] font-bold"><Clock size={18} /> चेक करना है</span>
+                <p className="text-[13px] text-slate-500">पार्टनर ने कैश दे दिया है</p>
                 <div className="flex flex-wrap gap-2">
                     <button
                         disabled={busyId === r._id}
@@ -157,7 +157,7 @@ export default function CashManagementScreen() {
             <FranchisePageHeader
                 icon={Wallet}
                 title="COD Cash / डिलीवरी से मिला कैश"
-                subtitle="Delivery partners se mila cash check karein aur confirm karein."
+                subtitle="डिलीवरी पार्टनर से मिला कैश चेक करें और कन्फर्म करें।"
                 right={
                     <button onClick={load} className="h-14 w-14 rounded-2xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center hover:bg-slate-50" aria-label="Refresh">
                         <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
@@ -166,7 +166,7 @@ export default function CashManagementScreen() {
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 px-4 lg:px-6">
-                <StatTile tone="orange" icon={Clock} label="Check karna hai (आपके पास चेक करने के लिए)" value={money(totals.awaitingAmount)} note={entries(totals.awaitingCount)} onClick={() => setStatus('submitted')} active={status === 'submitted'} />
+                <StatTile tone="orange" icon={Clock} label="चेक करना है" value={money(totals.awaitingAmount)} note={entries(totals.awaitingCount)} onClick={() => setStatus('submitted')} active={status === 'submitted'} />
                 <StatTile tone="green" icon={CheckCircle2} label="Verified (सही पाया गया)" value={money(totals.verifiedAmount)} note={entries(totals.verifiedCount)} onClick={() => setStatus('verified')} active={status === 'verified'} />
                 <StatTile tone="red" icon={XCircle} label="Rejected (गलत / समस्या)" value={money(totals.rejectedAmount)} note={entries(totals.rejectedCount)} onClick={() => setStatus('rejected')} active={status === 'rejected'} />
             </div>
@@ -195,8 +195,8 @@ export default function CashManagementScreen() {
                 <div className="flex items-start gap-3 rounded-2xl bg-green-50 border border-green-100 p-4">
                     <Info size={22} className="text-green-700 shrink-0 mt-0.5" />
                     <div className="text-[14px] text-slate-700">
-                        <p><b className="text-slate-900">Important:</b> Sirf wahi entry verify karein jab aapne delivery partner se physically cash le kar count kar liya ho.</p>
-                        <p className="text-slate-500">Agar amount kam ya zyada ho to "Reject" karein aur note daalein.</p>
+                        <p><b className="text-slate-900">ज़रूरी:</b> एंट्री तभी वेरिफ़ाई करें जब आपने डिलीवरी पार्टनर से कैश लेकर गिन लिया हो।</p>
+                        <p className="text-slate-500">रकम कम या ज़्यादा हो तो रिजेक्ट करें और नोट लिखें।</p>
                     </div>
                 </div>
             </div>
@@ -210,7 +210,7 @@ export default function CashManagementScreen() {
                 {!loading && shown.length === 0 && (
                     <div className="bg-white rounded-3xl border border-slate-100 py-16 text-center text-slate-500">
                         <Banknote className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                        <p className="text-[15px]">{status === 'submitted' ? 'Abhi koi cash check ke liye nahi hai.' : 'Yahan abhi kuch nahi hai.'}</p>
+                        <p className="text-[15px]">{status === 'submitted' ? 'अभी चेक करने के लिए कोई कैश नहीं है।' : 'यहाँ अभी कुछ नहीं है।'}</p>
                     </div>
                 )}
                 {!loading && shown.map((r, idx) => {

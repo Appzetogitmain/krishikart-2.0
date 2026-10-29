@@ -30,6 +30,7 @@ import api from '@/lib/axios';
 import { toast } from 'sonner';
 import { FranchisePageHeader } from '../components/layout/FranchisePageHeader';
 import { hindiName } from '../utils/hindiNames';
+import { useFranchiseLanguage } from '../contexts/FranchiseLanguageContext';
 
 /* Counter sale (POS), built to the client's mockup: Hindi-first product cards, cart with totals, Cash / UPI. */
 
@@ -46,6 +47,8 @@ const rupees = (n) => `₹${(Math.round((Number(n) || 0) * 100) / 100).toLocaleS
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=40';
 
 export default function POSScreen() {
+    const { lang } = useFranchiseLanguage();
+    const showHindi = lang === 'hi'; // Hindi product names only in Hindi; other languages translate the English name
     const { inventory, refreshInventory, loading: inventoryLoading } = useInventory();
     const { franchise } = useFranchiseAuth();
     const [searchQuery, setSearchQuery] = useState('');
@@ -246,7 +249,7 @@ export default function POSScreen() {
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3 lg:gap-4">
                             {filteredItems.map((item) => {
-                                const hi = hindiName(item.name);
+                                const hi = showHindi ? hindiName(item.name) : '';
                                 const inCart = cart.find((c) => c.id === item.id)?.qty || 0;
                                 const out = item.currentStock <= 0;
                                 const low = !out && item.currentStock <= 5;
@@ -259,7 +262,7 @@ export default function POSScreen() {
                                         </div>
                                         <div className="p-3 flex-1 flex flex-col gap-1">
                                             <p className="text-[17px] font-bold text-slate-900 leading-tight">{hi || item.name}</p>
-                                            {hi && <p className="text-[13px] text-slate-500 -mt-0.5">{item.name}</p>}
+                                            {hi && <p translate="no" className="text-[13px] text-slate-500 -mt-0.5">{item.name}</p>}
                                             <p className="text-[15px] text-slate-700 tabular-nums mt-1">
                                                 <b className="text-[18px] text-slate-900">₹ {(item.price || 0).toLocaleString('en-IN')}</b> / {item.unitValue > 1 ? `${item.unitValue} ` : ''}{item.unit}
                                                 {item.comparePrice > item.price && <span className="ml-1.5 text-[13px] text-slate-400 line-through">₹{item.comparePrice}</span>}
@@ -295,7 +298,7 @@ export default function POSScreen() {
                         {cart.length > 0 ? (
                             <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
                                 {cart.map((item) => {
-                                    const hi = hindiName(item.name);
+                                    const hi = showHindi ? hindiName(item.name) : '';
                                     return (
                                         <div key={item.id} className="py-3 flex items-center gap-3">
                                             <img src={item.image || FALLBACK_IMG} alt="" className="w-14 h-14 rounded-xl object-cover bg-slate-50 shrink-0"

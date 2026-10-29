@@ -21,8 +21,9 @@ import {
 import { useInventory } from '../contexts/InventoryContext';
 import { cn } from '@/lib/utils';
 import api from '@/lib/axios';
-import { FranchisePageHeader, StatTile } from '../components/layout/FranchisePageHeader';
+import { FranchisePageHeader, StatTile, HindiOnly } from '../components/layout/FranchisePageHeader';
 import { hindiName, hindiCategory } from '../utils/hindiNames';
+import { useFranchiseLanguage } from '../contexts/FranchiseLanguageContext';
 
 /* Store stock, built to the client's mockup: counts, a low-stock warning, category chips and a table. */
 
@@ -38,6 +39,8 @@ const catStyle = (name) => {
 const qty = (v) => Math.round((Number(v) || 0) * 100) / 100;
 
 export default function InventoryScreen() {
+    const { lang } = useFranchiseLanguage();
+    const showHindi = lang === 'hi'; // Hindi product names only in Hindi; other languages translate the English name
     const navigate = useNavigate();
     const { inventory, categories, getStockStats, loading: inventoryLoading, refreshInventory } = useInventory();
     const [searchQuery, setSearchQuery] = useState('');
@@ -113,12 +116,12 @@ export default function InventoryScreen() {
                         <button onClick={handleRefresh} disabled={isResetting}
                             className="h-14 px-4 rounded-2xl border border-slate-200 bg-white text-slate-700 flex items-center gap-2 hover:bg-slate-50 disabled:opacity-50">
                             <RefreshCw size={20} className={cn(isResetting && 'animate-spin')} />
-                            <span className="leading-tight text-left"><span className="block text-[14px] font-semibold">रिफ्रेश</span><span className="block text-[12px] text-slate-500">Refresh</span></span>
+                            <span className="leading-tight text-left"><span className="block text-[14px] font-semibold">रिफ्रेश</span><HindiOnly className="block text-[12px] text-slate-500">Refresh</HindiOnly></span>
                         </button>
                         <button onClick={() => addStock(null)}
                             className="h-14 px-5 rounded-2xl bg-green-700 text-white flex items-center gap-2 hover:bg-green-800">
                             <Plus size={22} />
-                            <span className="leading-tight text-left"><span className="block text-[15px] font-bold">स्टॉक जोड़ें</span><span className="block text-[13px]">Add Stock</span></span>
+                            <span className="leading-tight text-left"><span className="block text-[15px] font-bold">स्टॉक जोड़ें</span><HindiOnly className="block text-[13px]">Add Stock</HindiOnly></span>
                         </button>
                     </div>
                 }
@@ -155,7 +158,7 @@ export default function InventoryScreen() {
                     <div className="bg-white rounded-2xl border border-slate-100">
                         <button type="button" onClick={() => setShowReceipts((v) => !v)} className="w-full flex items-center gap-3 px-4 py-3 text-left">
                             <PackageCheck size={22} className="text-green-700" />
-                            <span className="flex-1 text-[15px] font-semibold text-slate-900">हाल में वेंडर से आया माल <span className="text-slate-500 font-normal">(Recently received)</span></span>
+                            <span className="flex-1 text-[15px] font-semibold text-slate-900">हाल में वेंडर से आया माल <HindiOnly className="text-slate-500 font-normal">(Recently received)</HindiOnly></span>
                             <ChevronDown size={20} className={cn('text-slate-400 transition-transform', showReceipts && 'rotate-180')} />
                         </button>
                         {showReceipts && (
@@ -213,7 +216,7 @@ export default function InventoryScreen() {
                                 className={cn('h-12 px-4 rounded-xl border text-[15px] font-semibold flex items-center gap-2 transition-colors',
                                     active ? 'bg-green-700 border-green-700 text-white' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50')}>
                                 <span className={cn('w-7 h-7 rounded-lg flex items-center justify-center', active ? 'bg-white/15' : cls)}><Icon size={16} /></span>
-                                {cat === 'All' ? 'सभी' : (hindiCategory(cat) || cat)}
+                                {cat === 'All' ? 'सभी' : ((showHindi && hindiCategory(cat)) || cat)}
                             </button>
                         );
                     })}
@@ -229,10 +232,10 @@ export default function InventoryScreen() {
                                     <th className="px-4 py-3 w-12">#</th>
                                     <th className="px-4 py-3">उत्पाद (Product)</th>
                                     <th className="px-4 py-3">श्रेणी (Category)</th>
-                                    <th className="px-4 py-3">वर्तमान स्टॉक<br />(Current Stock)</th>
+                                    <th className="px-4 py-3">वर्तमान स्टॉक<HindiOnly className="block">(Current Stock)</HindiOnly></th>
                                     <th className="px-4 py-3">स्थिति (Status)</th>
-                                    <th className="px-4 py-3">प्रति इकाई कीमत<br />(Rate per Unit)</th>
-                                    <th className="px-4 py-3">कुल कीमत<br />(Total Value)</th>
+                                    <th className="px-4 py-3">प्रति इकाई कीमत<HindiOnly className="block">(Rate per Unit)</HindiOnly></th>
+                                    <th className="px-4 py-3">कुल कीमत<HindiOnly className="block">(Total Value)</HindiOnly></th>
                                     <th className="px-4 py-3 text-center">कार्य (Action)</th>
                                 </tr>
                             </thead>
@@ -241,7 +244,7 @@ export default function InventoryScreen() {
                                     const out = item.currentStock <= 0;
                                     const low = !out && isLow(item);
                                     const { Icon, cls } = catStyle(item.category);
-                                    const hi = hindiName(item.name);
+                                    const hi = showHindi ? hindiName(item.name) : '';
                                     return (
                                         <tr key={item.id} className="hover:bg-slate-50/60">
                                             <td className="px-4 py-3 text-slate-500 tabular-nums">{idx + 1}</td>
@@ -252,13 +255,13 @@ export default function InventoryScreen() {
                                                         : <span className="w-14 h-14 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0"><Package size={22} /></span>}
                                                     <span className="min-w-0">
                                                         <span className="block font-bold text-slate-900">{hi || item.name}</span>
-                                                        {hi && <span className="block text-[13px] text-slate-500">{item.name}</span>}
+                                                        {hi && <span translate="no" className="block text-[13px] text-slate-500">{item.name}</span>}
                                                     </span>
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold', cls)}>
-                                                    <Icon size={15} /> {hindiCategory(item.category) || item.category}
+                                                    <Icon size={15} /> {(showHindi && hindiCategory(item.category)) || item.category}
                                                 </span>
                                             </td>
                                             <td className={cn('px-4 py-3 font-bold tabular-nums whitespace-nowrap', out ? 'text-slate-900' : low ? 'text-orange-600' : 'text-green-700')}>

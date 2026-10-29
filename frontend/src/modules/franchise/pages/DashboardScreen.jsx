@@ -8,6 +8,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
+import { useFranchiseLanguage } from '../contexts/FranchiseLanguageContext';
 import { StatTile } from '../components/layout/FranchisePageHeader';
 
 /*
@@ -33,7 +34,7 @@ const statusOf = (s) => (NEW.includes(s) ? STATUS.new : TO_PACK.includes(s) ? ST
 
 const dayKey = (d) => { const x = new Date(d); return isNaN(x) ? '' : `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
 const hiDate = (d) => new Date(d).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-const hiDay = (d) => new Date(d).toLocaleDateString('hi-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const dayLabel = (d, locale) => new Date(d).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 // The order's day: its delivery date for advance orders, else when it was placed
 const orderDay = (o) => o.scheduledDate || o.createdAt;
 
@@ -47,6 +48,7 @@ export default function DashboardScreen() {
     const navigate = useNavigate();
     const { franchise } = useFranchiseAuth();
     const { orders } = useFranchiseOrders();
+    const { locale } = useFranchiseLanguage();
     const [showKYCModal, setShowKYCModal] = useState(false);
     const [day, setDay] = useState(dayKey(new Date()));
 
@@ -80,7 +82,7 @@ export default function DashboardScreen() {
                 <div className="flex-1 min-w-[220px]">
                     <h1 className="text-2xl lg:text-[30px] font-bold text-slate-900 leading-tight">नमस्ते! आज का काम</h1>
                     <div className="flex flex-wrap items-center gap-3 mt-1">
-                        <span className="text-[15px] text-slate-500">{hiDay(new Date())}</span>
+                        <span className="text-[15px] text-slate-500">{dayLabel(new Date(), locale)}</span>
                         <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-800">
                             <CheckCircle2 size={16} className="text-green-600" /> आज के ऑर्डर समय पर पूरा करें
                         </span>
@@ -128,7 +130,7 @@ export default function DashboardScreen() {
                         {!dayOrders.length && (
                             <div className="text-center py-14 text-slate-500">
                                 <Package size={40} className="mx-auto text-slate-300 mb-2" />
-                                <p className="text-[15px]">{hiDate(day)} को कोई ऑर्डर नहीं</p>
+                                <p className="text-[15px]">{`${hiDate(day)} को कोई ऑर्डर नहीं`}</p>
                             </div>
                         )}
                         {dayOrders.slice(0, 8).map((o) => {
@@ -144,7 +146,7 @@ export default function DashboardScreen() {
                                     <div className="min-w-[104px]">
                                         <p className="text-[12px] text-slate-500">डिलीवरी समय</p>
                                         <p className="text-[15px] font-bold text-slate-900">{o.deliverySlot}</p>
-                                        <p className="text-[13px] text-slate-500 flex items-center gap-1"><Clock size={13} /> {new Date(orderDay(o)).toLocaleDateString('hi-IN', { day: 'numeric', month: 'long' })}</p>
+                                        <p className="text-[13px] text-slate-500 flex items-center gap-1"><Clock size={13} /> {new Date(orderDay(o)).toLocaleDateString(locale, { day: 'numeric', month: 'long' })}</p>
                                     </div>
                                     <div className="min-w-[84px]">
                                         <p className="text-[12px] text-slate-500">कुल राशि</p>
