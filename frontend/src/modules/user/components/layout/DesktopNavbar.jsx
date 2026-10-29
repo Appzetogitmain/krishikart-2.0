@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation as useRouteLocation, Link } from 'react-router-dom'
-import { Search, Heart, ShoppingCart, MapPin, Bell } from 'lucide-react'
+import { Search, Heart, ShoppingCart, MapPin, Bell, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCart } from '../../contexts/CartContext'
 import { useWishlist } from '../../contexts/WishlistContext'
@@ -25,7 +25,9 @@ const PLACEHOLDERS = [
 
 export default function DesktopNavbar() {
     const navigate = useNavigate()
-    const { cartCount } = useCart()
+    // The badge counts products, as on the cart page ("1 item"), not packs
+    const { cartItems, cartTotal } = useCart()
+    const cartCount = cartItems.length
     const { wishlistCount } = useWishlist()
     const { address, updateFranchiseLocation, setPinnedFranchiseLocation, loading } = useLocation()
     const { unreadCount } = useUserNotifications()
@@ -143,7 +145,7 @@ export default function DesktopNavbar() {
             isScrolled ? "shadow-sm" : ""
         )}>
             {/* Main Navbar */}
-            <div className="max-w-[1440px] mx-auto px-6 h-[72px] flex items-center justify-between gap-4">
+            <div className="max-w-[1440px] mx-auto px-6 h-[80px] flex items-center justify-between gap-4">
                 {/* Logo Section */}
                 <div className="flex items-center gap-6 shrink-0">
                     <div
@@ -159,20 +161,16 @@ export default function DesktopNavbar() {
                     {/* Delivery Info */}
                     <div
                         onClick={() => setShowLocationPopup(true)}
-                        className="hidden lg:flex items-center gap-2.5 cursor-pointer group hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-all"
+                        className="hidden lg:flex items-center gap-2.5 cursor-pointer group hover:bg-slate-50 pl-4 pr-3 py-1.5 rounded-xl transition-all border-l border-slate-200"
                     >
-                        <div className={cn(
-                            "w-9 h-9 rounded-full bg-slate-50 flex items-center justify-center text-teal-600 transition-colors group-hover:bg-teal-100",
-                            loading && "animate-pulse"
-                        )}>
-                            <MapPin size={18} strokeWidth={2.5} />
-                        </div>
-                        <div className="flex flex-col max-w-[150px]">
-                            <span className="text-[14px] font-bold text-slate-900 leading-tight">Delivery tomorrow</span>
-                            <span className="text-[12px] font-medium text-slate-400 leading-tight truncate">
+                        <MapPin size={24} strokeWidth={2} className={cn("text-slate-800 shrink-0", loading && "animate-pulse")} />
+                        <div className="flex flex-col max-w-[180px]">
+                            <span className="text-[14px] font-medium text-slate-500 leading-tight">Deliver to</span>
+                            <span className="text-[16px] font-bold text-slate-900 leading-tight truncate">
                                 {loading ? "Fetching..." : (address || "Set Location")}
                             </span>
                         </div>
+                        <ChevronDown size={18} strokeWidth={2.5} className="text-slate-700 shrink-0" />
                     </div>
                 </div>
 
@@ -192,18 +190,18 @@ export default function DesktopNavbar() {
                         }}
                         className="relative group"
                     >
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500 z-10">
-                            <Search size={18} strokeWidth={2.5} />
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-green-700 z-10">
+                            <Search size={22} strokeWidth={2.5} />
                         </div>
                         <input
                             type="text"
                             value={searchValue}
                             onChange={handleSearchChange}
                             placeholder=""
-                            className="w-full h-[44px] pl-12 pr-4 bg-slate-50/50 border border-slate-100 rounded-full text-[14px] font-medium placeholder:text-slate-400 focus:bg-white focus:border-slate-200 focus:ring-4 focus:ring-slate-100 transition-all outline-none"
+                            className="w-full h-[54px] pl-14 pr-5 bg-slate-100 border border-transparent rounded-full text-[16px] font-medium text-slate-900 placeholder:text-slate-500 focus:bg-white focus:border-slate-200 focus:ring-4 focus:ring-green-100 transition-all outline-none"
                         />
                         {!searchValue && (
-                            <div className="absolute left-12 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[14px] font-medium">
+                            <div className="absolute left-14 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 text-[16px] font-medium">
                                 <AnimatePresence mode="wait">
                                     <motion.span
                                         key={index}
@@ -286,15 +284,17 @@ export default function DesktopNavbar() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-3 shrink-0">
+                {/* Badges are bright red and a little bigger so new alerts are easy to spot (client, Oct 2026) */}
+                <div className="flex items-center gap-2 xl:gap-4 shrink-0">
                     {/* Wishlist */}
                     <button
                         onClick={() => navigate('/wishlist')}
-                        className="w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-rose-500 transition-all group relative active:scale-95"
+                        className="relative h-12 px-3 flex items-center gap-2 rounded-xl text-slate-800 hover:bg-slate-50 hover:text-rose-600 transition-all active:scale-95"
                     >
-                        <Heart size={20} className={cn(wishlistCount > 0 && "fill-rose-500 text-rose-500")} strokeWidth={2.5} />
+                        <Heart size={24} className={cn(wishlistCount > 0 && "fill-rose-500 text-rose-500")} strokeWidth={2} />
+                        <span className="hidden xl:inline text-[16px] font-semibold">Wishlist</span>
                         {wishlistCount > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                            <span className="absolute top-0 left-6 min-w-[22px] h-[22px] px-1 bg-red-600 text-white text-[12px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
                                 {wishlistCount}
                             </span>
                         )}
@@ -304,27 +304,34 @@ export default function DesktopNavbar() {
                     <button
                         onClick={() => navigate('/notifications')}
                         aria-label="Notifications"
-                        className="relative w-11 h-11 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all active:scale-95"
+                        className="relative w-12 h-12 flex items-center justify-center rounded-full text-slate-800 hover:bg-slate-50 transition-all active:scale-95"
                     >
-                        <Bell size={20} strokeWidth={2.5} />
+                        <Bell size={24} strokeWidth={2} />
                         {unreadCount > 0 && (
-                            <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                            <span className="absolute top-0 right-0 min-w-[22px] h-[22px] px-1 bg-red-600 text-white text-[12px] font-bold rounded-full flex items-center justify-center ring-2 ring-white">
                                 {unreadCount > 99 ? '99+' : unreadCount}
                             </span>
                         )}
                     </button>
 
-                    {/* Cart */}
+                    {/* Cart: count and running total */}
                     <button
                         onClick={() => navigate('/cart')}
-                        className="relative w-11 h-11 flex items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm hover:translate-y-[-1px] transition-all group active:scale-95"
+                        aria-label="Cart"
+                        className="relative h-14 pl-4 pr-5 flex items-center gap-4 rounded-2xl bg-green-50 text-green-800 hover:bg-green-100 transition-all active:scale-95"
                     >
-                        <ShoppingCart size={20} strokeWidth={2.5} />
-                        {cartCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 min-w-[23px] h-[23px] px-1.5 bg-black text-white text-[11px] leading-none font-black rounded-full flex items-center justify-center border-2 border-white">
-                                {cartCount > 99 ? '99+' : cartCount}
-                            </span>
-                        )}
+                        <span className="relative">
+                            <ShoppingCart size={26} strokeWidth={2.2} className="text-green-700" />
+                            {cartCount > 0 && (
+                                <span className="absolute -top-2.5 -right-2.5 min-w-[22px] h-[22px] px-1 bg-red-600 text-white text-[12px] leading-none font-bold rounded-full flex items-center justify-center ring-2 ring-white">
+                                    {cartCount > 99 ? '99+' : cartCount}
+                                </span>
+                            )}
+                        </span>
+                        <span className="flex flex-col items-start leading-tight">
+                            <span className="text-[15px] font-semibold text-slate-800">Cart</span>
+                            <span className="text-[15px] font-bold text-slate-900 tabular-nums">₹{Math.round(cartTotal || 0).toLocaleString('en-IN')}</span>
+                        </span>
                     </button>
 
                     {/* Profile Drawer */}

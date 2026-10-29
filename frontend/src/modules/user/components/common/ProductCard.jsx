@@ -225,13 +225,13 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
             {/* Entrance animation lives on the wrapper; press feedback on the card itself */}
             <div
                 className={cn(
-                    "kk-press relative bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden flex flex-col h-full group",
+                    "kk-press relative bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden flex flex-col h-full group md:border-slate-200 md:shadow-[0_2px_10px_rgba(15,23,42,0.06)] md:hover:shadow-[0_8px_24px_rgba(15,23,42,0.10)] md:transition-shadow",
                     quantity > 0 && "kk-in-cart"
                 )}
             >
                 {/* Image Area */}
                 <div
-                    className={cn("relative w-full aspect-square overflow-hidden cursor-pointer", imgLoaded ? "bg-slate-50/50" : "kk-shimmer")}
+                    className={cn("relative w-full aspect-square md:aspect-[4/3] overflow-hidden cursor-pointer", imgLoaded ? "bg-slate-50/50" : "kk-shimmer")}
                     onClick={() => navigate(`/product/${productId}`)}
                 >
                     <img
@@ -270,7 +270,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                     <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-1 pointer-events-none">
                         <div className="flex flex-col items-start gap-1">
                             {discountPercent > 0 && (
-                                <div className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm tracking-tight whitespace-nowrap">
+                                <div className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm tracking-tight whitespace-nowrap md:bg-red-600 md:text-[13px] md:font-bold md:px-2.5 md:py-1 md:rounded-full">
                                     {discountPercent}% OFF
                                 </div>
                             )}
@@ -290,12 +290,12 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                 </div>
 
                 {/* Content Area */}
-                <div className="p-2.5 flex flex-col flex-1 gap-1.5">
+                <div className="p-2.5 flex flex-col flex-1 gap-1.5 md:p-4 md:gap-2">
                     <div className="flex-1 cursor-pointer" onClick={() => navigate(`/product/${productId}`)}>
-                        <h3 className="text-[13px] font-bold text-slate-800 leading-tight line-clamp-2 tracking-tight group-hover:text-emerald-700 group-active:text-emerald-700 transition-colors">
+                        <h3 className="text-[13px] font-bold text-slate-800 leading-tight line-clamp-2 tracking-tight group-hover:text-emerald-700 group-active:text-emerald-700 transition-colors md:text-[17px] md:font-semibold md:text-slate-900 md:tracking-normal">
                             <HighlightText text={product.name} query={highlight} />
                         </h3>
-                        <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                        <p className="text-[10px] font-bold text-slate-400 mt-0.5 md:text-[14px] md:font-medium md:text-slate-500 md:mt-1">
                             {product.unitValue} {product.unit}
                         </p>
                     </div>
@@ -305,9 +305,9 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                         overflows narrow cards */}
                     <div className={cn("mt-auto pt-1 flex gap-2", quantity > 0 ? "flex-col" : "items-center justify-between")}>
                         <div className={cn("flex min-w-0", quantity > 0 ? "items-baseline gap-1.5" : "flex-col")}>
-                            <span className="text-[15px] font-black text-slate-900 leading-none">₹{displayPrice}</span>
+                            <span className={cn("text-[15px] font-black text-slate-900 leading-none md:text-[22px] md:font-bold", hasComparePrice && "md:text-red-600")}>₹{displayPrice}</span>
                             {hasComparePrice && (
-                                <span className={cn("text-[10px] text-slate-400 line-through font-bold", quantity > 0 ? "" : "mt-0.5")}>₹{strikePrice}</span>
+                                <span className={cn("text-[10px] text-slate-400 line-through font-bold md:text-[14px] md:font-medium md:text-slate-500", quantity > 0 ? "" : "mt-0.5")}>₹{strikePrice}</span>
                             )}
                         </div>
 
@@ -317,13 +317,15 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                                     <button
                                         type="button"
                                         onClick={handleAddToCart}
-                                        className="size-9 rounded-xl bg-emerald-600 text-white shadow-[0_6px_14px_-6px_rgba(5,150,105,0.7)] hover:bg-emerald-700 active:scale-90 transition-all flex items-center justify-center p-0"
+                                        className="size-9 rounded-xl bg-emerald-600 text-white shadow-[0_6px_14px_-6px_rgba(5,150,105,0.7)] hover:bg-emerald-700 active:scale-90 transition-all flex items-center justify-center p-0 md:size-auto md:h-11 md:px-4 md:gap-2 md:bg-white md:text-green-700 md:border-2 md:border-green-700 md:shadow-none md:hover:bg-green-700 md:hover:text-white md:text-[16px] md:font-bold"
                                         aria-label="Add to cart"
                                     >
-                                        <Plus size={16} strokeWidth={3} />
+                                        <Plus size={16} strokeWidth={3} className="md:hidden" />
+                                        <ShoppingCart size={18} strokeWidth={2.5} className="hidden md:block" />
+                                        <span className="hidden md:inline">Add</span>
                                     </button>
                                 ) : (
-                                    <div className="kk-pop flex w-full items-center justify-between bg-emerald-600 rounded-xl text-white shadow-[0_6px_14px_-6px_rgba(5,150,105,0.7)] overflow-hidden">
+                                    <div className="kk-pop flex w-full items-center justify-between bg-emerald-600 rounded-xl text-white shadow-[0_6px_14px_-6px_rgba(5,150,105,0.7)] overflow-hidden md:bg-green-700">
                                         <button
                                             type="button"
                                             onClick={handleDecrement}

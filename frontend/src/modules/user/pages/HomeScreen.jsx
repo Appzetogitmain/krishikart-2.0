@@ -39,6 +39,7 @@ import { useFilter } from '../contexts/FilterContext'
 import { appendLocationToProductParams, getBrowseLocationParams } from '../utils/storefrontParams'
 import ServiceUnavailable from '../components/common/ServiceUnavailable'
 import { optimizedImage } from '../utils/optimizedImage'
+import { DesktopHero, DesktopCategories, DesktopDeals, DesktopTrustStrip, pickDeals } from '../components/home/DesktopHome'
 
 const isMobile = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
 
@@ -225,7 +226,15 @@ export default function HomeScreen() {
                     </div>
                 ) : (
                     <div className="bg-[var(--color-brand-subtle)] md:bg-white pb-32 min-h-screen pt-24 md:pt-0">
-                        <div className="bg-[var(--color-brand-subtle)]/75 md:bg-white shadow-sm md:shadow-none">
+                        {/* Desktop (client mockup): hero, categories, today's deals, trust strip */}
+                        <div className="hidden md:block max-w-[1440px] mx-auto px-8 pt-2 space-y-10">
+                            <DesktopHero />
+                            <DesktopCategories categories={categories} />
+                            <DesktopDeals products={pickDeals(filteredProducts)} />
+                            <DesktopTrustStrip />
+                        </div>
+
+                        <div className="bg-[var(--color-brand-subtle)]/75 md:hidden shadow-sm">
                             <div className="max-w-7xl mx-auto px-5 md:px-8 pt-5 md:pt-4 pb-10 md:pb-16">
                                 <div className="flex items-center justify-between mb-6 md:mb-8">
                                     <h2 className="text-xl md:text-3xl font-black text-slate-900 whitespace-nowrap">Shop by Category</h2>
@@ -244,8 +253,8 @@ export default function HomeScreen() {
                             </div>
                         </div>
 
-                        <div className="max-w-7xl mx-auto md:px-8">
-                            <div className="px-5 mt-6 md:px-0 md:mt-4">
+                        <div className="max-w-7xl md:max-w-[1440px] mx-auto md:px-8">
+                            <div className="px-5 mt-6 md:hidden">
                                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full rounded-[32px] md:rounded-2xl px-6 py-4 md:px-10 md:py-6 relative overflow-hidden shadow-xl bg-gradient-to-br from-[var(--color-brand-dark)] via-[var(--color-brand-primary)] to-[var(--color-brand-yellow)]/20">
                                     <div className="relative z-10 max-w-lg">
                                         <h2 className="text-[24px] md:text-4xl font-black text-white leading-tight tracking-tight md:normal-case md:font-bold">Wholesale <span className="text-[var(--color-brand-yellow)] md:text-primary">B2B</span> <br />Direct from Farms</h2>
@@ -257,7 +266,7 @@ export default function HomeScreen() {
 
                             {/* Section 1: Flash Deals */}
                             {filteredProducts.filter(p => p.homeSections?.includes('flash_deals')).length > 0 && (
-                                <div className="mt-8 md:mt-12">
+                                <div className="mt-8 md:hidden">
                                     <div className="px-5 md:px-0 flex items-end justify-between mb-6">
                                         <div>
                                             <div className="flex items-center gap-2 mb-1">
@@ -281,7 +290,7 @@ export default function HomeScreen() {
                             {/* Section 2: Bulk Savings */}
                             {filteredProducts.filter(p => p.homeSections?.includes('bulk_saving') || p.bulkPricing?.length > 0).length > 0 && (
                                 <div className="mt-6 md:mt-4 py-8 md:py-10 bg-[var(--color-brand-yellow-subtle)]/70 md:bg-slate-50/50 border-y border-[var(--color-brand-yellow)]/10 md:border-slate-100/50">
-                                    <div className="max-w-7xl mx-auto md:px-8">
+                                    <div className="max-w-7xl md:max-w-[1440px] mx-auto md:px-0">
                                         <div className="px-5 md:px-0 flex items-center justify-between mb-6">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-2 mb-1">
@@ -303,7 +312,7 @@ export default function HomeScreen() {
                                 </div>
                             )}
 
-                            <div className="max-w-7xl mx-auto md:px-8">
+                            <div className="max-w-7xl md:max-w-[1440px] mx-auto md:px-0">
                                 {/* Section 3: Seasonal Picks */}
                                 {filteredProducts.filter(p => p.homeSections?.includes('seasonal_picks')).length > 0 && (
                                     <div className="mt-8 px-5 md:px-0 md:mt-8">

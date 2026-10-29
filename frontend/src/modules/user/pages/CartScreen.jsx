@@ -20,6 +20,7 @@ import {
 import PageTransition from '../components/layout/PageTransition'
 import { Button } from '@/components/ui/button'
 import { useCart } from '../contexts/CartContext'
+import DesktopCart from '../components/cart/DesktopCart'
 
 function CartItemImage({ src, alt }) {
   const [failed, setFailed] = useState(false)
@@ -100,7 +101,18 @@ export default function CartScreen() {
 
   return (
     <PageTransition>
-      <div className="bg-[#f8fafd] min-h-screen overflow-x-hidden pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-20">
+      {/* Desktop layout (client mockup, Oct 2026); phones keep the layout below */}
+      <div className="hidden md:block">
+        <DesktopCart
+          deliveryFee={deliveryFee}
+          tax={tax}
+          taxRateString={taxRateString}
+          total={total}
+          recommendations={recommendations}
+          onRecommendationAdded={(id) => setRecommendations(prev => prev.filter(p => p._id !== id))}
+        />
+      </div>
+      <div className="md:hidden bg-[#f8fafd] min-h-screen overflow-x-hidden pb-[calc(9rem+env(safe-area-inset-bottom))]">
         {/* Mobile Header */}
         <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl px-3 py-2 pt-2 border-b border-slate-100/80 shadow-[0_1px_10px_rgba(0,0,0,0.04)] flex items-center gap-3 md:hidden">
           <button onClick={() => navigate(-1)} className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-full bg-white border border-slate-100 shadow-sm text-slate-600 active:scale-95 transition-transform shrink-0">

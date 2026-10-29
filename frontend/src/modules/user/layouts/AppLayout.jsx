@@ -53,6 +53,9 @@ export default function AppLayout() {
 
 
     const isHomeScreen = location.pathname === '/home'
+    // Desktop pages redesigned on a light grey background (client mockups, Oct 2026): the
+    // breadcrumb strip matches them and lines up with their wider content
+    const isGreyPage = ['/cart', '/notifications', '/checkout', '/orders', '/order-detail/', '/track-order/'].some(path => location.pathname.startsWith(path))
 
     const hideBottomNav = [
         '/product/',
@@ -78,10 +81,10 @@ export default function AppLayout() {
                 <DesktopNavbar />
             </div>
 
-            <main className="w-full max-w-md mx-auto min-h-screen bg-background md:bg-white shadow-[0_0_20px_rgba(0,0,0,0.03)] md:shadow-none md:max-w-none md:mx-0 relative md:pt-24">
+            <main className={`w-full max-w-md mx-auto min-h-screen bg-background ${isGreyPage ? 'md:bg-slate-50' : 'md:bg-white'} shadow-[0_0_20px_rgba(0,0,0,0.03)] md:shadow-none md:max-w-none md:mx-0 relative md:pt-24`}>
                 {/* Breadcrumbs for Desktop - Hidden on Home */}
                 {!isHomeScreen && (
-                    <div className="max-w-7xl mx-auto px-8 hidden md:block">
+                    <div className={`${isGreyPage ? 'max-w-[1440px] [&_*]:text-[15px]' : 'max-w-7xl'} mx-auto px-8 hidden md:block`}>
                         <Breadcrumbs />
                     </div>
                 )}

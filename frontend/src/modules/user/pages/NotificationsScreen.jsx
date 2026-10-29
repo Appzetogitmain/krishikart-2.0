@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Bell } from 'lucide-react';
 import PageTransition from '../components/layout/PageTransition';
 import { useUserNotifications } from '../contexts/UserNotificationsContext';
+import DesktopNotifications from '../components/notifications/DesktopNotifications';
 
 export default function NotificationsScreen() {
     const navigate = useNavigate();
@@ -15,7 +16,9 @@ export default function NotificationsScreen() {
 
     return (
         <PageTransition>
-            <div className="bg-[#f8fafd] min-h-screen">
+            {/* Desktop layout (client mockup, Oct 2026); phones keep the list below */}
+            <div className="hidden md:block"><DesktopNotifications /></div>
+            <div className="md:hidden bg-[#f8fafd] min-h-screen">
                 <div className="bg-white px-4 py-4 md:px-6 md:py-6 border-b border-slate-50 flex items-center justify-between sticky top-0 z-30">
                     <div className="flex items-center gap-3 md:gap-4">
                         <button
