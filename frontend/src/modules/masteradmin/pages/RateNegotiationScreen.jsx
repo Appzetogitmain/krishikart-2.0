@@ -83,7 +83,10 @@ function ItemRow({ row, vendorId, onDone }) {
                     className="h-8 px-2.5 bg-slate-900 text-white rounded-sm text-[10px] font-bold uppercase flex items-center gap-1 disabled:opacity-50">
                     {busy === 'counter' ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Offer
                 </button>
-                {Number(offer) > 0 && <span className="text-[10px] text-slate-500">= {money(Number(offer) * row.qty)} for {qtyText(row.qty, row.unit)}</span>}
+                {/* Space is always kept for this line, so typing an offer does not push the buttons sideways */}
+                <span className="w-44 shrink-0 text-left text-[10px] text-slate-500 tabular-nums whitespace-nowrap overflow-hidden text-ellipsis" aria-live="polite">
+                    {Number(offer) > 0 ? `= ${money(Number(offer) * row.qty)} for ${qtyText(row.qty, row.unit)}` : ''}
+                </span>
             </span>
         </div>
     );
