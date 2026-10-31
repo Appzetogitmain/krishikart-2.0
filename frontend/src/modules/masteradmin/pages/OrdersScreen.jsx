@@ -62,8 +62,12 @@ export default function OrdersScreen() {
 
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
-    /** period: 'today' | 'month' | 'year' | 'current' (whatever is filtered on screen) */
-    const handleExport = (period = 'current') => {
+    /**
+     * period: 'today' | 'month' | 'year' | 'current' (whatever is filtered on screen)
+     * kind:   'orders'       - one row per order (order-wise sheet)
+     *         'consolidated' - the same item added up per delivery date (for the vendor)
+     */
+    const handleExport = (period = 'current', kind = 'orders') => {
         setIsExportMenuOpen(false);
         const now = new Date();
         const startOf = {
@@ -104,7 +108,8 @@ export default function OrdersScreen() {
             _id: order._id,
             orderDate: fmtDate(order.createdAt),
             customerName: order.userId?.fullName || 'Unknown',
-            customerMobile: order.userId?.mobile || '',
+            // ="..." keeps the number as text, so Excel does not show 6.38E+09
+            customerMobile: order.userId?.mobile ? `="${order.userId.mobile}"` : '',
             franchiseName: order.franchiseId?.franchiseName || '',
             orderStatus: order.orderStatus,
             paymentMethod: order.paymentMethod,
@@ -173,8 +178,17 @@ export default function OrdersScreen() {
         };
 
         const label = { today: 'Today', month: 'This_Month', year: 'This_Year', current: 'Filtered' }[period];
-        exportToCSV(`Orders_${label}`, columns, data, [totalsSection]);
-        toast.success(`Downloaded ${data.length} orders with ${itemTotals.length} item totals`);
+        if (kind === 'consolidated') {
+            if (!itemTotals.length) {
+                toast.info('No items to add up for the selected period (only cancelled orders)');
+                return;
+            }
+            exportToCSV(`Orders_Consolidated_${label}`, totalsSection.columns, itemTotals);
+            toast.success(`Downloaded ${itemTotals.length} item totals from ${data.length} orders`);
+        } else {
+            exportToCSV(`Orders_Orderwise_${label}`, columns, data);
+            toast.success(`Downloaded ${data.length} orders`);
+        }
     };
 
     const normalizeOrders = (results) => {
@@ -522,20 +536,31 @@ export default function OrdersScreen() {
                         {isExportMenuOpen && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsExportMenuOpen(false)} />
-                                <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-white border border-slate-200 rounded-sm shadow-lg py-1">
+                                <div className="absolute right-0 top-full mt-1 z-50 w-64 bg-white border border-slate-200 rounded-sm shadow-lg py-1">
                                     {[
-                                        { id: 'today', label: "Today's orders" },
-                                        { id: 'month', label: "This month's orders" },
-                                        { id: 'year', label: "This year's orders" },
-                                        { id: 'current', label: 'Orders shown on screen' },
-                                    ].map(opt => (
-                                        <button
-                                            key={opt.id}
-                                            onClick={() => handleExport(opt.id)}
-                                            className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
-                                        >
-                                            {opt.label}
-                                        </button>
+                                        { kind: 'orders', title: 'Order-wise', note: 'One row per order' },
+                                        { kind: 'consolidated', title: 'Consolidated', note: 'Same item added up per delivery date (for vendor)' },
+                                    ].map((group, gi) => (
+                                        <div key={group.kind} className={gi ? 'border-t border-slate-100 mt-1 pt-1' : ''}>
+                                            <div className="px-3 pt-2 pb-1">
+                                                <p className="text-[11px] font-bold text-slate-900">{group.title}</p>
+                                                <p className="text-[10px] text-slate-400">{group.note}</p>
+                                            </div>
+                                            {[
+                                                { id: 'today', label: "Today's orders" },
+                                                { id: 'month', label: "This month's orders" },
+                                                { id: 'year', label: "This year's orders" },
+                                                { id: 'current', label: 'Orders shown on screen' },
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.id}
+                                                    onClick={() => handleExport(opt.id, group.kind)}
+                                                    className="w-full text-left px-3 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     ))}
                                 </div>
                             </>
