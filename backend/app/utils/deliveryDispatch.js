@@ -79,6 +79,26 @@ export async function dispatchOrderToPartner(order, partnerId, { by = "franchise
   return order;
 }
 
+const placeText = (o) => String(o.shippingAddress || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const addressWords = (o) => new Set(String(o.shippingAddress || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3));
+const addressesAlike = (a, b) => {
+  const wa = addressWords(a);
+  const wb = addressWords(b);
+  if (!wa.size || !wb.size) return false;
+  let both = 0;
+  wa.forEach((w) => { if (wb.has(w)) both += 1; });
+  return both / (wa.size + wb.size - both) >= 0.5;
+};
+/** Same delivery address text, or delivery pins within ~60 m whose addresses mostly match (same rule as the franchise screen) */
+export function samePlace(a, b) {
+  const ta = placeText(a);
+  if (ta.length >= 8 && ta === placeText(b)) return true;
+  const ca = a.shippingLocation?.coordinates;
+  const cb = b.shippingLocation?.coordinates;
+  if (!hasCoords(ca) || !hasCoords(cb)) return false;
+  return getDistance(ca[1], ca[0], cb[1], cb[0]) <= 0.06 && addressesAlike(a, b);
+}
+
 const hasCoords = (c) => Array.isArray(c) && c.length === 2 && !(Number(c[0]) === 0 && Number(c[1]) === 0);
 
 /**
@@ -95,18 +115,20 @@ export async function pickDeliveryPartner(order, { exclude = [] } = {}) {
   if (!candidates.length) return null;
   const ids = candidates.map((p) => p._id);
 
-  // Same customer, same day, already on the road with someone
+  // Same customer or same place, same day, already on the road with someone (not picked up yet,
+  // so this order can still go in the same trip)
   const dayKey = getISTDayKey(order.scheduledDate || order.createdAt || new Date());
   const siblings = await Order.find({
     _id: { $ne: order._id },
-    userId: order.userId,
     franchiseId: order.franchiseId,
-    orderStatus: "Dispatched", // not picked up yet, so this order can still go in the same trip
+    orderStatus: "Dispatched",
     deliveryPartnerId: { $in: ids },
   })
-    .select("deliveryPartnerId scheduledDate createdAt")
+    .select("userId shippingAddress shippingLocation deliveryPartnerId scheduledDate createdAt")
     .lean();
-  const sibling = siblings.find((o) => getISTDayKey(o.scheduledDate || o.createdAt) === dayKey);
+  const sameDay = siblings.filter((o) => getISTDayKey(o.scheduledDate || o.createdAt) === dayKey);
+  const sibling =
+    sameDay.find((o) => String(o.userId) === String(order.userId)) || sameDay.find((o) => samePlace(o, order));
   if (sibling) return candidates.find((p) => String(p._id) === String(sibling.deliveryPartnerId)) || null;
 
   const loads = await Order.aggregate([

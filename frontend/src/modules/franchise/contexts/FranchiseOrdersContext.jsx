@@ -275,6 +275,9 @@ export function FranchiseOrdersProvider({ children }) {
             customerName: o.userId?.fullName || o.user?.fullName || "",
             customerId: String(o.userId?._id || o.user?._id || (typeof o.userId === "string" ? o.userId : "") || ""),
             city: o.shippingLocation?.city || o.shippingLocation?.area || "",
+            // Where this order goes (orders for the same place on the same day are grouped and sent together)
+            shippingAddress: o.shippingAddress || "",
+            shippingCoords: Array.isArray(o.shippingLocation?.coordinates) ? o.shippingLocation.coordinates : null,
             time: o.time,
             scheduledDate: o.scheduledDate,
             scheduledDateFormatted: o.scheduledDateFormatted,

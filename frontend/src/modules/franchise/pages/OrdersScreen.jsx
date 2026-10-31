@@ -120,6 +120,36 @@ const dayKey = (o) => {
 };
 const customerKey = (o) => o.customerId || o.customerMobile || o.hotelName || o.id;
 
+// Same place: same delivery address text, or delivery pins within ~60 m whose addresses mostly match
+// (a pin alone is not enough: an address without a pin is geocoded and may land on the city centre)
+const placeText = (o) => String(o.shippingAddress || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const addressWords = (o) => new Set(String(o.shippingAddress || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3));
+const addressesAlike = (a, b) => {
+    const wa = addressWords(a);
+    const wb = addressWords(b);
+    if (!wa.size || !wb.size) return false;
+    let both = 0;
+    wa.forEach((w) => { if (wb.has(w)) both += 1; });
+    return both / (wa.size + wb.size - both) >= 0.5;
+};
+const pinOf = (o) => {
+    const c = o.shippingCoords;
+    return Array.isArray(c) && c.length === 2 && !(Number(c[0]) === 0 && Number(c[1]) === 0) ? [Number(c[0]), Number(c[1])] : null;
+};
+const metersBetween = ([lng1, lat1], [lng2, lat2]) => {
+    const r = Math.PI / 180;
+    const a = Math.sin(((lat2 - lat1) * r) / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lng2 - lng1) * r) / 2) ** 2;
+    return 12742000 * Math.asin(Math.sqrt(a));
+};
+const samePlace = (a, b) => {
+    const ta = placeText(a);
+    if (ta.length >= 8 && ta === placeText(b)) return true;
+    const pa = pinOf(a);
+    const pb = pinOf(b);
+    return !!(pa && pb && metersBetween(pa, pb) <= 60 && addressesAlike(a, b));
+};
+const belongTogether = (a, b) => dayKey(a) === dayKey(b) && (customerKey(a) === customerKey(b) || samePlace(a, b));
+
 /** The items of several orders added up per product + unit (Potato 2 kg + 3 kg -> 5 kg) */
 function mergeItems(orders) {
     const rows = new Map();
@@ -611,20 +641,22 @@ export default function OrdersScreen() {
         );
     };
 
-    // New / Ready tabs: a customer's orders for the same day become one combined card
+    // New / Ready tabs: orders for the same day from the same customer OR going to the same place become one
+    // combined card (each order keeps its own bill, payment and delivery code)
     const groupable = ['new', 'ready'].includes(activeTab);
-    const entries = [];
-    {
-        const byKey = new Map();
-        for (const o of filteredOrders) {
-            const key = groupable ? `${customerKey(o)}|${dayKey(o)}` : o.id;
-            if (!byKey.has(key)) {
-                const g = { key, orders: [] };
-                byKey.set(key, g);
-                entries.push(g);
-            }
-            byKey.get(key).orders.push(o);
+    let entries = [];
+    for (const o of filteredOrders) {
+        if (!groupable) { entries.push({ key: o.id, orders: [o] }); continue; }
+        const hits = entries.filter((g) => g.orders.some((m) => belongTogether(m, o)));
+        if (!hits.length) {
+            entries.push({ key: `${customerKey(o)}|${dayKey(o)}`, orders: [o] });
+            continue;
         }
+        // One order can link two groups (same customer as one, same address as the other): join them
+        const [keep, ...rest] = hits;
+        keep.orders.push(o);
+        for (const g of rest) keep.orders.push(...g.orders);
+        entries = entries.filter((g) => !rest.includes(g));
     }
 
     const groupCard = (g) => {
@@ -644,6 +676,8 @@ export default function OrdersScreen() {
         const toCount = idsWhere((o) => o.status === 'packed' && !(o.numberOfPackages > 0));
         const toSend = idsWhere((o) => o.status === 'packed' && o.numberOfPackages > 0);
         const busy = bulkBusy === g.key;
+        const people = [...new Set(orders.map((o) => o.hotelName).filter(Boolean))];
+        const manyPeople = people.length > 1;
         // Who is taking these orders (set automatically, or changed by hand)
         const riders = [...new Set(orders.filter((o) => o.status === 'dispatched' && o.deliveryPartner?.fullName).map((o) => o.deliveryPartner.fullName))];
         const openPack = (ids, mode) => setGroupPack({ key: g.key, ids, mode, counts: Object.fromEntries(ids.map((id) => [id, 1])) });
@@ -658,10 +692,13 @@ export default function OrdersScreen() {
                     </span>
                     <div className="flex-1 min-w-[180px]">
                         <div className="flex flex-wrap items-center gap-2">
-                            <p translate="no" className="text-[17px] font-bold text-slate-900">{first.hotelName}</p>
+                            <p translate="no" className="text-[17px] font-bold text-slate-900">{people.join(' + ') || first.hotelName}</p>
                             <span className="px-3 py-1 rounded-lg text-[13px] font-semibold bg-green-50 text-green-700">{orders.length} orders combined</span>
                         </div>
-                        <p className="text-[13px] text-slate-500 mt-0.5">Same customer, same day - pack and send together</p>
+                        <p className="text-[13px] text-slate-500 mt-0.5">{manyPeople ? 'Same place, same day' : 'Same customer, same day'} - pack and send together</p>
+                        {manyPeople && first.shippingAddress && (
+                            <p translate="no" className="text-[13px] text-slate-600 flex items-center gap-1 mt-0.5"><MapPin size={13} /> {first.shippingAddress}</p>
+                        )}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[13px] text-slate-500">
                             {first.customerMobile && <span className="flex items-center gap-1"><Phone size={13} /> {first.customerMobile}</span>}
                             {first.city && <span className="flex items-center gap-1"><MapPin size={13} /> {first.city}</span>}
@@ -749,6 +786,7 @@ export default function OrdersScreen() {
                                             <p className="text-[15px] font-bold text-slate-900 whitespace-nowrap">Order #{String(row.id).slice(-6).toUpperCase()}</p>
                                             <span className={cn('px-2.5 py-0.5 rounded-lg text-[12px] font-semibold', cls)}>{label}</span>
                                             {row.status === 'procuring' && <RefreshCw size={13} className="text-amber-600 animate-spin" />}
+                                            {manyPeople && <span translate="no" className="text-[13px] font-semibold text-slate-600">· {row.hotelName}</span>}
                                         </div>
                                         <p className="text-[13px] text-slate-600 mt-0.5">
                                             {(row.items || []).map((i) => `${i.name} ${i.quantity} ${i.unit}${i.isShortage && !row.allowPartialFulfillment ? ' (short)' : ''}`).join(', ')}
