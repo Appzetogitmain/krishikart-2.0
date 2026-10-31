@@ -30,6 +30,7 @@ import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket';
 import DocumentViewer from '../../vendor/components/documents/DocumentViewer';
+import { estimateWeightKg, vehicleFor, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 export default function OrderDetailScreen() {
     const { id } = useParams();
@@ -44,7 +45,8 @@ export default function OrderDetailScreen() {
     const [reviewReasons, setReviewReasons] = useState({});
     const [isReviewing, setIsReviewing] = useState(false);
     const [isAssigningPickup, setIsAssigningPickup] = useState(false);
-    const [numberOfPackages, setNumberOfPackages] = useState(1);
+    // Packed weight (kg); null = not typed yet, show the estimate from the ordered quantities
+    const [packKg, setPackKg] = useState(null);
 
     const fetchOrderDetail = async () => {
         setIsLoading(true);
@@ -381,7 +383,7 @@ export default function OrderDetailScreen() {
                                                 <Package size={16} className="text-amber-500" />
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Bilty (Delivery Slip)</span>
-                                                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">{order.bilty.numberOfPackages} Packages • {order.bilty.biltyNumber}</span>
+                                                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">{Number(order.packedWeightKg) > 0 ? `${order.packedWeightKg} kg` : `${order.bilty.numberOfPackages} Packages`} • {order.bilty.biltyNumber}</span>
                                                 </div>
                                             </div>
                                             <ChevronRight size={12} className="text-slate-300" />
@@ -663,20 +665,25 @@ export default function OrderDetailScreen() {
                                                 </div>
                                             )}
                                             <label className="text-[10px] font-black uppercase text-emerald-800 tracking-widest flex items-center justify-between">
-                                                <span>Number of Packages</span>
+                                                <span>Packed weight (kg) · {vehicleFor(packKg ?? estimateWeightKg(order.items))}</span>
                                                 <Package size={14} />
                                             </label>
                                             <div className="flex items-center gap-3">
                                                 <input
                                                     type="number"
-                                                    min="1"
-                                                    value={numberOfPackages}
-                                                    onChange={(e) => setNumberOfPackages(e.target.value)}
+                                                    min="0"
+                                                    step="0.1"
+                                                    inputMode="decimal"
+                                                    aria-label="Packed weight in kg"
+                                                    value={packKg ?? (estimateWeightKg(order.items) || '')}
+                                                    onChange={(e) => setPackKg(e.target.value === '' ? '' : Math.min(MAX_ORDER_WEIGHT_KG, Math.max(0, Math.round(Number(e.target.value) * 100) / 100 || 0)))}
                                                     className="w-20 h-10 text-center text-sm font-black border border-emerald-200 rounded-sm focus:outline-none focus:border-emerald-500 bg-white"
                                                 />
                                                 <button
                                                     onClick={async () => {
-                                                        await updateOrderStatus(id, 'Packed', { numberOfPackages: Number(numberOfPackages) });
+                                                        const kg = Number(packKg ?? estimateWeightKg(order.items)) || 0;
+                                                        if (!(kg > 0)) { toast.error('Enter the packed weight (kg)'); return; }
+                                                        await updateOrderStatus(id, 'Packed', { packedWeightKg: kg });
                                                         fetchOrderDetail();
                                                     }}
                                                     className="flex-1 h-10 bg-emerald-600 text-white rounded-sm font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"

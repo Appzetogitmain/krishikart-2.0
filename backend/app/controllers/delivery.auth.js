@@ -13,6 +13,7 @@ import { sendSMS } from "../utils/smsService.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { VEHICLE_TYPES, VEHICLE_NUMBER_RE } from "../constants/delivery.js";
 
 /* 🔐 TOKEN */
 const generateToken = (id) =>
@@ -49,10 +50,10 @@ export const registerDelivery = async (req, res) => {
     if (!/^[6-9]\d{9}$/.test(mobile))
       return handleResponse(res, 400, "Invalid mobile number. Must be 10 digits starting with 6-9.");
 
-    if (!/^[a-zA-Z]{2}\d{2}[a-zA-Z]{2}\d{4}$/.test(vehicleNumber))
-      return handleResponse(res, 400, "Vehicle number must be in format MP09CS1234");
+    if (!VEHICLE_NUMBER_RE.test(String(vehicleNumber).toUpperCase()))
+      return handleResponse(res, 400, "Vehicle number must be like MP09CS1234");
 
-    if (!["bike", "scooter"].includes(vehicleType))
+    if (!VEHICLE_TYPES.includes(vehicleType))
       return handleResponse(res, 400, "Invalid vehicle type");
 
     if (!req.files?.aadharImage?.[0] || !req.files?.panImage?.[0] || !req.files?.licenseImage?.[0]) {
@@ -424,7 +425,7 @@ export const updateDeliveryProfile = async (req, res) => {
     if (fullName) delivery.fullName = fullName;
     if (vehicleNumber) delivery.vehicleNumber = vehicleNumber;
     if (vehicleType) {
-      if (!["bike", "scooter"].includes(vehicleType)) {
+      if (!VEHICLE_TYPES.includes(vehicleType)) {
         return handleResponse(res, 400, "Invalid vehicle type");
       }
       delivery.vehicleType = vehicleType;

@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import api from '@/lib/axios';
 import OrderHistoryModal from '../components/modals/OrderHistoryModal';
 import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/FranchisePageHeader';
+import { estimateWeightKg, hasPackInfo, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 /**
  * The same product across all orders in the list, added up (e.g. Potato 85 KG from 4 hotels), with the
@@ -165,7 +166,18 @@ function mergeItems(orders) {
     return [...rows.values()];
 }
 
-const packageLimit = (o) => Math.min(500, Math.max(1, Math.ceil((o?.items || []).reduce((s, i) => s + Number(i.quantity || 0), 0))));
+// Weight typed in the pack popups: up to 2 decimals, within the allowed range
+const cleanKg = (v) => {
+    if (v === '' || v === null || v === undefined) return '';
+    const n = Math.round(Number(v) * 100) / 100;
+    return Number.isFinite(n) && n >= 0 ? Math.min(MAX_ORDER_WEIGHT_KG, n) : '';
+};
+const weightOf = (o) => (Number(o?.packedWeightKg) > 0 ? Number(o.packedWeightKg) : estimateWeightKg(o?.items));
+const VehicleHint = ({ kg }) => (Number(kg) > 0 ? (
+    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[13px] font-semibold', Number(kg) > TWO_WHEELER_MAX_KG ? 'bg-violet-50 text-violet-700' : 'bg-green-50 text-green-700')}>
+        <Truck size={14} /> Goes on: {vehicleFor(kg)}
+    </span>
+) : null);
 
 const paymentLabel = (val) => {
     const m = String(val || 'COD').toUpperCase();
@@ -238,10 +250,6 @@ export default function OrdersScreen() {
     const [selectedOrderForDispatch, setSelectedOrderForDispatch] = useState(null);
     const [selectedOrderForPacking, setSelectedOrderForPacking] = useState(null);
     const packingOrder = allOrders.find(o => o.id === selectedOrderForPacking) || null;
-    // An order is packed exactly as ordered: at most one package per ordered unit
-    const maxPackages = packingOrder
-        ? Math.min(500, Math.max(1, Math.ceil((packingOrder.items || []).reduce((s, i) => s + Number(i.quantity || 0), 0))))
-        : 500;
     const [isAssigning, setIsAssigning] = useState(false);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [rejectingOrderId, setRejectingOrderId] = useState(null);
@@ -249,7 +257,7 @@ export default function OrdersScreen() {
     const [quickFilter, setQuickFilter] = useState('all');
     const filterMenuRef = useRef(null);
     // Combined customer cards: which are expanded, which one is running a bulk action, and the
-    // "mark all ready" / "package counts" popup: { key, ids, mode: 'pack' | 'count', counts: { [orderId]: n } }
+    // "mark all ready" / "enter weights" popup: { key, ids, mode: 'pack' | 'count', counts: { [orderId]: kg } }
     const [openGroups, setOpenGroups] = useState({});
     const [bulkBusy, setBulkBusy] = useState(null);
     const [groupPack, setGroupPack] = useState(null);
@@ -272,11 +280,11 @@ export default function OrdersScreen() {
         if (!groupPack) return;
         const { key, ids, mode, counts } = groupPack;
         const fn = mode === 'count'
-            ? (id) => api.put(`/orders/franchise/${id}/packages`, { numberOfPackages: counts[id] })
+            ? (id) => api.put(`/orders/franchise/${id}/packages`, { packedWeightKg: Number(counts[id]) })
                 .then(() => true)
-                .catch((error) => { toast.error(error.response?.data?.message || 'Could not save the package count'); return false; })
-            : (id) => updateOrderStatus(id, 'Packed', { numberOfPackages: counts[id] }, { quiet: true });
-        await runBulk(key, ids, fn, (n) => (mode === 'count' ? `Package count saved for ${n} orders` : `${n} orders marked ready`));
+                .catch((error) => { toast.error(error.response?.data?.message || 'Could not save the weight'); return false; })
+            : (id) => updateOrderStatus(id, 'Packed', { packedWeightKg: Number(counts[id]) }, { quiet: true });
+        await runBulk(key, ids, fn, (n) => (mode === 'count' ? `Weight saved for ${n} orders` : `${n} orders marked ready`));
         setGroupPack(null);
         if (mode !== 'count') refreshInventory();
     };
@@ -325,8 +333,9 @@ export default function OrdersScreen() {
             return;
         }
 
-        if (newStatus === 'Packed' && !extraData.numberOfPackages) {
+        if (newStatus === 'Packed' && !extraData.packedWeightKg) {
             setSelectedOrderForPacking(orderId);
+            setPackageCount(estimateWeightKg(order.items) || '');
             setPackageModalMode('pack');
             setIsPackageModalOpen(true);
             return;
@@ -349,17 +358,17 @@ export default function OrdersScreen() {
         if (packageModalMode === 'count') {
             setProcessingOrderId(selectedOrderForPacking);
             try {
-                await api.put(`/orders/franchise/${selectedOrderForPacking}/packages`, { numberOfPackages: packageCount });
-                toast.success('Package count saved. You can assign a delivery partner now.');
+                const { data } = await api.put(`/orders/franchise/${selectedOrderForPacking}/packages`, { packedWeightKg: Number(packageCount) });
+                toast.success(data?.message || 'Weight saved');
                 if (refreshOrders) await refreshOrders();
             } catch (error) {
-                toast.error(error.response?.data?.message || 'Could not save the package count');
+                toast.error(error.response?.data?.message || 'Could not save the weight');
                 setProcessingOrderId(null);
                 return;
             }
             setProcessingOrderId(null);
         } else {
-            await handleAction(selectedOrderForPacking, 'Packed', { numberOfPackages: packageCount });
+            await handleAction(selectedOrderForPacking, 'Packed', { packedWeightKg: Number(packageCount) });
         }
         setIsPackageModalOpen(false);
         setSelectedOrderForPacking(null);
@@ -498,21 +507,21 @@ export default function OrdersScreen() {
                     </>
                 )
             )}
-            {activeTab === 'ready' && row.status === 'packed' && !(row.numberOfPackages > 0) && (
+            {activeTab === 'ready' && row.status === 'packed' && !hasPackInfo(row) && (
                 <button
                     onClick={() => {
                         setSelectedOrderForPacking(row.id);
                         setPackageModalMode('count');
-                        setPackageCount(0);
+                        setPackageCount(estimateWeightKg(row.items) || '');
                         setIsPackageModalOpen(true);
                     }}
                     className={cn(btn, 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100')}
-                    title="Enter how many boxes/bags this order is packed in. A delivery partner is then assigned automatically."
+                    title="Enter the packed weight (kg). A bike / scooter (up to 20 kg) or auto / 4-wheeler is then assigned automatically."
                 >
-                    <Package size={18} /> Enter package count
+                    <Package size={18} /> Enter weight
                 </button>
             )}
-            {activeTab === 'ready' && row.status === 'packed' && row.numberOfPackages > 0 && (
+            {activeTab === 'ready' && row.status === 'packed' && hasPackInfo(row) && (
                 <button
                     onClick={() => {
                         setSelectedOrderForDispatch(row.id);
@@ -673,14 +682,14 @@ export default function OrdersScreen() {
         const idsWhere = (test) => orders.filter(test).map((o) => o.id);
         const toAccept = idsWhere((o) => ['placed', 'assigned', 'new'].includes(o.status));
         const toPack = idsWhere((o) => o.status === 'accepted' && !((o.items || []).some((i) => i.isShortage) && !o.allowPartialFulfillment));
-        const toCount = idsWhere((o) => o.status === 'packed' && !(o.numberOfPackages > 0));
-        const toSend = idsWhere((o) => o.status === 'packed' && o.numberOfPackages > 0);
+        const toCount = idsWhere((o) => o.status === 'packed' && !hasPackInfo(o));
+        const toSend = idsWhere((o) => o.status === 'packed' && hasPackInfo(o));
         const busy = bulkBusy === g.key;
         const people = [...new Set(orders.map((o) => o.hotelName).filter(Boolean))];
         const manyPeople = people.length > 1;
         // Who is taking these orders (set automatically, or changed by hand)
         const riders = [...new Set(orders.filter((o) => o.status === 'dispatched' && o.deliveryPartner?.fullName).map((o) => o.deliveryPartner.fullName))];
-        const openPack = (ids, mode) => setGroupPack({ key: g.key, ids, mode, counts: Object.fromEntries(ids.map((id) => [id, 1])) });
+        const openPack = (ids, mode) => setGroupPack({ key: g.key, ids, mode, counts: Object.fromEntries(ids.map((id) => [id, estimateWeightKg(orders.find((o) => o.id === id)?.items) || ''])) });
         return (
             <div key={g.key} data-group-card className="bg-white rounded-3xl border-2 border-green-200 p-4 lg:p-5 space-y-4 hover:shadow-sm transition-shadow">
                 <div className="flex flex-wrap items-start gap-4">
@@ -761,7 +770,7 @@ export default function OrdersScreen() {
                     )}
                     {toCount.length > 0 && (
                         <button type="button" disabled={busy} onClick={() => openPack(toCount, 'count')} className={cn(btn, 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100')}>
-                            <Package size={18} /> {`Enter package counts (${toCount.length})`}
+                            <Package size={18} /> {`Enter weights (${toCount.length})`}
                         </button>
                     )}
                     {toSend.length > 0 && (
@@ -810,6 +819,11 @@ export default function OrdersScreen() {
     };
 
     const groupPackOrders = groupPack ? allOrders.filter((o) => groupPack.ids.includes(o.id)) : [];
+    const groupPackKg = Math.round(groupPackOrders.reduce((sum, o) => sum + (Number(groupPack?.counts[o.id]) || 0), 0) * 100) / 100;
+    // Weight of what is being assigned by hand (one order, or a combined card's orders together)
+    const dispatchKg = Math.round((Array.isArray(selectedOrderForDispatch) ? selectedOrderForDispatch : [selectedOrderForDispatch])
+        .map((id) => allOrders.find((o) => o.id === id)).filter(Boolean)
+        .reduce((sum, o) => sum + weightOf(o), 0) * 100) / 100;
 
     if (isLoading && !filteredOrders.length) {
         return (
@@ -986,7 +1000,10 @@ export default function OrdersScreen() {
                                                     </div>
                                                     <div className="text-left">
                                                         <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{partner.fullName}</p>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{partner.vehicleNumber} • {partner.vehicleType}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{partner.vehicleNumber} • {vehicleLabel(partner.vehicleType)}</p>
+                                                        {dispatchKg > TWO_WHEELER_MAX_KG && isTwoWheeler(partner.vehicleType) && (
+                                                            <p className="text-[11px] font-semibold text-rose-600 mt-0.5">Over {TWO_WHEELER_MAX_KG} kg - needs an auto / 4-wheeler</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
@@ -1058,18 +1075,17 @@ export default function OrdersScreen() {
                                 <div>
                                     <h3 className="text-[17px] font-bold flex items-center gap-2">
                                         <Package size={18} className="text-green-200" />
-                                        {groupPack.mode === 'count' ? 'Package counts' : 'Mark all ready'}
+                                        {groupPack.mode === 'count' ? 'Packed weight' : 'Mark all ready'}
                                     </h3>
                                     <p className="text-[13px] text-green-100 mt-0.5">
-                                        {groupPackOrders.length} orders for <span translate="no">{groupPackOrders[0]?.hotelName}</span> - boxes / bags for each order (not kg)
+                                        {groupPackOrders.length} orders for <span translate="no">{groupPackOrders[0]?.hotelName}</span> - packed weight of each order (kg)
                                     </p>
                                 </div>
                                 <button type="button" onClick={() => !bulkBusy && setGroupPack(null)} className="p-2 hover:bg-white/10 rounded-full" aria-label="Close"><X size={20} /></button>
                             </div>
                             <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
                                 {groupPackOrders.map((o) => {
-                                    const max = packageLimit(o);
-                                    const val = groupPack.counts[o.id] || 0;
+                                    const val = groupPack.counts[o.id];
                                     return (
                                         <div key={o.id} className="rounded-2xl border border-slate-200 p-3 flex items-center gap-3">
                                             <div className="flex-1 min-w-0">
@@ -1078,19 +1094,25 @@ export default function OrdersScreen() {
                                             </div>
                                             <input
                                                 type="number"
-                                                min="1"
-                                                max={max}
-                                                aria-label={`Boxes for order ${String(o.id).slice(-6).toUpperCase()}`}
-                                                value={val === 0 ? '' : val}
+                                                inputMode="decimal"
+                                                min="0"
+                                                step="0.1"
+                                                aria-label={`Weight in kg for order ${String(o.id).slice(-6).toUpperCase()}`}
+                                                value={val === 0 || val === undefined ? '' : val}
                                                 onChange={(e) => {
-                                                    const n = e.target.value === '' ? 0 : Math.min(max, Math.max(0, parseInt(e.target.value, 10) || 0));
+                                                    const n = cleanKg(e.target.value);
                                                     setGroupPack((prev) => ({ ...prev, counts: { ...prev.counts, [o.id]: n } }));
                                                 }}
-                                                className="w-20 h-11 rounded-xl border-2 border-slate-200 text-center text-lg font-bold text-slate-900 outline-none focus:border-green-600 tabular-nums"
+                                                className="w-24 h-11 rounded-xl border-2 border-slate-200 text-center text-lg font-bold text-slate-900 outline-none focus:border-green-600 tabular-nums"
                                             />
+                                            <span className="text-[13px] font-semibold text-slate-500">kg</span>
                                         </div>
                                     );
                                 })}
+                                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50 px-3 py-2.5">
+                                    <span className="text-[14px] font-semibold text-slate-700">Total trip: <b className="tabular-nums">{groupPackKg} kg</b></span>
+                                    <VehicleHint kg={groupPackKg} />
+                                </div>
                                 {groupPack.mode !== 'count' && (
                                     <p className="text-[13px] text-slate-500">Exactly what the customer ordered is taken from your stock.</p>
                                 )}
@@ -1100,7 +1122,7 @@ export default function OrdersScreen() {
                                 <button
                                     type="button"
                                     onClick={confirmGroupPack}
-                                    disabled={!!bulkBusy || groupPackOrders.some((o) => !(groupPack.counts[o.id] >= 1))}
+                                    disabled={!!bulkBusy || groupPackOrders.some((o) => !(Number(groupPack.counts[o.id]) > 0))}
                                     className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
                                 >
                                     <Check size={18} /> {bulkBusy ? 'Please wait…' : groupPack.mode === 'count' ? 'Save counts' : 'Confirm & mark ready'}
@@ -1129,9 +1151,9 @@ export default function OrdersScreen() {
                                 <div>
                                     <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
                                         <Package size={16} className="text-green-200" />
-                                        {packageModalMode === 'count' ? 'Package Count' : 'Pack Order'}
+                                        {packageModalMode === 'count' ? 'Packed Weight' : 'Pack Order'}
                                     </h3>
-                                    <p className="text-[10px] font-bold text-green-100 uppercase tracking-widest mt-1">{packageModalMode === 'count' ? 'This order is already packed' : 'Enter package count'}</p>
+                                    <p className="text-[10px] font-bold text-green-100 uppercase tracking-widest mt-1">{packageModalMode === 'count' ? 'This order is already packed' : 'Enter packed weight'}</p>
                                 </div>
                                 <button onClick={() => setIsPackageModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <X size={20} />
@@ -1156,38 +1178,35 @@ export default function OrdersScreen() {
                                             )}
                                         </div>
                                     )}
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Number of boxes / bags (not kg)</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Packed weight (kg)</label>
                                     <div className="relative group">
                                         <input
                                             type="number"
+                                            inputMode="decimal"
                                             min="0"
+                                            step="0.1"
+                                            aria-label="Packed weight in kg"
                                             value={packageCount === 0 ? '' : packageCount}
-                                            onChange={(e) => {
-                                                const v = e.target.value;
-                                                if (v === '') setPackageCount(0);
-                                                else setPackageCount(Math.min(maxPackages, Math.max(0, parseInt(v, 10) || 0)));
-                                            }}
+                                            onChange={(e) => setPackageCount(e.target.value === '' ? '' : cleanKg(e.target.value))}
                                             className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 px-6 text-3xl font-black text-slate-900 outline-none focus:border-slate-900 transition-all text-center tabular-nums"
                                             placeholder="0"
                                             autoFocus
                                         />
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-                                            <button type="button" onClick={() => setPackageCount(p => Math.min(maxPackages, p + 1))} className="p-1 hover:bg-white border border-slate-200 rounded text-slate-400 hover:text-slate-900 shadow-sm transition-all"><ArrowUpRight size={12} /></button>
-                                            <button type="button" onClick={() => setPackageCount(p => Math.max(0, p - 1))} className="p-1 hover:bg-white border border-slate-200 rounded text-slate-400 hover:text-slate-900 shadow-sm transition-all"><ArrowDownRight size={12} /></button>
-                                        </div>
+                                        <span className="absolute right-6 top-1/2 -translate-y-1/2 text-lg font-black text-slate-400">kg</span>
                                     </div>
-                                    <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tight leading-relaxed">
-                                        How many boxes/bags is this order packed in? Maximum {maxPackages}. This number is printed on the delivery slip (Bilty). A delivery partner is assigned automatically after this.
+                                    <div className="flex justify-center"><VehicleHint kg={packageCount} /></div>
+                                    <p className="text-[12px] font-semibold text-slate-500 text-center leading-relaxed">
+                                        Weigh the packed order. Up to {TWO_WHEELER_MAX_KG} kg goes on a bike / scooter, more on an auto / 4-wheeler - the delivery partner is assigned automatically. Printed on the delivery slip (Bilty).
                                     </p>
                                 </div>
 
                                 <button
                                     onClick={handleConfirmPacking}
-                                    disabled={packageCount < 1 || processingOrderId === selectedOrderForPacking}
-                                    title={packageCount < 1 ? 'Enter at least 1 package' : ''}
+                                    disabled={!(Number(packageCount) > 0) || processingOrderId === selectedOrderForPacking}
+                                    title={!(Number(packageCount) > 0) ? 'Enter the packed weight' : ''}
                                     className="w-full h-14 bg-green-700 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-lg hover:bg-green-800 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                                 >
-                                    {packageModalMode === 'count' ? 'Save Package Count' : 'Confirm & Mark Packed'}
+                                    {packageModalMode === 'count' ? 'Save Weight' : 'Confirm & Mark Packed'}
                                     <Check size={16} className="text-green-200" />
                                 </button>
                             </div>

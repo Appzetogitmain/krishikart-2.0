@@ -240,6 +240,7 @@ export function FranchiseOrdersProvider({ children }) {
             hotelImage: (o.items && o.items[0]?.image) || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&q=80",
             status: (o.orderStatus || '').toLowerCase(),
             numberOfPackages: Number(o.numberOfPackages) || 0,
+            packedWeightKg: Number(o.packedWeightKg) || 0,
             deliveryRefusal: o.deliveryRefusal?.reason ? o.deliveryRefusal : null,
             // The customer kept only some items at the door; the rest comes back like refused goods
             partialReturn: o.partialReturn?.goodsStatus ? o.partialReturn : null,

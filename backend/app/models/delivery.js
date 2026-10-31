@@ -20,12 +20,12 @@ const deliverySchema = new mongoose.Schema(
       type: String,
       required: true,
       uppercase: true,
-      match: [/^[A-Z]{2}\d{2}[A-Z]{2}\d{4}$/, "Vehicle number must be in format MP09CS1234"],
+      match: [/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/, "Vehicle number must be like MP09CS1234"],
     },
 
     vehicleType: {
       type: String,
-      enum: ["bike", "scooter"],
+      enum: ["bike", "scooter", "auto", "four_wheeler"],
       required: true,
     },
 

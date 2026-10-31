@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/FranchisePageHeader';
+import { estimateWeightKg, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 const paymentText = (val) => {
     const m = String(val || 'COD').toUpperCase();
@@ -32,31 +33,34 @@ const paymentText = (val) => {
 };
 
 /**
- * A packed order waiting to go out: pick the delivery partner and the number of packages it goes out in,
- * then one button saves the count and assigns the partner. A partner can be assigned only once the count is set.
+ * A packed order waiting to go out (usually because no partner was free for the automatic assignment): pick the
+ * delivery partner and the packed weight, then one button saves the weight and assigns the partner.
+ * Up to 20 kg goes on a bike / scooter, more on an auto / 4-wheeler.
  */
 function AssignBox({ order, partners, onAssign, onSaved }) {
-    const saved = Number(order.numberOfPackages) || 0;
-    const max = Math.min(500, Math.max(1, Math.ceil((order.items || []).reduce((s, i) => s + (Number(i.quantity ?? i.qty) || 0), 0))));
-    const [count, setCount] = useState(saved || '');
+    const saved = Number(order.packedWeightKg) || 0;
+    const [weight, setWeight] = useState(saved || estimateWeightKg(order.items) || '');
     const [partnerId, setPartnerId] = useState('');
     const [busy, setBusy] = useState(false);
-    useEffect(() => { setCount(saved || ''); }, [saved]);
-    const n = Number(count) || 0;
-    const set = (v) => setCount(Math.min(max, Math.max(1, Math.round(Number(v) || 0))) || '');
+    useEffect(() => { if (saved) setWeight(saved); }, [saved]);
+    const kg = Number(weight) || 0;
+    const heavy = kg > TWO_WHEELER_MAX_KG;
+    // Bigger vehicles first for heavy orders
+    const sorted = [...partners].sort((a, b) => (heavy ? Number(isTwoWheeler(a.vehicleType)) - Number(isTwoWheeler(b.vehicleType)) : 0));
+    const chosen = partners.find((p) => p._id === partnerId);
 
     const send = async () => {
         if (!partnerId) return toast.error('Select a delivery partner');
-        if (!(n >= 1)) return toast.error('Enter the number of packages');
+        if (!(kg > 0)) return toast.error('Enter the packed weight (kg)');
         setBusy(true);
         try {
-            if (n !== saved) {
-                await api.put(`/orders/franchise/${order.id}/packages`, { numberOfPackages: n });
+            if (kg !== saved) {
+                await api.put(`/orders/franchise/${order.id}/packages`, { packedWeightKg: kg });
                 if (onSaved) await onSaved();
             }
             await onAssign(order.id, partnerId);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Could not save the package count');
+            toast.error(error.response?.data?.message || 'Could not save the weight');
         } finally {
             setBusy(false);
         }
@@ -70,8 +74,10 @@ function AssignBox({ order, partners, onAssign, onSaved }) {
                     <select id={`dp-${order.id}`} value={partnerId} onChange={(e) => setPartnerId(e.target.value)}
                         className="w-full h-12 rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-900 outline-none focus:border-green-600">
                         <option value="">Choose partner</option>
-                        {partners.map((dp) => (
-                            <option key={dp._id} value={dp._id}>{dp.fullName}{dp.mobile || dp.phone ? ` - ${dp.mobile || dp.phone}` : ''}</option>
+                        {sorted.map((dp) => (
+                            <option key={dp._id} value={dp._id}>
+                                {dp.fullName}{dp.vehicleType ? ` (${vehicleLabel(dp.vehicleType)})` : ''}{dp.mobile || dp.phone ? ` - ${dp.mobile || dp.phone}` : ''}{heavy && isTwoWheeler(dp.vehicleType) ? ' - over 20 kg' : ''}
+                            </option>
                         ))}
                     </select>
                 ) : (
@@ -79,17 +85,19 @@ function AssignBox({ order, partners, onAssign, onSaved }) {
                 )}
             </div>
             <div>
-                <p className={cn('text-[13px] font-semibold mb-1.5', saved ? 'text-slate-600' : 'text-amber-700')}>Packages to Assign</p>
-                <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => set(n - 1)} disabled={busy || n <= 1} className="w-12 h-12 rounded-xl border border-slate-200 bg-white text-xl font-bold disabled:opacity-30" aria-label="Fewer packages">−</button>
-                    <input type="number" inputMode="numeric" min="1" max={max} value={count} placeholder="0"
-                        onChange={(e) => setCount(e.target.value === '' ? '' : Math.min(max, Math.max(0, Math.round(Number(e.target.value) || 0))))}
-                        className={cn('flex-1 min-w-0 h-12 rounded-xl border bg-white text-center text-lg font-bold tabular-nums outline-none focus:border-green-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none',
+                <p className={cn('text-[13px] font-semibold mb-1.5', saved ? 'text-slate-600' : 'text-amber-700')}>Packed weight (kg)</p>
+                <div className="relative">
+                    <input type="number" inputMode="decimal" min="0" step="0.1" value={weight} placeholder="0"
+                        onChange={(e) => setWeight(e.target.value === '' ? '' : Math.min(MAX_ORDER_WEIGHT_KG, Math.max(0, Math.round(Number(e.target.value) * 100) / 100 || 0)))}
+                        className={cn('w-full h-12 rounded-xl border bg-white text-center text-lg font-bold tabular-nums outline-none focus:border-green-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none',
                             saved ? 'border-slate-200' : 'border-amber-300')}
-                        aria-label="Number of packages" />
-                    <button type="button" onClick={() => set(n + 1)} disabled={busy || n >= max} className="w-12 h-12 rounded-xl border border-slate-200 bg-white text-xl font-bold disabled:opacity-30" aria-label="More packages">+</button>
+                        aria-label="Packed weight in kg" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[15px] font-bold text-slate-400">kg</span>
                 </div>
-                <p className="text-[12px] text-slate-500 mt-1">Boxes / bags, not kg. Maximum {max}.</p>
+                {kg > 0 && <p className={cn('text-[13px] font-semibold mt-1.5', heavy ? 'text-violet-700' : 'text-green-700')}>Goes on: {vehicleFor(kg)}</p>}
+                {chosen && heavy && isTwoWheeler(chosen.vehicleType) && (
+                    <p className="text-[13px] font-semibold text-rose-600 mt-1">{chosen.fullName} has a {vehicleLabel(chosen.vehicleType).toLowerCase()} - over {TWO_WHEELER_MAX_KG} kg needs an auto / 4-wheeler.</p>
+                )}
             </div>
             <button type="button" onClick={send} disabled={busy || !partners.length}
                 className="w-full h-12 rounded-xl bg-green-700 text-white text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-green-800 disabled:opacity-50">
@@ -306,7 +314,9 @@ export default function DeliveryScreen() {
                                         </span>
                                     ))}
                                 </div>
-                                {Number(order.numberOfPackages) > 0 && (
+                                {Number(order.packedWeightKg) > 0 ? (
+                                    <p className="mt-2 text-[13px] text-slate-600 flex items-center gap-1.5"><Box size={14} /> {order.packedWeightKg} kg packed · {vehicleFor(order.packedWeightKg)}</p>
+                                ) : Number(order.numberOfPackages) > 0 && (
                                     <p className="mt-2 text-[13px] text-slate-600 flex items-center gap-1.5"><Box size={14} /> {order.numberOfPackages} package{order.numberOfPackages > 1 ? 's' : ''}</p>
                                 )}
                             </div>

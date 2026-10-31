@@ -6,7 +6,7 @@ import Order from "../models/order.js";
  */
 export async function deliveryTaskSummary(orderId) {
     const o = await Order.findById(orderId)
-        .select("shippingAddress totalAmount paymentMethod items numberOfPackages userId franchiseId")
+        .select("shippingAddress totalAmount paymentMethod items numberOfPackages packedWeightKg userId franchiseId")
         .populate("userId", "fullName legalEntityName")
         .populate("franchiseId", "franchiseName formattedAddress area city")
         .lean();
@@ -23,6 +23,7 @@ export async function deliveryTaskSummary(orderId) {
         paymentMethod: o.paymentMethod,
         itemCount: (o.items || []).length,
         packages: o.numberOfPackages || 0,
+        weightKg: o.packedWeightKg || 0,
     };
 }
 

@@ -66,7 +66,9 @@ const DeliveryCard = ({ request, onAccept, onReject }) => {
                     <div className="flex items-center gap-1">
                         <Package className="w-3 h-3" />
                         <span>
-                            {Number(request.numberOfPackages) > 0
+                            {Number(request.packedWeightKg) > 0
+                                ? `${request.packedWeightKg} kg`
+                                : Number(request.numberOfPackages) > 0
                                 ? `${request.numberOfPackages} ${Number(request.numberOfPackages) === 1 ? 'Package' : 'Packages'}`
                                 : 'Packages: not counted'}
                         </span>

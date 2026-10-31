@@ -8,6 +8,7 @@ import { createDeliveryOtps } from "./deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "./deliveryTask.js";
 import { getDistance } from "./geo.js";
 import { getISTDayKey } from "./deliverySchedule.js";
+import { TWO_WHEELER_MAX_KG, isTwoWheeler, orderWeightKg, hasPackInfo } from "../constants/delivery.js";
 
 /**
  * Delivery partner assignment (client, Oct 2026): as soon as an order is packed and its box count is known,
@@ -15,6 +16,7 @@ import { getISTDayKey } from "./deliverySchedule.js";
  * can still pick or change the partner by hand ("Assign & Send" / "Change partner").
  */
 
+const VEHICLE_LABEL = { bike: "bike", scooter: "scooter", auto: "auto", four_wheeler: "4-wheeler" };
 const ACTIVE_TASK = ["Dispatched", "Out for Delivery"];
 const MAX_KM = 25; // partners whose last known location is further than this from the store are skipped
 
@@ -103,17 +105,21 @@ const hasCoords = (c) => Array.isArray(c) && c.length === 2 && !(Number(c[0]) ==
 
 /**
  * Best partner for an order:
- * 1. the partner already carrying this customer's other orders for the same day (one trip),
- * 2. otherwise an online, approved partner - fewest running deliveries first, then nearest to the store.
+ * 1. the partner already carrying this customer's (or this place's) other orders for the same day, when the
+ *    whole trip still fits their vehicle (bike / scooter: up to 20 kg),
+ * 2. otherwise by weight: over 20 kg only an auto / four-wheeler; up to 20 kg a bike / scooter first, a bigger
+ *    vehicle only when no two-wheeler is free - fewest running deliveries first, then nearest to the store.
  */
 export async function pickDeliveryPartner(order, { exclude = [] } = {}) {
   const skip = new Set([...exclude, ...(order.deliveryRejectedBy || [])].map(String));
   const partners = await Delivery.find({ status: "active", isVerified: true, isApproved: true, isOnline: true })
-    .select("fullName location")
+    .select("fullName location vehicleType")
     .lean();
   const candidates = partners.filter((p) => !skip.has(String(p._id)));
   if (!candidates.length) return null;
   const ids = candidates.map((p) => p._id);
+  const weight = orderWeightKg(order);
+  const fits = (p, kg) => !isTwoWheeler(p.vehicleType) || kg <= TWO_WHEELER_MAX_KG;
 
   // Same customer or same place, same day, already on the road with someone (not picked up yet,
   // so this order can still go in the same trip)
@@ -124,12 +130,18 @@ export async function pickDeliveryPartner(order, { exclude = [] } = {}) {
     orderStatus: "Dispatched",
     deliveryPartnerId: { $in: ids },
   })
-    .select("userId shippingAddress shippingLocation deliveryPartnerId scheduledDate createdAt")
+    .select("userId shippingAddress shippingLocation deliveryPartnerId scheduledDate createdAt items packedWeightKg")
     .lean();
-  const sameDay = siblings.filter((o) => getISTDayKey(o.scheduledDate || o.createdAt) === dayKey);
-  const sibling =
-    sameDay.find((o) => String(o.userId) === String(order.userId)) || sameDay.find((o) => samePlace(o, order));
-  if (sibling) return candidates.find((p) => String(p._id) === String(sibling.deliveryPartnerId)) || null;
+  const together = siblings.filter(
+    (o) => getISTDayKey(o.scheduledDate || o.createdAt) === dayKey && (String(o.userId) === String(order.userId) || samePlace(o, order)),
+  );
+  for (const sib of together) {
+    const p = candidates.find((c) => String(c._id) === String(sib.deliveryPartnerId));
+    const tripKg = together
+      .filter((o) => String(o.deliveryPartnerId) === String(sib.deliveryPartnerId))
+      .reduce((sum, o) => sum + orderWeightKg(o), weight);
+    if (p && fits(p, tripKg)) return p;
+  }
 
   const loads = await Order.aggregate([
     { $match: { orderStatus: { $in: ACTIVE_TASK }, deliveryPartnerId: { $in: ids } } },
@@ -140,21 +152,23 @@ export async function pickDeliveryPartner(order, { exclude = [] } = {}) {
   const franchise = await Franchise.findById(order.franchiseId).select("location").lean();
   const store = franchise?.location?.coordinates;
   const scored = candidates
+    .filter((p) => fits(p, weight))
     .map((p) => {
       const c = p.location?.coordinates;
       const km = hasCoords(store) && hasCoords(c) ? getDistance(store[1], store[0], c[1], c[0]) : null;
-      return { p, km, load: loadOf.get(String(p._id)) || 0 };
+      return { p, km, load: loadOf.get(String(p._id)) || 0, small: isTwoWheeler(p.vehicleType) };
     })
     .filter((x) => x.km === null || x.km <= MAX_KM)
-    // 1 running delivery counts like 3 km extra; unknown location ranks after known ones
-    .sort((a, b) => (a.load * 3 + (a.km ?? MAX_KM)) - (b.load * 3 + (b.km ?? MAX_KM)));
+    // Light orders: two-wheelers before bigger vehicles. Then 1 running delivery counts like 3 km extra;
+    // unknown location ranks after known ones
+    .sort((a, b) => (Number(b.small) - Number(a.small)) || ((a.load * 3 + (a.km ?? MAX_KM)) - (b.load * 3 + (b.km ?? MAX_KM))));
   return scored[0]?.p || null;
 }
 
-/** Packed, box count entered, not blocked by a shortage, and due today (advance bookings wait for their day) */
+/** Packed, weight (or older box count) entered, not blocked by a shortage, and due today (advance bookings wait for their day) */
 export function readyForAutoDispatch(order) {
   if (!order || !["Packed", "Ready"].includes(order.orderStatus)) return false;
-  if (!(Number(order.numberOfPackages) > 0)) return false;
+  if (!hasPackInfo(order)) return false;
   if ((order.items || []).some((i) => i.isShortage) && !order.allowPartialFulfillment) return false;
   if (order.scheduledDate && getISTDayKey(order.scheduledDate) > getISTDayKey(new Date())) return false;
   return !!order.franchiseId;
@@ -173,7 +187,9 @@ export async function autoDispatchOrder(orderId, { exclude = [], notifyFranchise
       if (notifyFranchiseIfNone) {
         emitToFranchise(order.franchiseId, "delivery_auto_assign_failed", {
           orderId: order._id,
-          message: `No delivery partner is online for order #${order._id.toString().slice(-6).toUpperCase()}. Please assign one by hand.`,
+          message: orderWeightKg(order) > TWO_WHEELER_MAX_KG
+            ? `Order #${order._id.toString().slice(-6).toUpperCase()} is ${orderWeightKg(order)} kg - no auto / four-wheeler partner is free. Please assign one by hand.`
+            : `No delivery partner is online for order #${order._id.toString().slice(-6).toUpperCase()}. Please assign one by hand.`,
         });
       }
       return null;
@@ -182,7 +198,7 @@ export async function autoDispatchOrder(orderId, { exclude = [], notifyFranchise
     emitToFranchise(order.franchiseId, "delivery_auto_assigned", {
       orderId: order._id,
       partnerName: partner.fullName,
-      message: `Order #${order._id.toString().slice(-6).toUpperCase()} given to ${partner.fullName}`,
+      message: `Order #${order._id.toString().slice(-6).toUpperCase()} given to ${partner.fullName}${partner.vehicleType ? ` (${VEHICLE_LABEL[partner.vehicleType] || partner.vehicleType})` : ""}`,
     });
     console.log(`[AutoDispatch] Order ${order._id} -> partner ${partner._id}`);
     return partner;
@@ -197,7 +213,7 @@ export async function sweepAutoDispatch() {
   try {
     const waiting = await Order.find({
       orderStatus: { $in: ["Packed", "Ready"] },
-      numberOfPackages: { $gt: 0 },
+      $or: [{ packedWeightKg: { $gt: 0 } }, { numberOfPackages: { $gt: 0 } }],
       franchiseId: { $ne: null },
     })
       .select("_id")

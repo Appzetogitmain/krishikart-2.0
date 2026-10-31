@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Truck, Save, ArrowLeft, Bike } from 'lucide-react';
+import { VEHICLES } from '@/lib/deliveryVehicles';
 import { useNavigate } from 'react-router-dom';
 import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
 import api from '@/lib/axios';
@@ -72,7 +73,7 @@ export default function VehicleInfoScreen() {
                             type="text"
                             value={formData.vehicleNumber}
                             onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
-                            pattern="^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$"
+                            pattern="^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{4}$"
                             title="Please enter a valid vehicle number, e.g. MP09AB1234"
                             maxLength={10}
                             className="w-full p-4 rounded-2xl border border-border bg-muted/20 focus:outline-none focus:ring-2 focus:ring-primary/20 font-bold uppercase"
@@ -84,7 +85,7 @@ export default function VehicleInfoScreen() {
                     <div>
                         <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1 mb-2 block">Vehicle Type</label>
                         <div className="grid grid-cols-2 gap-4">
-                            {['bike', 'scooter'].map((type) => (
+                            {VEHICLES.map(({ id: type, label }) => (
                                 <button
                                     key={type}
                                     type="button"
@@ -94,8 +95,8 @@ export default function VehicleInfoScreen() {
                                         : 'border-border bg-white text-muted-foreground'
                                         }`}
                                 >
-                                    {type === 'bike' ? <Bike className="w-6 h-6" /> : <Truck className="w-6 h-6" />}
-                                    <span className="text-xs font-black uppercase tracking-widest">{type}</span>
+                                    {type === 'bike' || type === 'scooter' ? <Bike className="w-6 h-6" /> : <Truck className="w-6 h-6" />}
+                                    <span className="text-xs font-black uppercase tracking-widest">{label}</span>
                                 </button>
                             ))}
                         </div>

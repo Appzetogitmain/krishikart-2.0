@@ -6,8 +6,10 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../../lib/axios';
 import { toast } from 'sonner';
 import { openFlutterCamera } from '../../../lib/flutterCamera';
+import { VEHICLES } from '@/lib/deliveryVehicles';
 
-const VEHICLE_REGEX = /^[A-Z]{2}\d{2}[A-Z]{2}\d{4}$/;
+// MP09CS1234, MP09R1234 (autos often have a one-letter series), DL1CAB1234
+const VEHICLE_REGEX = /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/;
 
 const SignupScreen = () => {
     const [step, setStep] = useState('details'); // 'details' or 'otp'
@@ -15,7 +17,7 @@ const SignupScreen = () => {
         name: '',
         phone: '',
         vehicleNumber: '',
-        vehicleType: 'bike', // 'bike', 'scooter'
+        vehicleType: 'bike', // bike / scooter: orders up to 20 kg; auto / four_wheeler: heavier orders
         aadharImage: null,
         panImage: null,
         licenseImage: null
@@ -101,7 +103,7 @@ const SignupScreen = () => {
             setFormData(prev => ({ ...prev, vehicleNumber }));
         }
         if (!VEHICLE_REGEX.test(vehicleNumber)) {
-            toast.error('Vehicle number must be 2 letters + 2 digits + 2 letters + 4 digits (e.g. MP09CS1234)');
+            toast.error('Enter the vehicle number like MP09CS1234');
             return;
         }
         if (!formData.aadharImage || !formData.panImage || !formData.licenseImage) {
@@ -330,18 +332,19 @@ const SignupScreen = () => {
 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Vehicle Type</label>
-                                    <div className="flex gap-2">
-                                        {['bike', 'scooter'].map((type) => (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {VEHICLES.map(({ id: type, label }) => (
                                             <button
                                                 key={type}
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, vehicleType: type })}
                                                 className={`flex-1 py-3 rounded-2xl border text-xs font-black uppercase tracking-wider transition-all ${formData.vehicleType === type ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}`}
                                             >
-                                                {type}
+                                                {label}
                                             </button>
                                         ))}
                                     </div>
+                                    <p className="text-[10px] text-muted-foreground ml-1">Bike / scooter: orders up to 20 kg. Auto / 4-wheeler: heavier orders.</p>
                                 </div>
 
                                 <div className="text-center py-2">

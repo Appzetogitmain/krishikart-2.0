@@ -39,7 +39,8 @@ const ActiveDelivery = () => {
     const [refuseNote, setRefuseNote] = useState('');
     // Partial delivery: how much of each item the customer gives back (productId -> qty), and why
     const [returned, setReturned] = useState({});
-    const [returnReason, setReturnReason] = useState('');
+    const [returnReason, setReturnReason] = useState(''); // optional note (required for "Other")
+    const [partialReasonKey, setPartialReasonKey] = useState('');
     // Split payment at the door: the cash part (the rest is paid on the franchise QR)
     const [splitCash, setSplitCash] = useState('');
     const [splitCredit, setSplitCredit] = useState('');
@@ -98,7 +99,7 @@ const ActiveDelivery = () => {
     const deliveryExtras = () => ({
         ...(isPartial ? {
             returnedItems: returnedLines.map((i) => ({ productId: pidOf(i), quantity: Number(returned[pidOf(i)]) })),
-            returnReason: returnReason.trim(),
+            returnReason: [PARTIAL_REASONS.find((r) => r.key === partialReasonKey)?.label, returnReason.trim()].filter(Boolean).join(' - '),
         } : {}),
         ...(pendingMode === 'split'
             ? { payments: [{ mode: 'cash', amount: cashPart }, { mode: 'credit', amount: creditPart }, { mode: 'upi', amount: upiPart }].filter((p) => p.amount > 0) }
@@ -125,6 +126,7 @@ const ActiveDelivery = () => {
         setPendingMode(null);
         setReturned({});
         setReturnReason('');
+        setPartialReasonKey('');
         setSplitCash('');
         setSplitCredit('');
         // COD: first ask how the customer is paying; then the customer's code
@@ -152,6 +154,19 @@ const ActiveDelivery = () => {
         if (needsCode && otpCode.length !== 4) return;
         await finishDelivery({ ...deliveryExtras(), ...(needsCode ? { otp: otpCode } : {}) });
     };
+
+    // Why the customer is giving some items back (partial delivery): one tap, a note only for "Other"
+    const PARTIAL_REASONS = [
+        { key: 'quality_not_ok', label: 'Quality not good' },
+        { key: 'damaged', label: 'Item damaged or spoiled' },
+        { key: 'wrong_item', label: 'Wrong item sent' },
+        { key: 'short_weight', label: 'Size / weight not as ordered' },
+        { key: 'needs_less', label: 'Customer needs less now' },
+        { key: 'price_issue', label: 'Price / rate issue' },
+        { key: 'no_cash', label: 'Not enough cash for everything (COD)' },
+        { key: 'other', label: 'Other' },
+    ];
+    const partialReasonOk = !!partialReasonKey && (partialReasonKey !== 'other' || !!returnReason.trim());
 
     const REFUSE_REASONS = [
         { key: 'customer_refused', label: 'Customer refused to take the order' },
@@ -361,7 +376,9 @@ const ActiveDelivery = () => {
                 <div className="bg-white rounded-2xl border border-border overflow-hidden">
                     <div className="px-4 py-3 border-b border-border bg-muted/20 flex justify-between items-center">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Package Details</h4>
-                        {Number(order?.numberOfPackages) > 0 ? (
+                        {Number(order?.packedWeightKg) > 0 ? (
+                            <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{order.packedWeightKg} kg</span>
+                        ) : Number(order?.numberOfPackages) > 0 ? (
                             <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                                 {order.numberOfPackages} {Number(order.numberOfPackages) === 1 ? 'Package' : 'Packages'}
                             </span>
@@ -449,13 +466,31 @@ const ActiveDelivery = () => {
                                         );
                                     })}
                                 </div>
-                                <textarea
-                                    value={returnReason}
-                                    onChange={(e) => setReturnReason(e.target.value)}
-                                    maxLength={300}
-                                    placeholder="Why is the customer giving these back? (required)"
-                                    className="w-full min-h-[64px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:border-slate-400"
-                                />
+                                <div>
+                                    <p className="text-xs font-bold text-slate-700 mb-2">Why is the customer giving these back?</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {PARTIAL_REASONS.map((r) => (
+                                            <button
+                                                key={r.key}
+                                                type="button"
+                                                onClick={() => setPartialReasonKey(r.key)}
+                                                aria-pressed={partialReasonKey === r.key}
+                                                className={`min-h-[48px] text-left px-3 py-2 rounded-xl border-2 text-[13px] font-bold leading-tight transition-all ${partialReasonKey === r.key ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200 text-slate-700'}`}
+                                            >
+                                                {r.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {partialReasonKey && (
+                                        <textarea
+                                            value={returnReason}
+                                            onChange={(e) => setReturnReason(e.target.value)}
+                                            maxLength={300}
+                                            placeholder={partialReasonKey === 'other' ? 'Write what happened (required)' : 'Note (optional)'}
+                                            className="mt-2 w-full min-h-[56px] bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold outline-none focus:border-slate-400"
+                                        />
+                                    )}
+                                </div>
                                 <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-4 py-3">
                                     <span className="text-xs font-bold uppercase text-emerald-700">{isCodOrder ? 'New amount to collect' : 'Customer pays (prepaid)'}</span>
                                     <span className="text-xl font-black text-slate-900">Rs {codAmount}</span>
@@ -468,7 +503,7 @@ const ActiveDelivery = () => {
                                 )}
                                 <button
                                     onClick={afterItems}
-                                    disabled={isUpdating || !isPartial || !keptAnything || !returnReason.trim()}
+                                    disabled={isUpdating || !isPartial || !keptAnything || !partialReasonOk}
                                     className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
                                 >
                                     Next

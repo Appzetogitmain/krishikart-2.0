@@ -159,6 +159,8 @@ const orderSchema = new mongoose.Schema({
     deliveryRejectedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' }],
     // true when the system picked the delivery partner (not the franchise)
     autoDispatched: { type: Boolean, default: false },
+    // Packed weight entered by the franchise (kg); decides bike/scooter (up to 20 kg) or auto/four-wheeler
+    packedWeightKg: { type: Number, default: 0 },
     numberOfPackages: {
         type: Number,
         default: 0

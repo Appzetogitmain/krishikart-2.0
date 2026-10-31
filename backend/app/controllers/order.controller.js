@@ -34,6 +34,7 @@ import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
 import { autoDispatchOrder, dispatchOrderToPartner } from "../utils/deliveryDispatch.js";
+import { MAX_ORDER_WEIGHT_KG, hasPackInfo } from "../constants/delivery.js";
 import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments, creditProblem, chargeDoorCredit } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
 
@@ -1460,7 +1461,16 @@ export const updateOrderStatus = async (req, res) => {
       }
     }
 
-    // Accept number of packages when marking as packed
+    // Packed weight (kg) when marking as packed: decides bike/scooter or auto/four-wheeler
+    if (status === "Packed" && req.body.packedWeightKg !== undefined && req.body.packedWeightKg !== null && req.body.packedWeightKg !== "") {
+      const kg = Math.round(Number(req.body.packedWeightKg) * 100) / 100;
+      if (!(kg > 0) || kg > MAX_ORDER_WEIGHT_KG) {
+        return handleResponse(res, 400, `Please enter the packed weight in kg (more than 0, up to ${MAX_ORDER_WEIGHT_KG}).`);
+      }
+      order.packedWeightKg = kg;
+    }
+
+    // Accept number of packages when marking as packed (older screens)
     if (status === "Packed" && req.body.numberOfPackages) {
       const packages = Number(req.body.numberOfPackages);
       if (!Number.isInteger(packages) || packages < 1) {
@@ -1617,12 +1627,15 @@ export const updateOrderStatus = async (req, res) => {
           biltyNumber,
           generatedAt: new Date(),
           numberOfPackages: order.numberOfPackages || 0,
+          packedWeightKg: order.packedWeightKg || 0,
           items: order.items.map((item) => ({
             name: item.name,
             quantity: item.quantity,
             unit: item.unit,
           })),
-          totalWeight: `${order.items.reduce((acc, i) => acc + (i.quantity || 0), 0)} Units`,
+          totalWeight: order.packedWeightKg > 0
+            ? `${order.packedWeightKg} kg`
+            : `${order.items.reduce((acc, i) => acc + (i.quantity || 0), 0)} Units`,
           fromFranchise:
             fullOrder.franchiseId?.franchiseName || "Kisaankart Franchise",
           toCustomer:
@@ -1780,7 +1793,7 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     // Packed with a box count: hand it to a delivery partner automatically (franchise can still change it)
-    if (status === "Packed" && isFranchise && Number(order.numberOfPackages) > 0) {
+    if (status === "Packed" && isFranchise && hasPackInfo(order)) {
       const partner = await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
       if (partner) {
         const fresh = await Order.findById(order._id);
@@ -2347,8 +2360,13 @@ const maxPackagesFor = (order) => {
 export const setOrderPackageCount = async (req, res) => {
   try {
     const { id } = req.params;
+    const byWeight = req.body?.packedWeightKg !== undefined;
+    const kg = Math.round(Number(req.body?.packedWeightKg) * 100) / 100;
     const count = Number(req.body?.numberOfPackages);
-    if (!Number.isInteger(count) || count < 1 || count > 500) {
+    if (byWeight && (!(kg > 0) || kg > MAX_ORDER_WEIGHT_KG)) {
+      return handleResponse(res, 400, `Please enter the packed weight in kg (more than 0, up to ${MAX_ORDER_WEIGHT_KG}).`);
+    }
+    if (!byWeight && (!Number.isInteger(count) || count < 1 || count > 500)) {
       return handleResponse(res, 400, "Please enter the number of packages (a whole number from 1 to 500).");
     }
     const order = await Order.findById(id);
@@ -2356,24 +2374,27 @@ export const setOrderPackageCount = async (req, res) => {
     if (!order.franchiseId || order.franchiseId.toString() !== req.franchise._id.toString()) {
       return handleResponse(res, 403, "Not authorized to manage this order");
     }
-    if (count > maxPackagesFor(order)) {
+    if (!byWeight && count > maxPackagesFor(order)) {
       return handleResponse(res, 400, `This order has ${maxPackagesFor(order)} units in total, so it cannot be packed in ${count} packages.`);
     }
     if (!["Packed", "Ready"].includes(order.orderStatus)) {
-      return handleResponse(res, 400, "The package count can only be set while the order is packed and waiting for dispatch.");
+      return handleResponse(res, 400, "The weight can only be set while the order is packed and waiting for dispatch.");
     }
-    order.numberOfPackages = count;
+    if (byWeight) order.packedWeightKg = kg;
+    else order.numberOfPackages = count;
     order.statusHistory.push({
       status: order.orderStatus,
       updatedAt: new Date(),
       updatedBy: "franchise",
-      message: `Package count entered: ${count}`,
+      message: byWeight ? `Packed weight entered: ${kg} kg` : `Package count entered: ${count}`,
     });
     await order.save();
     const partner = await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
-    return handleResponse(res, 200, partner ? `Package count saved. Given to ${partner.fullName}` : "Package count saved", {
+    const saved = byWeight ? "Weight saved" : "Package count saved";
+    return handleResponse(res, 200, partner ? `${saved}. Given to ${partner.fullName}` : saved, {
       _id: order._id,
       numberOfPackages: order.numberOfPackages,
+      packedWeightKg: order.packedWeightKg,
       deliveryPartnerName: partner?.fullName || null,
     });
   } catch (error) {
@@ -2419,9 +2440,9 @@ export const assignDeliveryPartner = async (req, res) => {
       );
     }
 
-    // The delivery slip prints the package count, so it must be known before dispatch
-    if (order.orderStatus !== "Dispatched" && !(Number(order.numberOfPackages) > 0)) {
-      return handleResponse(res, 400, "Please enter how many packages this order is packed in before assigning a delivery partner.");
+    // The delivery slip prints the packed weight, so it must be known before dispatch
+    if (order.orderStatus !== "Dispatched" && !hasPackInfo(order)) {
+      return handleResponse(res, 400, "Please enter the packed weight (kg) of this order before assigning a delivery partner.");
     }
 
     const partner = await Delivery.findById(deliveryPartnerId).select("isApproved status fullName");
@@ -2524,6 +2545,7 @@ export const getDispatchedOrders = async (req, res) => {
         distance: distance,
         itemsCount: order.items.reduce((acc, item) => acc + item.quantity, 0),
         numberOfPackages: order.numberOfPackages || 0,
+        packedWeightKg: order.packedWeightKg || 0,
         items: order.items,
         timeWindow: "20-30 mins",
         priority: "medium",
@@ -2794,6 +2816,7 @@ export const getReturnsToFranchise = async (req, res) => {
         reason: partial ? `Partly returned: ${o.partialReturn?.reason || ""}` : o.deliveryRefusal?.reasonLabel || "",
         refusedAt: partial ? o.partialReturn?.at : o.deliveryRefusal?.refusedAt,
         numberOfPackages: partial ? 0 : o.numberOfPackages || 0,
+        packedWeightKg: partial ? 0 : o.packedWeightKg || 0,
         items: partial
           ? (o.partialReturn?.items || []).map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit }))
           : (o.items || []).map((i) => ({ name: i.name, quantity: i.quantity, unit: i.unit })),
@@ -2921,6 +2944,7 @@ export const getDeliveryOrderHistory = async (req, res) => {
         franchiseAddress: franchiseAddr,
         items: order.items,
         numberOfPackages: order.numberOfPackages || 0,
+        packedWeightKg: order.packedWeightKg || 0,
         status: "delivered",
         date: dateObj.toLocaleDateString("en-IN", {
           day: "2-digit",
