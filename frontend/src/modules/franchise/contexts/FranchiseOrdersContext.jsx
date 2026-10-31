@@ -256,6 +256,7 @@ export function FranchiseOrdersProvider({ children }) {
             createdAt: o.createdAt,
             customerMobile: o.userId?.mobile || o.user?.mobile || "",
             customerName: o.userId?.fullName || o.user?.fullName || "",
+            customerId: String(o.userId?._id || o.user?._id || (typeof o.userId === "string" ? o.userId : "") || ""),
             city: o.shippingLocation?.city || o.shippingLocation?.area || "",
             time: o.time,
             scheduledDate: o.scheduledDate,
@@ -270,14 +271,15 @@ export function FranchiseOrdersProvider({ children }) {
         }));
     }, [liveOrders]);
 
-    const updateOrderStatus = async (orderId, newStatus, extraData = {}) => {
+    // opts.quiet: no success toast / refetch - bulk actions on a customer's grouped orders show one summary instead
+    const updateOrderStatus = async (orderId, newStatus, extraData = {}, opts = {}) => {
         try {
             const response = await api.put(`/orders/franchise/${orderId}/status`, {
                 status: newStatus,
                 ...extraData
             });
             if (response.data.success) {
-                toast.success(`Order status updated to ${newStatus}`);
+                if (!opts.quiet) toast.success(`Order status updated to ${newStatus}`);
                 stopRingingFor(orderId);
                 setLiveOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: newStatus, ...extraData } : o));
                 return true;
@@ -290,14 +292,14 @@ export function FranchiseOrdersProvider({ children }) {
         }
     };
 
-    const acceptOrder = async (orderId) => {
+    const acceptOrder = async (orderId, opts = {}) => {
         try {
             const response = await api.put(`/orders/franchise/${orderId}/accept`);
             if (response.data.success) {
-                toast.success('Order accepted successfully');
+                if (!opts.quiet) toast.success('Order accepted successfully');
                 stopRingingFor(orderId);
                 setLiveOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: 'Accepted' } : o));
-                fetchOrders(); // Refresh to get full details from server
+                if (!opts.quiet) fetchOrders(); // Refresh to get full details from server (bulk callers refresh once)
                 return true;
             }
             return false;
@@ -326,12 +328,14 @@ export function FranchiseOrdersProvider({ children }) {
         }
     };
 
-    const assignDeliveryPartner = async (orderId, deliveryPartnerId) => {
+    const assignDeliveryPartner = async (orderId, deliveryPartnerId, opts = {}) => {
         try {
             const response = await api.put(`/orders/franchise/${orderId}/assign-delivery`, { deliveryPartnerId });
             if (response.data.success) {
-                toast.success('Order dispatched successfully');
-                fetchOrders();
+                if (!opts.quiet) {
+                    toast.success('Order dispatched successfully');
+                    fetchOrders();
+                }
                 return true;
             }
         } catch (error) {

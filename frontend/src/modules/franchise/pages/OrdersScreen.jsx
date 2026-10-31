@@ -113,6 +113,30 @@ function ProductTotals({ orders, inventory }) {
     );
 }
 
+// One customer's orders for one day are shown together (client, Oct 2026): same customer + same delivery day
+const dayKey = (o) => {
+    const d = new Date(o.scheduledDate || o.createdAt || Date.now());
+    return Number.isNaN(d.getTime()) ? '' : d.toDateString();
+};
+const customerKey = (o) => o.customerId || o.customerMobile || o.hotelName || o.id;
+
+/** The items of several orders added up per product + unit (Potato 2 kg + 3 kg -> 5 kg) */
+function mergeItems(orders) {
+    const rows = new Map();
+    for (const o of orders) {
+        for (const i of o.items || []) {
+            const key = `${String(i.productId?._id || i.productId || i.name)}|${String(i.unit || '').toLowerCase()}`;
+            if (!rows.has(key)) rows.set(key, { key, name: i.name, unit: i.unit, quantity: 0, short: false });
+            const r = rows.get(key);
+            r.quantity = Math.round((r.quantity + (Number(i.quantity) || 0)) * 100) / 100;
+            if (i.isShortage && !o.allowPartialFulfillment) r.short = true;
+        }
+    }
+    return [...rows.values()];
+}
+
+const packageLimit = (o) => Math.min(500, Math.max(1, Math.ceil((o?.items || []).reduce((s, i) => s + Number(i.quantity || 0), 0))));
+
 const paymentLabel = (val) => {
     const m = String(val || 'COD').toUpperCase();
     if (m === 'COD') return { text: 'Cash on Delivery', cls: 'bg-amber-50 text-amber-700' };
@@ -194,6 +218,38 @@ export default function OrdersScreen() {
     const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
     const [quickFilter, setQuickFilter] = useState('all');
     const filterMenuRef = useRef(null);
+    // Combined customer cards: which are expanded, which one is running a bulk action, and the
+    // "mark all ready" / "package counts" popup: { key, ids, mode: 'pack' | 'count', counts: { [orderId]: n } }
+    const [openGroups, setOpenGroups] = useState({});
+    const [bulkBusy, setBulkBusy] = useState(null);
+    const [groupPack, setGroupPack] = useState(null);
+
+    /** Runs one action on several orders, one after another, then shows a single summary */
+    const runBulk = async (key, ids, fn, doneMsg) => {
+        setBulkBusy(key);
+        let ok = 0;
+        for (const id of ids) {
+            if (await fn(id)) ok += 1;
+        }
+        setBulkBusy(null);
+        if (refreshOrders) await refreshOrders();
+        if (ok === ids.length) toast.success(doneMsg(ok));
+        else toast.warning(`${ok} of ${ids.length} orders done - please check the others`);
+        return ok;
+    };
+
+    const confirmGroupPack = async () => {
+        if (!groupPack) return;
+        const { key, ids, mode, counts } = groupPack;
+        const fn = mode === 'count'
+            ? (id) => api.put(`/orders/franchise/${id}/packages`, { numberOfPackages: counts[id] })
+                .then(() => true)
+                .catch((error) => { toast.error(error.response?.data?.message || 'Could not save the package count'); return false; })
+            : (id) => updateOrderStatus(id, 'Packed', { numberOfPackages: counts[id] }, { quiet: true });
+        await runBulk(key, ids, fn, (n) => (mode === 'count' ? `Package count saved for ${n} orders` : `${n} orders marked ready`));
+        setGroupPack(null);
+        if (mode !== 'count') refreshInventory();
+    };
 
     useEffect(() => {
         if (!isFilterMenuOpen) return;
@@ -284,6 +340,15 @@ export default function OrdersScreen() {
     const handleAssignDelivery = async (partnerId) => {
         if (!selectedOrderForDispatch || !partnerId) return;
         setIsAssigning(true);
+        if (Array.isArray(selectedOrderForDispatch)) {
+            // A customer's combined orders go with one delivery partner
+            await runBulk('dispatch', selectedOrderForDispatch, (id) => assignDeliveryPartner(id, partnerId, { quiet: true }), (n) => `${n} orders sent with one delivery partner`);
+            setIsAssignModalOpen(false);
+            setSelectedOrderForDispatch(null);
+            refreshInventory();
+            setIsAssigning(false);
+            return;
+        }
         const success = await assignDeliveryPartner(selectedOrderForDispatch, partnerId);
         if (success) {
             setIsAssignModalOpen(false);
@@ -533,6 +598,161 @@ export default function OrdersScreen() {
         );
     };
 
+    // New / Ready tabs: a customer's orders for the same day become one combined card
+    const groupable = ['new', 'ready'].includes(activeTab);
+    const entries = [];
+    {
+        const byKey = new Map();
+        for (const o of filteredOrders) {
+            const key = groupable ? `${customerKey(o)}|${dayKey(o)}` : o.id;
+            if (!byKey.has(key)) {
+                const g = { key, orders: [] };
+                byKey.set(key, g);
+                entries.push(g);
+            }
+            byKey.get(key).orders.push(o);
+        }
+    }
+
+    const groupCard = (g) => {
+        const orders = g.orders;
+        const first = orders[0];
+        const open = !!openGroups[g.key];
+        const items = mergeItems(orders);
+        const total = Math.round(orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0) * 100) / 100;
+        const slots = [...new Set(orders.map((o) => o.deliverySlot).filter(Boolean))];
+        const pays = [...new Map(orders.map((o) => { const p = paymentLabel(o.paymentMode); return [p.text, p]; })).values()];
+        const day = first.scheduledDate || first.createdAt;
+        const advance = orders.some((o) => o.scheduledDateFormatted || o.scheduledDate);
+        const image = orders.flatMap((o) => o.items || []).find((i) => i.image)?.image;
+        const idsWhere = (test) => orders.filter(test).map((o) => o.id);
+        const toAccept = idsWhere((o) => ['placed', 'assigned', 'new'].includes(o.status));
+        const toPack = idsWhere((o) => o.status === 'accepted' && !((o.items || []).some((i) => i.isShortage) && !o.allowPartialFulfillment));
+        const toCount = idsWhere((o) => o.status === 'packed' && !(o.numberOfPackages > 0));
+        const toSend = idsWhere((o) => o.status === 'packed' && o.numberOfPackages > 0);
+        const busy = bulkBusy === g.key;
+        const openPack = (ids, mode) => setGroupPack({ key: g.key, ids, mode, counts: Object.fromEntries(ids.map((id) => [id, 1])) });
+        return (
+            <div key={g.key} data-group-card className="bg-white rounded-3xl border-2 border-green-200 p-4 lg:p-5 space-y-4 hover:shadow-sm transition-shadow">
+                <div className="flex flex-wrap items-start gap-4">
+                    <span className="relative shrink-0">
+                        {image
+                            ? <img src={image} alt="" className="w-16 h-16 rounded-xl object-cover bg-slate-50" loading="lazy" />
+                            : <span className="w-16 h-16 rounded-xl bg-green-50 text-green-700 flex items-center justify-center"><Package size={26} /></span>}
+                        <span className="absolute -top-2 -right-2 min-w-[26px] h-[26px] px-1.5 rounded-full bg-green-700 text-white text-[13px] font-bold flex items-center justify-center border-2 border-white">{orders.length}</span>
+                    </span>
+                    <div className="flex-1 min-w-[180px]">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p translate="no" className="text-[17px] font-bold text-slate-900">{first.hotelName}</p>
+                            <span className="px-3 py-1 rounded-lg text-[13px] font-semibold bg-green-50 text-green-700">{orders.length} orders combined</span>
+                        </div>
+                        <p className="text-[13px] text-slate-500 mt-0.5">Same customer, same day - pack and send together</p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[13px] text-slate-500">
+                            {first.customerMobile && <span className="flex items-center gap-1"><Phone size={13} /> {first.customerMobile}</span>}
+                            {first.city && <span className="flex items-center gap-1"><MapPin size={13} /> {first.city}</span>}
+                        </div>
+                    </div>
+                    <div className="min-w-[130px]">
+                        <p className="text-[12px] text-slate-500">Delivery</p>
+                        <p className="text-[15px] font-bold text-slate-900">{slots.join(', ') || 'Standard'}</p>
+                        {day && <p className="text-[13px] text-slate-500 flex items-center gap-1"><CalendarDays size={13} /> {new Date(day).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>}
+                        {advance && <p className="text-[12px] font-semibold text-amber-700 flex items-center gap-1"><Clock size={12} /> Advance booking</p>}
+                    </div>
+                    <div className="min-w-[110px] text-right">
+                        <p className="text-[12px] text-slate-500">Total value</p>
+                        <p className="text-[18px] font-bold text-slate-900 tabular-nums">₹{total.toLocaleString('en-IN')}</p>
+                        <span className="flex flex-wrap justify-end gap-1 mt-1">
+                            {pays.map((p) => <span key={p.text} className={cn('inline-block px-2.5 py-0.5 rounded-md text-[12px] font-semibold', p.cls)}>{p.text}</span>)}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <p className="text-[12px] font-semibold text-slate-500 mb-1.5">Total to pack</p>
+                    <div className="flex flex-wrap gap-2">
+                        {items.slice(0, 8).map((i) => (
+                            <span key={i.key} className="px-3 py-1.5 rounded-lg bg-green-50 text-[13px] text-slate-700">
+                                {i.name} <b className="text-slate-900 tabular-nums">{i.quantity} {i.unit}</b>
+                                {i.short && <span className="ml-1 text-rose-600 font-semibold">(short)</span>}
+                            </span>
+                        ))}
+                        {items.length > 8 && <span className="px-3 py-1.5 rounded-lg bg-slate-50 text-[13px] text-slate-500">+{items.length - 8} more</span>}
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-1 border-t border-slate-50">
+                    <button
+                        type="button"
+                        onClick={() => setOpenGroups((prev) => ({ ...prev, [g.key]: !prev[g.key] }))}
+                        className="mr-auto inline-flex items-center gap-1.5 h-11 px-3 rounded-xl text-[14px] font-semibold text-green-800 hover:bg-green-50"
+                    >
+                        <ChevronRight size={18} className={cn('transition-transform', open && 'rotate-90')} />
+                        {open ? 'Hide orders' : `See ${orders.length} orders`}
+                    </button>
+                    {toAccept.length > 0 && (
+                        <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => runBulk(g.key, toAccept, (id) => acceptOrder(id, { quiet: true }), (n) => `${n} orders accepted`)}
+                            className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
+                        >
+                            <Check size={18} /> {busy ? 'Please wait…' : `Accept all (${toAccept.length})`}
+                        </button>
+                    )}
+                    {toPack.length > 0 && (
+                        <button type="button" disabled={busy} onClick={() => openPack(toPack, 'pack')} className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}>
+                            <CheckCircle2 size={18} /> {busy ? 'Please wait…' : `Mark all ready (${toPack.length})`}
+                        </button>
+                    )}
+                    {toCount.length > 0 && (
+                        <button type="button" disabled={busy} onClick={() => openPack(toCount, 'count')} className={cn(btn, 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100')}>
+                            <Package size={18} /> {`Enter package counts (${toCount.length})`}
+                        </button>
+                    )}
+                    {toSend.length > 0 && (
+                        <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => { setSelectedOrderForDispatch(toSend); setIsAssignModalOpen(true); }}
+                            className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
+                        >
+                            <Truck size={18} /> {`Assign & Send all (${toSend.length})`}
+                        </button>
+                    )}
+                </div>
+                {open && (
+                    <div className="rounded-2xl border border-slate-100 divide-y divide-slate-100">
+                        {orders.map((row) => {
+                            const [label, cls] = STATUS_PILL[(row.status || '').toLowerCase()] || [row.status, 'bg-slate-100 text-slate-600'];
+                            return (
+                                <div key={row.id} className="p-3 lg:p-4 flex flex-wrap items-center gap-3">
+                                    <div className="flex-1 min-w-[220px]">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-[15px] font-bold text-slate-900 whitespace-nowrap">Order #{String(row.id).slice(-6).toUpperCase()}</p>
+                                            <span className={cn('px-2.5 py-0.5 rounded-lg text-[12px] font-semibold', cls)}>{label}</span>
+                                            {row.status === 'procuring' && <RefreshCw size={13} className="text-amber-600 animate-spin" />}
+                                        </div>
+                                        <p className="text-[13px] text-slate-600 mt-0.5">
+                                            {(row.items || []).map((i) => `${i.name} ${i.quantity} ${i.unit}${i.isShortage && !row.allowPartialFulfillment ? ' (short)' : ''}`).join(', ')}
+                                        </p>
+                                    </div>
+                                    <span className="text-[13px] text-slate-500 whitespace-nowrap flex items-center gap-1"><Clock size={13} /> {row.deliverySlot}</span>
+                                    <span className="text-[15px] font-bold text-slate-900 tabular-nums whitespace-nowrap">₹{Number(row.total || 0).toLocaleString('en-IN')}</span>
+                                    <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+                                        {row.status === 'dispatched' && row.deliveryPartner && (
+                                            <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700"><UserCircle2 size={18} /> {row.deliveryPartner?.fullName}</span>
+                                        )}
+                                        {renderActions(row)}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const groupPackOrders = groupPack ? allOrders.filter((o) => groupPack.ids.includes(o.id)) : [];
+
     if (isLoading && !filteredOrders.length) {
         return (
             <div className="p-4 lg:p-6 space-y-4 animate-pulse bg-[#f6f8f7] min-h-screen">
@@ -649,7 +869,7 @@ export default function OrdersScreen() {
                                 <p className="text-[15px]">No orders here right now</p>
                             </div>
                         )}
-                        {filteredOrders.map((row) => orderCard(row))}
+                        {entries.map((g) => (g.orders.length > 1 ? groupCard(g) : orderCard(g.orders[0])))}
                     </>
                 )}
             </div>
@@ -677,7 +897,11 @@ export default function OrdersScreen() {
                                         <Truck size={16} className="text-green-200" />
                                         Assign Delivery Partner
                                     </h3>
-                                    <p className="text-[10px] font-bold text-green-100 uppercase tracking-widest mt-1">Order #{selectedOrderForDispatch?.slice(-6)}</p>
+                                    <p className="text-[10px] font-bold text-green-100 uppercase tracking-widest mt-1">
+                                        {Array.isArray(selectedOrderForDispatch)
+                                            ? `${selectedOrderForDispatch.length} orders together`
+                                            : `Order #${String(selectedOrderForDispatch || '').slice(-6)}`}
+                                    </p>
                                 </div>
                                 <button onClick={() => setIsAssignModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                                     <X size={20} />
@@ -762,6 +986,66 @@ export default function OrdersScreen() {
                                     className="w-full h-10 text-slate-400 font-black uppercase text-[10px] tracking-widest"
                                 >
                                     Not received yet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {groupPack && (
+                    <div key="group-pack" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => !bulkBusy && setGroupPack(null)} />
+                        <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+                            <div className="bg-green-700 p-5 text-white flex justify-between items-start gap-3">
+                                <div>
+                                    <h3 className="text-[17px] font-bold flex items-center gap-2">
+                                        <Package size={18} className="text-green-200" />
+                                        {groupPack.mode === 'count' ? 'Package counts' : 'Mark all ready'}
+                                    </h3>
+                                    <p className="text-[13px] text-green-100 mt-0.5">
+                                        {groupPackOrders.length} orders for <span translate="no">{groupPackOrders[0]?.hotelName}</span> - boxes / bags for each order (not kg)
+                                    </p>
+                                </div>
+                                <button type="button" onClick={() => !bulkBusy && setGroupPack(null)} className="p-2 hover:bg-white/10 rounded-full" aria-label="Close"><X size={20} /></button>
+                            </div>
+                            <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+                                {groupPackOrders.map((o) => {
+                                    const max = packageLimit(o);
+                                    const val = groupPack.counts[o.id] || 0;
+                                    return (
+                                        <div key={o.id} className="rounded-2xl border border-slate-200 p-3 flex items-center gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[14px] font-bold text-slate-900">Order #{String(o.id).slice(-6).toUpperCase()}</p>
+                                                <p className="text-[13px] text-slate-600 truncate">{(o.items || []).map((i) => `${i.name} ${i.quantity} ${i.unit}`).join(', ')}</p>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={max}
+                                                aria-label={`Boxes for order ${String(o.id).slice(-6).toUpperCase()}`}
+                                                value={val === 0 ? '' : val}
+                                                onChange={(e) => {
+                                                    const n = e.target.value === '' ? 0 : Math.min(max, Math.max(0, parseInt(e.target.value, 10) || 0));
+                                                    setGroupPack((prev) => ({ ...prev, counts: { ...prev.counts, [o.id]: n } }));
+                                                }}
+                                                className="w-20 h-11 rounded-xl border-2 border-slate-200 text-center text-lg font-bold text-slate-900 outline-none focus:border-green-600 tabular-nums"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                                {groupPack.mode !== 'count' && (
+                                    <p className="text-[13px] text-slate-500">Exactly what the customer ordered is taken from your stock.</p>
+                                )}
+                            </div>
+                            <div className="p-4 border-t border-slate-100 flex justify-end gap-2">
+                                <button type="button" disabled={!!bulkBusy} onClick={() => setGroupPack(null)} className={cn(btn, 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50')}>Cancel</button>
+                                <button
+                                    type="button"
+                                    onClick={confirmGroupPack}
+                                    disabled={!!bulkBusy || groupPackOrders.some((o) => !(groupPack.counts[o.id] >= 1))}
+                                    className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
+                                >
+                                    <Check size={18} /> {bulkBusy ? 'Please wait…' : groupPack.mode === 'count' ? 'Save counts' : 'Confirm & mark ready'}
                                 </button>
                             </div>
                         </div>
