@@ -169,11 +169,17 @@ export function DeliveryOrderProvider({ children }) {
                 if (data?.orderId) taskInfoRef.current[String(data.orderId)] = data;
                 setNewTaskData(data);
                 setIsAlertOpen(true);
-                // Delivery tasks can be accepted or rejected, so they ring until one happens.
-                // Return pickups have no such step and get a single chime.
-                if (data?.type !== 'RETURN' && data?.orderId) startRingingFor(data.orderId);
-                else playNotificationSound();
-                toast.success("New delivery task assigned!");
+                // Deliveries are now assigned and accepted automatically (client, Oct 2026): one chime, and the
+                // task becomes the active delivery when the partner has none. Older servers still ring until accepted.
+                if (data?.autoAccepted) {
+                    playNotificationSound();
+                    if (data?.orderId && !localStorage.getItem('activeDeliveryId')) setActiveDeliveryId(String(data.orderId));
+                    toast.success("New delivery assigned to you");
+                } else {
+                    if (data?.type !== 'RETURN' && data?.orderId) startRingingFor(data.orderId);
+                    else playNotificationSound();
+                    toast.success("New delivery task assigned!");
+                }
                 fetchDispatchedOrders();
                 fetchReturnPickups();
             };
@@ -197,6 +203,13 @@ export function DeliveryOrderProvider({ children }) {
             syncDeliveryTasks();
             socket.on('connect', syncDeliveryTasks);
             socket.on('new_task', handleNewTask);
+            // The franchise gave this task to someone else
+            const handleTaskRemoved = (data) => {
+                if (data?.orderId && localStorage.getItem('activeDeliveryId') === String(data.orderId)) setActiveDeliveryId(null);
+                toast.info(`Order #${String(data?.orderId || '').slice(-6).toUpperCase()} was given to another delivery partner`);
+                fetchDispatchedOrders();
+            };
+            socket.on('task_removed', handleTaskRemoved);
             socket.on('cod_remittance_reviewed', handleCashReviewed);
             socket.on('account_status', handleAccountNews);
             socket.on('docs_status', handleAccountNews);
@@ -204,6 +217,7 @@ export function DeliveryOrderProvider({ children }) {
             return () => {
                 socket.off('connect', syncDeliveryTasks);
                 socket.off('new_task', handleNewTask);
+                socket.off('task_removed', handleTaskRemoved);
                 socket.off('cod_remittance_reviewed', handleCashReviewed);
                 socket.off('account_status', handleAccountNews);
                 socket.off('docs_status', handleAccountNews);

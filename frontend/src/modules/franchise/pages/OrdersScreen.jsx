@@ -477,7 +477,7 @@ export default function OrdersScreen() {
                         setIsPackageModalOpen(true);
                     }}
                     className={cn(btn, 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100')}
-                    title="Enter how many boxes/bags this order is packed in. Needed before you can assign a delivery partner."
+                    title="Enter how many boxes/bags this order is packed in. A delivery partner is then assigned automatically."
                 >
                     <Package size={18} /> Enter package count
                 </button>
@@ -491,6 +491,18 @@ export default function OrdersScreen() {
                     className={cn(btn, 'bg-green-700 text-white hover:bg-green-800')}
                 >
                     <Truck size={18} /> Assign & Send
+                </button>
+            )}
+            {activeTab === 'ready' && row.status === 'dispatched' && (
+                <button
+                    onClick={() => {
+                        setSelectedOrderForDispatch(row.id);
+                        setIsAssignModalOpen(true);
+                    }}
+                    className={cn(btn, 'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+                    title="Give this order to a different delivery partner (only before it is picked up)"
+                >
+                    <Truck size={18} /> Change partner
                 </button>
             )}
             <button
@@ -590,6 +602,7 @@ export default function OrdersScreen() {
                     {activeTab === 'ready' && row.status === 'dispatched' && row.deliveryPartner && (
                         <span className="mr-auto inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700">
                             <UserCircle2 size={18} /> {row.deliveryPartner?.fullName}
+                            {row.autoDispatched && <span className="px-2 py-0.5 rounded-md bg-violet-50 text-[12px] font-semibold">Auto-assigned</span>}
                         </span>
                     )}
                     {renderActions(row)}
@@ -631,6 +644,8 @@ export default function OrdersScreen() {
         const toCount = idsWhere((o) => o.status === 'packed' && !(o.numberOfPackages > 0));
         const toSend = idsWhere((o) => o.status === 'packed' && o.numberOfPackages > 0);
         const busy = bulkBusy === g.key;
+        // Who is taking these orders (set automatically, or changed by hand)
+        const riders = [...new Set(orders.filter((o) => o.status === 'dispatched' && o.deliveryPartner?.fullName).map((o) => o.deliveryPartner.fullName))];
         const openPack = (ids, mode) => setGroupPack({ key: g.key, ids, mode, counts: Object.fromEntries(ids.map((id) => [id, 1])) });
         return (
             <div key={g.key} data-group-card className="bg-white rounded-3xl border-2 border-green-200 p-4 lg:p-5 space-y-4 hover:shadow-sm transition-shadow">
@@ -687,6 +702,11 @@ export default function OrdersScreen() {
                         <ChevronRight size={18} className={cn('transition-transform', open && 'rotate-90')} />
                         {open ? 'Hide orders' : `See ${orders.length} orders`}
                     </button>
+                    {riders.length > 0 && (
+                        <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700">
+                            <Truck size={18} /> On the way with <span translate="no">{riders.join(', ')}</span>
+                        </span>
+                    )}
                     {toAccept.length > 0 && (
                         <button
                             type="button"
@@ -738,7 +758,7 @@ export default function OrdersScreen() {
                                     <span className="text-[15px] font-bold text-slate-900 tabular-nums whitespace-nowrap">₹{Number(row.total || 0).toLocaleString('en-IN')}</span>
                                     <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
                                         {row.status === 'dispatched' && row.deliveryPartner && (
-                                            <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700"><UserCircle2 size={18} /> {row.deliveryPartner?.fullName}</span>
+                                            <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700"><UserCircle2 size={18} /> {row.deliveryPartner?.fullName}{row.autoDispatched && <span className="px-2 py-0.5 rounded-md bg-violet-50 text-[12px] font-semibold">Auto-assigned</span>}</span>
                                         )}
                                         {renderActions(row)}
                                     </div>
@@ -1119,7 +1139,7 @@ export default function OrdersScreen() {
                                         </div>
                                     </div>
                                     <p className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-tight leading-relaxed">
-                                        How many boxes/bags is this order packed in? Maximum {maxPackages}. This number is printed on the delivery slip (Bilty).
+                                        How many boxes/bags is this order packed in? Maximum {maxPackages}. This number is printed on the delivery slip (Bilty). A delivery partner is assigned automatically after this.
                                     </p>
                                 </div>
 

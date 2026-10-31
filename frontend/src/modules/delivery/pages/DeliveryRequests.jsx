@@ -16,9 +16,9 @@ const DeliveryRequests = () => {
 
     const handleAccept = async (id) => {
         const confirmed = await confirm({
-            title: `Accept task ${shortRef(id)}?`,
+            title: `Start delivery ${shortRef(id)}?`,
             message: 'This becomes your active delivery.',
-            confirmLabel: 'Yes, accept',
+            confirmLabel: 'Yes, start',
         });
         if (!confirmed) return;
         // In this flow, "Accept" just navigates to the active delivery.
@@ -29,7 +29,7 @@ const DeliveryRequests = () => {
     const handleReject = async (id) => {
         const confirmed = await confirm({
             title: `Reject task ${shortRef(id)}?`,
-            message: 'The order goes back to the franchise to assign someone else.',
+            message: 'The order is given to another delivery partner.',
             confirmLabel: 'Yes, reject',
             tone: 'danger',
         });

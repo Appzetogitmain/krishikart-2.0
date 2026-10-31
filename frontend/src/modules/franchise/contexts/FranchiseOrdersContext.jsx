@@ -189,6 +189,17 @@ export function FranchiseOrdersProvider({ children }) {
                 duration: 10000,
             });
         };
+        // The system gave a packed order to a delivery partner (or found nobody online)
+        const handleAutoAssigned = (data) => {
+            toast.success(data?.message || 'Delivery partner assigned automatically', { duration: 6000 });
+            fetchOrders();
+        };
+        const handleAutoAssignFailed = (data) => {
+            playNotificationSound();
+            toast.warning(data?.message || 'No delivery partner is online. Please assign one by hand.', { duration: 10000 });
+            fetchOrders();
+        };
+        const handleTaskHandedBack = () => fetchOrders();
         const handleReturnStatus = (data) => {
             toast.info(data?.title || 'Customer return updated', { description: data?.message, duration: 8000 });
             fetchOrders();
@@ -202,6 +213,9 @@ export function FranchiseOrdersProvider({ children }) {
         socket.on('order_status_changed', handleOrderStatusChanged);
         socket.on('cod_remittance_submitted', handleCashHandedOver);
         socket.on('return_status_changed', handleReturnStatus);
+        socket.on('delivery_auto_assigned', handleAutoAssigned);
+        socket.on('delivery_auto_assign_failed', handleAutoAssignFailed);
+        socket.on('ORDER_REJECTED', handleTaskHandedBack);
 
         return () => {
             socket.off('new_order', handleNewOrder);
@@ -212,6 +226,9 @@ export function FranchiseOrdersProvider({ children }) {
             socket.off('order_status_changed', handleOrderStatusChanged);
             socket.off('cod_remittance_submitted', handleCashHandedOver);
             socket.off('return_status_changed', handleReturnStatus);
+            socket.off('delivery_auto_assigned', handleAutoAssigned);
+            socket.off('delivery_auto_assign_failed', handleAutoAssignFailed);
+            socket.off('ORDER_REJECTED', handleTaskHandedBack);
         };
     }, [franchise?._id]);
 
@@ -267,6 +284,7 @@ export function FranchiseOrdersProvider({ children }) {
             allowPartialFulfillment: !!o.allowPartialFulfillment,
             deliveryPartnerId: o.deliveryPartnerId?._id || o.deliveryPartnerId,
             deliveryPartner: o.deliveryPartnerId,
+            autoDispatched: !!o.autoDispatched,
             statusHistory: o.statusHistory || []
         }));
     }, [liveOrders]);
@@ -279,9 +297,11 @@ export function FranchiseOrdersProvider({ children }) {
                 ...extraData
             });
             if (response.data.success) {
-                if (!opts.quiet) toast.success(`Order status updated to ${newStatus}`);
+                if (!opts.quiet) toast.success(response.data.message || `Order status updated to ${newStatus}`);
                 stopRingingFor(orderId);
                 setLiveOrders(prev => prev.map(o => o._id === orderId ? { ...o, orderStatus: newStatus, ...extraData } : o));
+                // Packing may hand the order to a delivery partner straight away (server picks one)
+                if (newStatus === 'Packed' && !opts.quiet) fetchOrders();
                 return true;
             }
             return false;

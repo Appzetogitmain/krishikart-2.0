@@ -33,6 +33,7 @@ import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
+import { autoDispatchOrder, dispatchOrderToPartner } from "../utils/deliveryDispatch.js";
 import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments, creditProblem, chargeDoorCredit } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
 
@@ -1778,6 +1779,15 @@ export const updateOrderStatus = async (req, res) => {
       }
     }
 
+    // Packed with a box count: hand it to a delivery partner automatically (franchise can still change it)
+    if (status === "Packed" && isFranchise && Number(order.numberOfPackages) > 0) {
+      const partner = await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
+      if (partner) {
+        const fresh = await Order.findById(order._id);
+        return handleResponse(res, 200, `Order packed and given to ${partner.fullName}`, fresh || order);
+      }
+    }
+
     return handleResponse(res, 200, `Order status updated to ${status}`, order);
   } catch (error) {
     console.error("Update order status error details:", error);
@@ -2166,8 +2176,7 @@ export const acceptFranchiseOrder = async (req, res) => {
 
     await order.save();
 
-    // Trigger Delivery Assignment logic
-    assignDeliveryToOrder(order._id);
+    // The delivery partner is picked automatically once the order is packed (utils/deliveryDispatch.js)
 
     return handleResponse(res, 200, "Order accepted successfully", order);
   } catch (error) {
@@ -2361,7 +2370,12 @@ export const setOrderPackageCount = async (req, res) => {
       message: `Package count entered: ${count}`,
     });
     await order.save();
-    return handleResponse(res, 200, "Package count saved", { _id: order._id, numberOfPackages: order.numberOfPackages });
+    const partner = await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
+    return handleResponse(res, 200, partner ? `Package count saved. Given to ${partner.fullName}` : "Package count saved", {
+      _id: order._id,
+      numberOfPackages: order.numberOfPackages,
+      deliveryPartnerName: partner?.fullName || null,
+    });
   } catch (error) {
     console.error("setOrderPackageCount:", error);
     return handleResponse(res, 500, "Could not save the package count");
@@ -2425,31 +2439,8 @@ export const assignDeliveryPartner = async (req, res) => {
       );
     }
 
-    order.deliveryPartnerId = deliveryPartnerId;
-    order.orderStatus = "Dispatched";
-    order.statusHistory.push({
-      status: "Dispatched",
-      updatedAt: new Date(),
-      updatedBy: "franchise",
-    });
-
-    await order.save();
-
-    // Fresh delivery codes for this hand-over; the customer gets theirs now
-    const { customerCode } = await createDeliveryOtps(order._id);
-    emitToOrderRoom(order._id, "order_status_changed", { orderId: order._id, status: "Dispatched", updatedAt: new Date() });
-    try {
-      await createUserNotification({
-        userId: order.userId,
-        type: "order_update",
-        title: "Order on the way",
-        message: `Your order #${order._id.toString().slice(-6)} is out for delivery. Your delivery code is ${customerCode}. Share it with the delivery partner only when you receive your order.`,
-        link: `/order-detail/${order._id}`,
-        meta: { orderId: order._id.toString(), status: "Dispatched" },
-      });
-    } catch (notifyErr) {
-      console.error("[assignDeliveryPartner] OTP notification error:", notifyErr);
-    }
+    // Manual choice by the franchise (also used to change an automatically picked partner before pickup)
+    await dispatchOrderToPartner(order, deliveryPartnerId, { by: "franchise" });
 
     console.log(
       "[AssignDeliveryPartner] Order dispatched with delivery partner",
@@ -2464,32 +2455,6 @@ export const assignDeliveryPartner = async (req, res) => {
 
     console.log(
       `🚚 Order ${id} dispatched by franchise ${franchiseId} via partner ${deliveryPartnerId}`,
-    );
-
-    // Send Real-time Notification (with address and amount, so the partner can decide before accepting)
-    const taskInfo = await deliveryTaskSummary(order._id).catch(() => ({}));
-    emitToDelivery(deliveryPartnerId, "new_task", {
-      orderId: order._id,
-      type: "DELIVERY",
-      message: `New delivery task assigned: #${order._id.toString().slice(-6)}`,
-      ...taskInfo,
-    });
-
-    // Send Push Notification (standardized payload for delivery assignment)
-    sendNotificationToUser(
-      deliveryPartnerId,
-      {
-        title: `New Delivery Task #${order._id.toString().slice(-6).toUpperCase()}`,
-        body: taskSummaryLine(taskInfo) || `You have been assigned a new delivery task for order #${order._id.toString().slice(-6)}.`,
-        data: {
-          type: "new_delivery",
-          notificationCategory: "assignment",
-          source: "franchise",
-          orderId: order._id.toString(),
-          link: `/delivery/assignments/${order._id}`,
-        },
-      },
-      "delivery",
     );
 
     return handleResponse(res, 200, "Order dispatched successfully", order);
@@ -2905,7 +2870,8 @@ export const rejectDeliveryTask = async (req, res) => {
       return handleResponse(res, 400, `This order is already "${order.orderStatus}" and can no longer be rejected.`);
     }
 
-    // Clear partner and reset status
+    // Clear partner and reset status; remember who handed it back so auto-assignment skips them
+    order.deliveryRejectedBy = [...(order.deliveryRejectedBy || []), partnerId];
     order.deliveryPartnerId = null;
     order.orderStatus = "Packed";
     order.statusHistory.push({
@@ -2920,6 +2886,8 @@ export const rejectDeliveryTask = async (req, res) => {
     if (order.franchiseId) {
       emitToFranchise(order.franchiseId, "ORDER_REJECTED", { orderId: id });
     }
+    // Straight to the next available partner; if nobody is free it waits for the franchise / the scheduler
+    await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
 
     return handleResponse(res, 200, "Task rejected successfully");
   } catch (error) {

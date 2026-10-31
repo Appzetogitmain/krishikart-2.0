@@ -1,6 +1,7 @@
 import Order from '../models/order.js';
 import { sendNotificationToUser } from './pushNotificationHelper.js';
 import { getISTDayKey, getISTMinutesOfDay, getShiftStartHour } from './deliverySchedule.js';
+import { sweepAutoDispatch } from './deliveryDispatch.js';
 
 /**
  * Checks for upcoming scheduled orders and sends reminders to delivery partners.
@@ -61,4 +62,8 @@ export const startScheduler = () => {
 
     // Also run once immediately on start
     checkScheduledReminders();
+
+    // Packed orders still without a delivery partner (nobody was online, or an advance booking's day came)
+    setInterval(sweepAutoDispatch, 2 * 60 * 1000);
+    setTimeout(sweepAutoDispatch, 20 * 1000);
 };

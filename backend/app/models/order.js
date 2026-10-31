@@ -155,6 +155,10 @@ const orderSchema = new mongoose.Schema({
         default: null
     },
     items: [orderItemSchema],
+    // Delivery partners who handed this task back; auto-assignment skips them
+    deliveryRejectedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' }],
+    // true when the system picked the delivery partner (not the franchise)
+    autoDispatched: { type: Boolean, default: false },
     numberOfPackages: {
         type: Number,
         default: 0

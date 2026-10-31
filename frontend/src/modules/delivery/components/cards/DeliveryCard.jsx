@@ -93,7 +93,7 @@ const DeliveryCard = ({ request, onAccept, onReject }) => {
                     onClick={() => onAccept(request.id)}
                     className="flex-1 py-4 flex items-center justify-center gap-2 text-sm font-bold text-primary hover:bg-primary/5 active:bg-primary/10 transition-colors"
                 >
-                    <Check className="w-4 h-4" /> Accept Task
+                    <Check className="w-4 h-4" /> Start Delivery
                 </button>
             </div>
         </motion.div>
