@@ -39,6 +39,53 @@ const supplierName = (po) => (po.supplierFranchiseId?.franchiseName
     ? `${po.supplierFranchiseId.franchiseName} (mother franchise)`
     : (po.vendorName || po.vendor || po.assignedVendorName || 'Kisaankart Franchise'));
 
+const r3 = (n) => Math.round((Number(n) || 0) * 1000) / 1000;
+const sentOf = (item) => Number(item.dispatchedQuantity ?? item.quantity) || 0;
+
+/**
+ * The same product from several deliveries of this supplier (e.g. Russet Potato 2 + 3 + 4 kg on three
+ * invoices) is checked as ONE line (9 kg). On saving, the line is split back per delivery: received
+ * quantity fills the earlier invoices first, damaged quantity is taken from the later ones first.
+ */
+function buildCheckLines(po) {
+    const lines = new Map();
+    for (const item of po?.items || []) {
+        if (!(sentOf(item) > 0)) continue;
+        const pid = String(item.productId?._id || item.productId || item.name);
+        const key = `${pid}|${String(item.unit || '').toLowerCase()}`;
+        if (!lines.has(key)) lines.set(key, { key, name: item.name, image: item.image, unit: item.unit, ordered: 0, sent: 0, items: [], refs: [], prices: new Set() });
+        const line = lines.get(key);
+        line.ordered = r3(line.ordered + (Number(item.quantity) || 0));
+        line.sent = r3(line.sent + sentOf(item));
+        line.items.push(item);
+        if (item._ref && !line.refs.includes(item._ref)) line.refs.push(item._ref);
+        line.prices.add(Number(item.quotedPrice) || 0);
+        if (!line.image && item.image) line.image = item.image;
+    }
+    return [...lines.values()].map((l) => {
+        const prices = [...l.prices].sort((a, b) => a - b);
+        return { ...l, priceText: prices.length > 1 ? `₹${prices[0]}–₹${prices[prices.length - 1]}` : `₹${prices[0] || 0}` };
+    });
+}
+
+/** Line values -> per-delivery values (see buildCheckLines) */
+function splitLine(line, data, rejected) {
+    let received = rejected ? 0 : Math.min(line.sent, Number(data?.received) || 0);
+    let damage = Number(data?.damage) || 0;
+    const parts = line.items.map((item) => {
+        const take = Math.min(sentOf(item), received);
+        received = r3(received - take);
+        return { item, received: r3(take), damage: 0 };
+    });
+    for (let i = parts.length - 1; i >= 0 && damage > 0; i--) {
+        const cap = rejected ? sentOf(parts[i].item) : parts[i].received;
+        const take = Math.min(cap, damage);
+        parts[i].damage = r3(take);
+        damage = r3(damage - take);
+    }
+    return parts;
+}
+
 function groupDeliveries(pos) {
     const groups = new Map();
     for (const po of pos) {
@@ -131,17 +178,10 @@ const ReceivingScreen = () => {
 
     const handleSelectPO = (po) => {
         setSelectedPO(po);
-        // Initialize receiving data with vendor's dispatched quantities (as default)
+        // One line per product: starts at what the vendor sent in total
         const initialData = {};
-        po.items.forEach(item => {
-            const itemId = item._id || item.productId;
-            const defaultQty = item.dispatchedQuantity !== undefined ? item.dispatchedQuantity : item.quantity;
-            initialData[itemId] = {
-                received: defaultQty,
-                damage: 0,
-                productId: item.productId,
-                name: item.name
-            };
+        buildCheckLines(po).forEach((line) => {
+            initialData[line.key] = { received: line.sent, damage: 0, name: line.name };
         });
         setReceivingData(initialData);
         setRejectedItems(new Set());
@@ -181,17 +221,22 @@ const ReceivingScreen = () => {
 
         // One save per delivery in the group, each with its own items
         const byRequest = new Map();
-        for (const item of selectedPO.items) {
-            const data = receivingData[item._id];
-            if (!data) continue;
-            const isRejected = rejectedItems.has(item._id);
+        const add = (item, entry) => {
             if (!byRequest.has(item._reqId)) byRequest.set(item._reqId, []);
-            byRequest.get(item._reqId).push({
-                productId: item._itemId,
-                receivedQuantity: isRejected ? 0 : data.received,
-                damagedQuantity: isRejected ? (data.damage || 0) : data.damage,
-                rejected: isRejected
-            });
+            byRequest.get(item._reqId).push({ productId: item._itemId, ...entry });
+        };
+        const lines = buildCheckLines(selectedPO);
+        const inLine = new Set();
+        for (const line of lines) {
+            const isRejected = rejectedItems.has(line.key);
+            for (const part of splitLine(line, receivingData[line.key], isRejected)) {
+                inLine.add(part.item._id);
+                add(part.item, { receivedQuantity: part.received, damagedQuantity: part.damage, rejected: isRejected });
+            }
+        }
+        // Items the vendor sent nothing of are saved as not received, as before
+        for (const item of selectedPO.items) {
+            if (!inLine.has(item._id)) add(item, { receivedQuantity: 0, damagedQuantity: 0, rejected: false });
         }
 
         const messages = [];
@@ -375,7 +420,7 @@ const ReceivingScreen = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <div className="hidden sm:flex flex-col items-end mr-4">
-                                        <span className="text-[11px] font-black text-slate-900 tabular-nums leading-none">{selectedPO.items.length}</span>
+                                        <span className="text-[11px] font-black text-slate-900 tabular-nums leading-none">{buildCheckLines(selectedPO).length}</span>
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Products</span>
                                     </div>
                                     <button
@@ -399,9 +444,9 @@ const ReceivingScreen = () => {
                                         </div>
 
                                         <div className="space-y-3">
-                                            {selectedPO.items.filter(item => (item.dispatchedQuantity ?? item.quantity) > 0).map((item) => {
-                                                const itemId = item._id || item.productId;
-                                                const data = receivingData[itemId] || { received: item.quantity, damage: 0 };
+                                            {buildCheckLines(selectedPO).map((item) => {
+                                                const itemId = item.key;
+                                                const data = receivingData[itemId] || { received: item.sent, damage: 0 };
                                                 return (
                                                     <motion.div
                                                         layout
@@ -418,17 +463,23 @@ const ReceivingScreen = () => {
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <h4 className="text-xs font-black text-slate-900 uppercase truncate leading-none mb-1.5">{item.name}</h4>
-                                                                {selectedPO.requests?.length > 1 && <p className="text-[10px] font-bold text-slate-400 mb-1">{item._ref}</p>}
+                                                                {selectedPO.requests?.length > 1 && (
+                                                                    <p className="text-[10px] font-bold text-slate-400 mb-1">
+                                                                        {item.items.length > 1 && <span className="inline-block mb-0.5 px-1.5 py-0.5 rounded bg-green-50 text-green-700 whitespace-nowrap">{item.items.length} deliveries combined</span>}
+                                                                        {item.items.length > 1 && <br />}
+                                                                        {item.refs.join(', ')}
+                                                                    </p>
+                                                                )}
                                                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                                                     <div className="flex items-center gap-1.5">
                                                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Order:</span>
-                                                                        <span className="text-[10px] font-black text-slate-500 tabular-nums">{item.quantity} {item.unit}</span>
+                                                                        <span className="text-[10px] font-black text-slate-500 tabular-nums">{item.ordered} {item.unit}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-900 text-white rounded-[4px]">
                                                                         <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Vendor Sent:</span>
-                                                                        <span className="text-[10px] font-black tabular-nums">{item.dispatchedQuantity || item.quantity} {item.unit}</span>
+                                                                        <span className="text-[10px] font-black tabular-nums">{item.sent} {item.unit}</span>
                                                                     </div>
-                                                                    <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-sm">₹{item.quotedPrice || 0}/{item.unit}</span>
+                                                                    <span className="text-[10px] font-black text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-sm">{item.priceText}/{item.unit}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -460,10 +511,10 @@ const ReceivingScreen = () => {
                                                                         type="number"
                                                                         min="0"
                                                                         step="any"
-                                                                        max={item.dispatchedQuantity || item.quantity}
+                                                                        max={item.sent}
                                                                         value={data.received}
                                                                         disabled={rejectedItems.has(itemId)}
-                                                                        onChange={(e) => updateItem(itemId, 'received', parseFloat(e.target.value) || 0, Number(item.dispatchedQuantity || item.quantity))}
+                                                                        onChange={(e) => updateItem(itemId, 'received', parseFloat(e.target.value) || 0, item.sent)}
                                                                         className={`bg-transparent w-full text-center font-black text-sm outline-none tabular-nums py-1 ${rejectedItems.has(itemId) ? 'text-slate-300' : ''}`}
                                                                     />
                                                                 </div>
