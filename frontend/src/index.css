@@ -6,6 +6,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+    /* One font for every panel and the website */
+    --font-sans: 'Inter', 'Noto Sans Devanagari', ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Noto Sans', Arial, sans-serif;
+
     /* Enterprise Color Palette */
     --color-background: #ffffff;
     --color-foreground: #0f172a;
@@ -128,7 +131,7 @@
 @import "leaflet/dist/leaflet.css";
 
 :root {
-    font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
     width: 100%;
     height: 100%;
@@ -461,4 +464,54 @@ body {
 /* Vendor portal in an Indian language: letter-spacing splits Devanagari & co. into pieces */
 .portal-indic body * {
     letter-spacing: normal !important;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Standard typography for the panels (client, Oct 2026: "fonts should be standard in every panel,
+ * specially the admin"). The panels were built with many 9-11 px labels in the heaviest weight, ALL
+ * CAPS and extra-wide letter spacing, which reads differently on every screen. Inside the admin,
+ * franchise, vendor and delivery panels:
+ *   - one font (Inter), normal letter spacing, no forced capitals (labels are written in Title Case),
+ *   - the smallest sizes raised to readable ones (9-10 px -> 12 px, 11 px -> 13 px),
+ *   - "black" (900) weight shown as bold (700).
+ * Not used on the customer website, which follows the client's approved desktop design.
+ * <html data-panel> is set in App.jsx (PanelMarker). Unlayered CSS, so it wins over the utilities.
+ * ------------------------------------------------------------------------------------------- */
+:root:not([data-panel="site"]) body { font-family: var(--font-sans); }
+[data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"] {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) :is(.text-\[7px\], .text-\[8px\], .text-\[9px\], .text-\[10px\]) {
+    font-size: 12px;
+    line-height: 1.4;
+}
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) .text-\[11px\] {
+    font-size: 13px;
+    line-height: 1.45;
+}
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) .font-black {
+    font-weight: 700;
+}
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) .uppercase {
+    text-transform: none;
+}
+/* ...but values that come from data in lower case ("superadmin", "active") still start with a capital */
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) .uppercase::first-letter {
+    text-transform: uppercase;
+}
+/* Chips / pills / inline values: every word capitalised ("12 open" -> "12 Open") */
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) :is(span.uppercase, .uppercase.inline-flex, .uppercase.inline-block) {
+    text-transform: capitalize;
+}
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) :is(.tracking-widest, .tracking-wider, .tracking-wide, [class*="tracking-[0."]) {
+    letter-spacing: normal;
+}
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) :is(.tracking-tighter, .tracking-tight) {
+    letter-spacing: -0.01em;
+}
+/* Chart axis labels (recharts sets 9-10 px on them) */
+:is([data-panel="masteradmin"], [data-panel="franchise"], [data-panel="vendor"], [data-panel="delivery"]) .recharts-cartesian-axis-tick-value {
+    font-size: 12px;
 }

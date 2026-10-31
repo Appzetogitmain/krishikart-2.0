@@ -1,6 +1,6 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useLayoutEffect } from 'react'
 import VersionWatcher from './components/VersionWatcher'
-import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import AppLayout from './modules/user/layouts/AppLayout'
 import LandingPage from './modules/landing/LandingPage'
@@ -138,6 +138,16 @@ const LandingOrHome = () => {
   return <LandingPage />;
 };
 
+/** Sets <html data-panel="masteradmin|franchise|vendor|delivery|site"> for the standard panel typography (index.css) */
+function PanelMarker() {
+  const { pathname } = useLocation();
+  useLayoutEffect(() => {
+    const m = pathname.match(/^\/(masteradmin|franchise|vendor|delivery)(\/|$)/);
+    document.documentElement.setAttribute('data-panel', m ? m[1] : 'site');
+  }, [pathname]);
+  return null;
+}
+
 function App() {
   const isIOS = typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
   return (
@@ -149,6 +159,7 @@ function App() {
       <HashRouter>
         <Toaster position="top-center" richColors />
         <VersionWatcher />
+        <PanelMarker />
         <Suspense fallback={
           <div className="user-app-theme h-screen w-full flex items-center justify-center bg-slate-50">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
