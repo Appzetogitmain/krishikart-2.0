@@ -26,6 +26,33 @@ import { keepPage, peekPage } from '../lib/pageCache';
 import { franchiseNameOf, loadOf, loadText, rupees, shortId } from '../lib/packing';
 import { DONE, NEEDS_RATES, NEEDS_REPLY, READY, TO_PACK, pageForRequest, statusOf } from '../lib/requestStatus';
 
+/**
+ * Recent orders, one card per franchise per day per status (client, Nov 2026): the same franchise's requests
+ * (e.g. SPF JP: Potato 4 kg, 3 kg, 2 kg) show as one card with the items added up (Potato 9 kg).
+ */
+function groupRecent(requests, statusOfFn, limit = 6) {
+    const groups = new Map();
+    const dayKey = (d) => { const x = new Date(d); return Number.isNaN(x.getTime()) ? '' : x.toDateString(); };
+    for (const r of requests) {
+        const key = `${String(r.franchiseId?._id || r.franchiseId || '')}|${dayKey(r.createdAt)}|${statusOfFn(r.status).label}`;
+        if (!groups.has(key)) groups.set(key, { key, first: r, requests: [], items: new Map(), latest: 0 });
+        const g = groups.get(key);
+        g.requests.push(r);
+        g.latest = Math.max(g.latest, new Date(r.updatedAt || r.createdAt).getTime() || 0);
+        for (const i of r.items || []) {
+            const k = `${String(i.productId?._id || i.productId || i.name)}|${String(i.unit || '').toLowerCase()}`;
+            const cur = g.items.get(k) || { ...i, quantity: 0 };
+            cur.quantity = Math.round(((Number(cur.quantity) || 0) + (Number(i.quantity) || 0)) * 1000) / 1000;
+            if (!cur.image && i.image) cur.image = i.image;
+            g.items.set(k, cur);
+        }
+    }
+    return [...groups.values()]
+        .map((g) => ({ ...g, items: [...g.items.values()] }))
+        .sort((a, b) => b.latest - a.latest)
+        .slice(0, limit);
+}
+
 function Thumb({ src }) {
     return src
         ? <img src={src} alt="" className="w-9 h-9 object-contain" loading="lazy" />
@@ -85,7 +112,7 @@ export default function DashboardScreen() {
     }, [requests, returns]);
 
     const noRate = inventory.filter((i) => !(Number(i.rate) > 0)).length;
-    const recent = useMemo(() => [...requests].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)).slice(0, 6), [requests]);
+    const recent = useMemo(() => groupRecent(requests, statusOf), [requests]);
     const firstName = String(vendor?.fullName || '').trim().split(/\s+/)[0] || '';
 
     if (loading) {
@@ -123,22 +150,34 @@ export default function DashboardScreen() {
     const recentList = (
         <div className="space-y-3">
             {!recent.length && <p className="text-base text-slate-500 text-center py-8">{t('No orders yet')}</p>}
-            {recent.map((r) => {
+            {recent.map((g) => {
+                const r = g.first;
                 const st = statusOf(r.status);
+                const many = g.requests.length > 1;
+                const last = new Date(Math.max(...g.requests.map((x) => new Date(x.createdAt).getTime() || 0)));
                 return (
-                    <button key={r._id} type="button" onClick={() => navigate(pageForRequest(r))}
+                    <button key={g.key} type="button" onClick={() => navigate(pageForRequest(r))}
                         className="w-full flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 text-left">
                         <span className="flex-1 min-w-0">
                             <span className="flex items-start justify-between gap-2">
                                 <span className="min-w-0">
                                     <span className="block text-lg font-bold text-slate-900 truncate" translate="no">{franchiseNameOf(r.franchiseId)}</span>
-                                    <span className="block text-sm text-slate-500"><span translate="no">{shortId(r._id)}</span> • {formatDay(new Date(r.createdAt), locale)}, {formatTime(new Date(r.createdAt), locale)}</span>
+                                    <span className="block text-sm text-slate-500">
+                                        {many
+                                            ? <span className="font-semibold text-green-700">{g.requests.length} {t('orders combined')}</span>
+                                            : <span translate="no">{shortId(r._id)}</span>}
+                                        {' • '}{formatDay(last, locale)}, {formatTime(last, locale)}
+                                    </span>
                                 </span>
                                 <span className={cn('px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap', st.cls)}>{t(st.label)}</span>
                             </span>
                             <span className="flex items-center gap-1.5 mt-2">
-                                {(r.items || []).slice(0, 3).map((i, k) => <Thumb key={k} src={i.image} />)}
-                                <span className="text-sm text-slate-500 ml-1">{(r.items || []).length} {t('items')} • {loadText(loadOf(r.items || [], (i) => i.quantity), t)}</span>
+                                {g.items.slice(0, 3).map((i, k) => <Thumb key={k} src={i.image} />)}
+                                <span className="text-sm text-slate-500 ml-1">
+                                    {g.items.length === 1
+                                        ? <><span translate="no">{g.items[0].name}</span> {g.items[0].quantity} {String(g.items[0].unit || '').toUpperCase()}</>
+                                        : <>{g.items.length} {t('items')} • {loadText(loadOf(g.items, (i) => i.quantity), t)}</>}
+                                </span>
                             </span>
                         </span>
                         <ChevronRight size={22} className="text-slate-500 shrink-0" />
