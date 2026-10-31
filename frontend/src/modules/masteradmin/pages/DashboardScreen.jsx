@@ -48,6 +48,7 @@ import DataGrid from '../components/tables/DataGrid';
 import FilterBar from '../components/tables/FilterBar';
 import ComparisonChart from '../components/cards/ComparisonChart';
 import ProfessionalTooltip from '../components/common/ProfessionalTooltip';
+import CitySummary from '../components/cards/CitySummary';
 
 export default function DashboardScreen() {
     const [isLoading, setIsLoading] = useState(true);
@@ -264,6 +265,9 @@ export default function DashboardScreen() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* Every city at a glance (head office / regional admin) */}
+            <CitySummary />
 
             {/* Operational Grid */}
             <div className="flex flex-col gap-0">                {/* Visual Analytics */}

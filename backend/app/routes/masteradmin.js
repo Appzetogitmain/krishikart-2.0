@@ -1,3 +1,4 @@
+import { getCitySummary } from "../controllers/citySummary.controller.js";
 import express from "express";
 import {
   createMasterAdmin,
@@ -462,6 +463,7 @@ router.patch("/recommendations/:id/toggle", protectMasterAdmin, requirePermissio
 router.get("/returns", protectMasterAdmin, requirePermission("returns"), getAllReturnRequests);
 router.get("/reports/comprehensive", protectMasterAdmin, requirePermission("dashboard"), getComprehensiveReports);
 router.get("/dashboard/stats", protectMasterAdmin, getAdminDashboardStats);
+router.get("/dashboard/city-summary", protectMasterAdmin, getCitySummary);
 router.get("/search", protectMasterAdmin, globalSearch);
 router.post("/test-notification", protectMasterAdmin, requireSuperAdmin, testPushNotification);
 

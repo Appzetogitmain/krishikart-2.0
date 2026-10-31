@@ -15,6 +15,7 @@ import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { getSocket, joinAdminDeliveryTracking } from "@/lib/socket";
 import { useMasterAdminAuth } from "../../contexts/MasterAdminAuthContext";
+import CitySwitcher from "../common/CitySwitcher";
 
 const formatNotificationTime = (createdAt) => {
   if (!createdAt) return "Just now";
@@ -319,6 +320,7 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-4">
+        <CitySwitcher isCityAdmin={isCityAdmin} cityCodes={cityCodes} />
         <div className="flex items-center gap-1 relative" ref={notificationMenuRef}>
           <button
             onClick={() => {

@@ -30,6 +30,7 @@ import { geocodeAddress } from "../utils/geo.js";
 import { loadZones, cityKeyOf } from "../utils/pricing.js";
 import {
   vendorInScope,
+  vendorIdsInScope,
   franchiseInScope,
   customerIdsInScope,
   deliveryIdsInScope,
@@ -43,7 +44,7 @@ import { syncInventoryToAssignedProducts } from "../utils/vendorInventorySync.js
 import {
   fetchPayoutOrders,
   aggregatePayoutsFromOrders,
-} from "../utils/franchisePayoutReport.js";
+} from "../utils/franchisePayoutReport.js";
 import { balanceOf } from "../utils/franchiseEarnings.js";
 import {
   LEGAL_CMS_KEYS,
@@ -2227,7 +2228,7 @@ export const getAdminDashboardStats = async (req, res) => {
       Order.countDocuments({ ...om, createdAt: { $gte: today } }),
       Order.countDocuments({ ...om, createdAt: { $gte: yesterday, $lt: today } }),
       scope
-        ? Vendor.find({ status: "active" }).select("farmLocation").lean().then((vs) => vs.filter((v) => vendorInScope(scope, v)).length)
+        ? vendorIdsInScope(scope).then(() => Vendor.find({ status: "active" }).select("_id farmLocation").lean()).then((vs) => vs.filter((v) => vendorInScope(scope, v)).length)
         : Vendor.countDocuments({ status: "active" }),
       Franchise.countDocuments({ status: "active", ...franchiseScopeMatch(scope, "_id") }),
       Order.countDocuments({
@@ -2620,7 +2621,10 @@ export const getAdminNotifications = async (req, res) => {
       : 20;
     const adminId = req.masteradmin?._id;
 
-    const notifications = await AdminNotification.find()
+    // City admins (and head office viewing one city) see only that city's notifications
+    const scope = req.cityScope || null;
+    const filter = scope ? { cityKeys: { $in: [...scope.cityKeys] } } : {};
+    const notifications = await AdminNotification.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit);
 

@@ -72,6 +72,12 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    // Head office city filter (masteradmin/lib/adminCity.js): show the admin panel for one city
+    if (token && token === localStorage.getItem('masterAdminToken')) {
+        const city = localStorage.getItem('kkAdminCity');
+        // A request can opt out by setting the header itself (e.g. the city list itself)
+        if (city && config.headers['X-Admin-City'] === undefined) config.headers['X-Admin-City'] = city;
+    }
     return config;
 }, (error) => {
     return Promise.reject(error);

@@ -30,9 +30,12 @@ export const getSocket = () => {
     return socket;
 };
 
+/** Admin alerts: the server puts head office in the all-cities room and a city admin in their own cities' rooms */
 export const joinAdminDeliveryTracking = () => {
     const s = getSocket();
-    s.emit("join_admin_delivery");
+    const token = localStorage.getItem("masterAdminToken");
+    if (!token) return;
+    s.emit("join_admin_delivery", { token });
 };
 
 export const joinOrderRoom = (orderId) => {

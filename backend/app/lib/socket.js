@@ -1,5 +1,9 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
+import SubAdmin from "../models/subAdmin.js";
+import MasterAdmin from "../models/masteradmin.js";
+import { computeAdminScope } from "../utils/adminScope.js";
+import { cityKeysFor, ADMIN_ALL_ROOM, adminCityRoom } from "../utils/adminCity.js";
 
 let io;
 
@@ -43,9 +47,26 @@ export const initSocket = (server) => {
             }
         });
 
-        socket.on("join_admin_delivery", () => {
-            socket.join("admin_delivery_tracking");
-            console.log(`Socket ${socket.id} joined admin_delivery_tracking`);
+        // Admin alerts: head office joins the all-cities room, a city admin only their own cities' rooms.
+        // The admin's token is required (alerts carry customer and order details).
+        socket.on("join_admin_delivery", async (payload) => {
+            try {
+                const token = payload && typeof payload === "object" ? payload.token : (typeof payload === "string" ? payload : null);
+                if (!token) return;
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const sub = await SubAdmin.findById(decoded.id).select("role priceZoneCodes status").lean();
+                const master = sub ? null : await MasterAdmin.findById(decoded.id).select("_id").lean();
+                if (!sub && !master) return;
+                if (sub?.status === "blocked") return;
+                const scope = sub ? await computeAdminScope(sub) : null;
+                if (!scope) {
+                    socket.join(ADMIN_ALL_ROOM);
+                } else {
+                    for (const key of scope.cityKeys) socket.join(adminCityRoom(key));
+                }
+            } catch (err) {
+                console.error("join_admin_delivery auth error:", err.message);
+            }
         });
 
         socket.on("join_franchise_room", (payload) => {
@@ -113,10 +134,16 @@ export const getIO = () => {
     return io;
 };
 
+/** Admin alert: head office always, plus the admins of the city / cities the payload belongs to */
 export const emitToAdmin = (event, data) => {
-    if (io) {
-        io.to("admin_delivery_tracking").emit(event, data);
-    }
+    if (!io) return;
+    cityKeysFor(data)
+        .then((keys) => {
+            let target = io.to(ADMIN_ALL_ROOM);
+            for (const key of keys) target = target.to(adminCityRoom(key));
+            target.emit(event, data);
+        })
+        .catch(() => io.to(ADMIN_ALL_ROOM).emit(event, data));
 };
 
 export const emitToOrderRoom = (orderId, event, data) => {

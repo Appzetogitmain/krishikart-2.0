@@ -30,10 +30,16 @@ const adminNotificationSchema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       default: [],
     },
+    // Cities this notification belongs to (lower-case city names); empty = head office only
+    cityKeys: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true },
 );
 
 adminNotificationSchema.index({ createdAt: -1 });
+adminNotificationSchema.index({ cityKeys: 1, createdAt: -1 });
 
 export default mongoose.model("AdminNotification", adminNotificationSchema);

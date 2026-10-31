@@ -7,6 +7,8 @@ import ProcurementRequest from "../models/procurementRequest.js";
 import handleResponse from "./helper.js";
 import {
     computeAdminScope,
+    scopeForCodes,
+    vendorIdsInScope,
     franchiseInScope,
     vendorInScope,
     orderInScope,
@@ -21,6 +23,10 @@ import {
  *   2. a record from another city opened directly by id is refused
  *   3. lists are trimmed to the admin's cities
  * The main admin and team members without a city code are not affected.
+ *
+ * City filter (client, Nov 2026): the main admin (or a regional admin with several cities) can pick one city
+ * in the top bar; the panel sends it as the "X-Admin-City" header. Lists and figures are then trimmed to that
+ * city exactly like for a city admin, but head office keeps all its rights (nothing is blocked).
  */
 
 const HEAD_OFFICE_MSG = "This is managed by the main admin (head office).";
@@ -140,7 +146,7 @@ async function recordAllowed(scope, check, id) {
             return !f || franchiseInScope(scope, f);
         }
         case "vendor": {
-            const v = await Vendor.findById(id).select("farmLocation").lean().catch(() => null);
+            const v = await Vendor.findById(id).select("_id farmLocation").lean().catch(() => null);
             return !v || vendorInScope(scope, v);
         }
         case "order": {
@@ -216,21 +222,37 @@ export const cityScopeGuard = async (req, res, next) => {
         const id = tokenAdminId(req);
         if (!id) return next(); // the route's own login check answers
         const admin = await SubAdmin.findById(id).select("role priceZoneCodes status").lean();
-        const scope = await computeAdminScope(admin);
+        let scope = await computeAdminScope(admin);
+        let viewingOneCity = false;
+        const wanted = String(req.headers["x-admin-city"] || "").trim().toUpperCase();
+        if (wanted) {
+            if (!scope) {
+                // Head office looking at one city: same trimming, no restrictions
+                const s = await scopeForCodes([wanted]);
+                if (s.zoneCount) { scope = s; viewingOneCity = true; }
+            } else if (scope.codes.length > 1 && scope.codes.includes(wanted)) {
+                // Regional admin narrowing to one of their own cities (never widening)
+                scope = await scopeForCodes([wanted]);
+            }
+        }
         if (!scope) return next();
         req.cityScope = scope;
 
         const method = req.method;
-        if (match(BLOCKED, method, req.path)) return handleResponse(res, 403, HEAD_OFFICE_MSG);
+        if (!viewingOneCity) {
+            if (match(BLOCKED, method, req.path)) return handleResponse(res, 403, HEAD_OFFICE_MSG);
 
-        const rec = match(RECORDS, method, req.path);
-        if (rec && !(await recordAllowed(scope, rec.rule.check, rec.params[rec.rule.param]))) {
-            return handleResponse(res, 403, OTHER_CITY_MSG);
+            const rec = match(RECORDS, method, req.path);
+            if (rec?.rule.check === "vendor") await vendorIdsInScope(scope);
+            if (rec && !(await recordAllowed(scope, rec.rule.check, rec.params[rec.rule.param]))) {
+                return handleResponse(res, 403, OTHER_CITY_MSG);
+            }
         }
 
         const list = method === "GET" ? match(LISTS, method, req.path) : null;
         if (list) {
             const deliverySet = list.rule.kind === "delivery" ? await deliveryIdsInScope(scope) : null;
+            if (list.rule.kind === "vendor" || list.rule.kind === "search") await vendorIdsInScope(scope);
             const originalJson = res.json.bind(res);
             res.json = (body) => originalJson(res.statusCode < 300 ? filterPayload(scope, list.rule.kind, body, deliverySet) : body);
         }
