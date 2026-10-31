@@ -25,7 +25,8 @@ import {
     Box,
     X,
     UserCircle2,
-    Check
+    Check,
+    Printer
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
@@ -36,6 +37,8 @@ import api from '@/lib/axios';
 import OrderHistoryModal from '../components/modals/OrderHistoryModal';
 import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/FranchisePageHeader';
 import { byDeliveryTime } from '@/lib/deliverySlots';
+import { printBills, canBill } from '../utils/printBill';
+import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import { estimateWeightKg, hasPackInfo, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 /**
@@ -219,6 +222,10 @@ export default function OrdersScreen() {
         refreshOrders
     } = useFranchiseOrders();
     const { inventory, refreshInventory } = useInventory();
+    const { franchise } = useFranchiseAuth();
+    const printOrderBills = (list) => {
+        if (!printBills(list, franchise)) toast.error('Allow pop-ups for this site to print the bill');
+    };
     const [activeTab, setActiveTab] = useState('new');
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -545,6 +552,16 @@ export default function OrdersScreen() {
                     <Truck size={18} /> Change partner
                 </button>
             )}
+            {canBill(row) && (
+                <button
+                    type="button"
+                    onClick={() => printOrderBills([row])}
+                    className={cn(btn, 'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+                    title="Print the bill for this order (80 mm POS printer)"
+                >
+                    <Printer size={18} /> Print Bill
+                </button>
+            )}
             <button
                 onClick={() => navigate(`/franchise/orders/${row.id}`)}
                 className={cn(btn, 'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
@@ -755,6 +772,16 @@ export default function OrdersScreen() {
                         <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700">
                             <Truck size={18} /> On the way with <span translate="no">{riders.join(', ')}</span>
                         </span>
+                    )}
+                    {orders.filter(canBill).length > 1 && (
+                        <button
+                            type="button"
+                            onClick={() => printOrderBills(orders.filter(canBill))}
+                            className={cn(btn, 'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50')}
+                            title="Print one bill per order, all in one go"
+                        >
+                            <Printer size={18} /> {`Print all bills (${orders.filter(canBill).length})`}
+                        </button>
                     )}
                     {toAccept.length > 0 && (
                         <button

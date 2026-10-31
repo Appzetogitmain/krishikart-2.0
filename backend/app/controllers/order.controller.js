@@ -1943,8 +1943,8 @@ export const getFranchiseOrders = async (req, res) => {
     }
 
     let orders = await Order.find(assignedQuery)
-      .populate("userId", "fullName mobile legalEntityName")
-      .populate("user", "fullName mobile legalEntityName")
+      .populate("userId", "fullName mobile legalEntityName gstNumber")
+      .populate("user", "fullName mobile legalEntityName gstNumber")
       .populate("items.productId")
       .populate(
         "deliveryPartnerId",
@@ -2092,7 +2092,7 @@ export const getFranchiseOrderById = async (req, res) => {
     const franchiseId = req.franchise._id;
 
     const order = await Order.findById(id)
-      .populate("userId", "fullName mobile address legalEntityName")
+      .populate("userId", "fullName mobile address legalEntityName gstNumber")
       .populate(
         "deliveryPartnerId",
         "fullName mobile vehicleNumber vehicleType",

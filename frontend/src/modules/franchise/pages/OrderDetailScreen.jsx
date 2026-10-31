@@ -22,7 +22,8 @@ import {
     Settings2,
     ArrowRight,
     Briefcase,
-    AlertCircle
+    AlertCircle,
+    Printer
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
@@ -30,12 +31,15 @@ import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { cn } from '@/lib/utils';
 import { getSocket } from '@/lib/socket';
 import DocumentViewer from '../../vendor/components/documents/DocumentViewer';
+import { printBills, canBill } from '../utils/printBill';
+import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import { estimateWeightKg, vehicleFor, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 export default function OrderDetailScreen() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { updateOrderStatus, deliveryPartners, refreshPartners, rejectFranchiseOrder } = useFranchiseOrders();
+    const { franchise } = useFranchiseAuth();
     const [order, setOrder] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isDocOpen, setIsDocOpen] = useState(false);
@@ -74,8 +78,12 @@ export default function OrderDetailScreen() {
                         quantity: i.quantity ?? 0,
                         price: i.price ?? 0,
                         isShortage: i.isShortage || false,
-                        unit: i.unit || ''
+                        unit: i.unit || '',
+                        packedQuantity: i.packedQuantity
                     })),
+                    packedWeightKg: Number(o.packedWeightKg) || 0,
+                    couponCode: o.couponCode,
+                    customerGst: o.userId?.gstNumber || o.user?.gstNumber || '',
                     createdAt: o.createdAt,
                     time: o.time,
                     paymentMethod: o.paymentMethod,
@@ -374,6 +382,22 @@ export default function OrderDetailScreen() {
                                     <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Documents</h3>
                                 </div>
                                 <div className="space-y-2">
+                                    {canBill(order) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const ok = printBills([{ ...order, hotelName: order.customer, customerMobile: order.mobile, shippingAddress: order.address, discountAmount: order.discount, deliveryShift: order.deliverySlot }], franchise);
+                                                if (!ok) toast.error('Allow pop-ups for this site to print the bill');
+                                            }}
+                                            className="w-full flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-sm hover:border-green-700 transition-all text-left group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <Printer size={16} className="text-green-700" />
+                                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Print Bill</span>
+                                            </div>
+                                            <ChevronRight size={12} className="text-slate-300" />
+                                        </button>
+                                    )}
                                     {order.bilty && (
                                         <button
                                             onClick={() => { setDocType('BILTY'); setIsDocOpen(true); }}
@@ -413,7 +437,7 @@ export default function OrderDetailScreen() {
                                             <ChevronRight size={12} className="text-slate-300" />
                                         </button>
                                     )}
-                                    {!order.deliveryChallan && !order.grn && (
+                                    {!order.deliveryChallan && !order.grn && !canBill(order) && (
                                         <div className="p-4 border border-dashed border-slate-200 rounded-sm text-center">
                                             <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">No documents available</p>
                                         </div>

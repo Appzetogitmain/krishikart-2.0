@@ -15,6 +15,7 @@ import {
     History,
     Send,
     Box,
+    Printer,
 } from 'lucide-react';
 import { useFranchiseOrders } from '../contexts/FranchiseOrdersContext';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,8 @@ import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/FranchisePageHeader';
 import { byDeliveryTime } from '@/lib/deliverySlots';
+import { printBills, canBill } from '../utils/printBill';
+import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import { estimateWeightKg, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 const paymentText = (val) => {
@@ -118,6 +121,7 @@ export default function DeliveryScreen() {
         refreshPartners
     } = useFranchiseOrders();
     const [activeTab, setActiveTab] = useState('ready'); // 'ready' | 'way' | 'history'
+    const { franchise } = useFranchiseAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -321,6 +325,15 @@ export default function DeliveryScreen() {
                                     <p className="mt-2 text-[13px] text-slate-600 flex items-center gap-1.5"><Box size={14} /> {order.packedWeightKg} kg packed · {vehicleFor(order.packedWeightKg)}</p>
                                 ) : Number(order.numberOfPackages) > 0 && (
                                     <p className="mt-2 text-[13px] text-slate-600 flex items-center gap-1.5"><Box size={14} /> {order.numberOfPackages} package{order.numberOfPackages > 1 ? 's' : ''}</p>
+                                )}
+                                {canBill(order) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { if (!printBills([order], franchise)) toast.error('Allow pop-ups for this site to print the bill'); }}
+                                        className="mt-3 h-10 px-4 rounded-xl border border-slate-200 bg-white text-[14px] font-semibold text-slate-800 inline-flex items-center gap-2 hover:bg-slate-50"
+                                    >
+                                        <Printer size={16} /> Print Bill
+                                    </button>
                                 )}
                             </div>
                         </div>

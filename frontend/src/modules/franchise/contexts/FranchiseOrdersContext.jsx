@@ -246,6 +246,13 @@ export function FranchiseOrdersProvider({ children }) {
             partialReturn: o.partialReturn?.goodsStatus ? o.partialReturn : null,
             returnOtpCode: o.returnOtpCode || null,
             total: o.totalAmount,
+            // For the printed bill
+            subtotal: o.subtotal,
+            deliveryFee: o.deliveryFee,
+            tax: o.tax,
+            discountAmount: o.discountAmount,
+            couponCode: o.couponCode,
+            customerGst: o.userId?.gstNumber || o.user?.gstNumber || "",
             items: (Array.isArray(o.items) ? o.items : []).map(i => ({
                 id: i.productId || i.product,
                 productId: i.productId || i.product,
@@ -256,6 +263,7 @@ export function FranchiseOrdersProvider({ children }) {
                 unit: i.unit || 'units',
                 price: i.price || 0,
                 subtotal: i.subtotal || 0,
+                packedQuantity: i.packedQuantity,
                 isShortage: i.isShortage || false
             })),
             address: o.userId?.address || o.user?.address || o.shippingAddress || 'Address not provided',
