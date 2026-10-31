@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/FranchisePageHeader';
+import { byDeliveryTime } from '@/lib/deliverySlots';
 import { estimateWeightKg, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 const paymentText = (val) => {
@@ -148,11 +149,13 @@ export default function DeliveryScreen() {
     };
 
     const TAB_STATUS = { ready: ['packed'], way: ['dispatched'], history: ['delivered', 'received'] };
-    const filteredOrders = orders.filter(o => {
+    const matching = orders.filter(o => {
         const q = searchQuery.toLowerCase();
         const matchesSearch = (o.hotelName?.toLowerCase() || '').includes(q) || (o.id?.toLowerCase() || '').includes(q);
         return matchesSearch && TAB_STATUS[activeTab].includes(o.status);
     });
+    // Earliest delivery day + slot first while assigning / delivering
+    const filteredOrders = activeTab === 'history' ? matching : [...matching].sort(byDeliveryTime);
 
     const readyCount = orders.filter(o => o.status === 'packed').length;
     const outCount = orders.filter(o => o.status === 'dispatched').length;

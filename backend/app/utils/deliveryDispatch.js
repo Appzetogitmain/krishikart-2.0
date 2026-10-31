@@ -7,7 +7,7 @@ import { createUserNotification } from "./userNotification.js";
 import { createDeliveryOtps } from "./deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "./deliveryTask.js";
 import { getDistance } from "./geo.js";
-import { getISTDayKey } from "./deliverySchedule.js";
+import { getISTDayKey, getShiftStartHour } from "./deliverySchedule.js";
 import { TWO_WHEELER_MAX_KG, isTwoWheeler, orderWeightKg, hasPackInfo } from "../constants/delivery.js";
 
 /**
@@ -216,9 +216,12 @@ export async function sweepAutoDispatch() {
       $or: [{ packedWeightKg: { $gt: 0 } }, { numberOfPackages: { $gt: 0 } }],
       franchiseId: { $ne: null },
     })
-      .select("_id")
+      .select("_id scheduledDate createdAt deliveryShift")
       .limit(200)
       .lean();
+    // Earliest delivery day + slot first, so early slots get the free partners first
+    const when = (o) => `${getISTDayKey(o.scheduledDate || o.createdAt)}|${String(getShiftStartHour(o.deliveryShift) ?? 99).padStart(2, "0")}|${new Date(o.createdAt).toISOString()}`;
+    waiting.sort((a, b) => when(a).localeCompare(when(b)));
     for (const o of waiting) await autoDispatchOrder(o._id);
   } catch (error) {
     console.error("[AutoDispatch] sweep error:", error);

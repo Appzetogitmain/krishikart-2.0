@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { getSocket, joinDeliveryRoom } from '@/lib/socket';
 import { useDeliveryAuth } from './DeliveryAuthContext';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { byDeliveryTime } from '@/lib/deliverySlots';
 
 const DeliveryOrderContext = createContext();
 
@@ -25,7 +26,8 @@ export function DeliveryOrderProvider({ children }) {
     };
 
     const availableRequests = useMemo(() => {
-        return dispatchedOrders.filter(o => o.id !== activeDeliveryId);
+        // Earliest delivery day + slot first
+        return dispatchedOrders.filter(o => o.id !== activeDeliveryId).sort(byDeliveryTime);
     }, [dispatchedOrders, activeDeliveryId]);
 
     // Alert State

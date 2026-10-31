@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import api from '@/lib/axios';
 import OrderHistoryModal from '../components/modals/OrderHistoryModal';
 import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/FranchisePageHeader';
+import { byDeliveryTime } from '@/lib/deliverySlots';
 import { estimateWeightKg, hasPackInfo, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
 
 /**
@@ -654,7 +655,9 @@ export default function OrdersScreen() {
     // combined card (each order keeps its own bill, payment and delivery code)
     const groupable = ['new', 'ready'].includes(activeTab);
     let entries = [];
-    for (const o of filteredOrders) {
+    // Earliest delivery day + slot first, so the early slots are packed and sent first
+    const ordered = groupable ? [...filteredOrders].sort(byDeliveryTime) : filteredOrders;
+    for (const o of ordered) {
         if (!groupable) { entries.push({ key: o.id, orders: [o] }); continue; }
         const hits = entries.filter((g) => g.orders.some((m) => belongTogether(m, o)));
         if (!hits.length) {
