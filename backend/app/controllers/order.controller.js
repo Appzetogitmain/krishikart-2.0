@@ -1696,14 +1696,23 @@ export const updateOrderStatus = async (req, res) => {
       }
     }
 
-    // Refund wallet/credit exactly once (shared with franchise rejection)
+    // Refund wallet/credit exactly once (shared with franchise rejection). A prepaid order's money always goes
+    // to the Kisaankart wallet, whoever cancels it and whenever (before dispatch or at the door).
+    let cancelRefund = { refunded: false, walletRefund: 0, creditRestore: 0 };
     if (status === "Cancelled") {
       try {
-        await refundCancelledOrder(order._id, `cancelled by ${updatedBy}`);
+        cancelRefund = await refundCancelledOrder(order._id, `cancelled by ${updatedBy}`);
       } catch (refundErr) {
         console.error("Refund error during status update:", refundErr);
       }
     }
+    const cancelRefundText = cancelRefund.walletRefund > 0 && cancelRefund.creditRestore > 0
+      ? ` ₹${cancelRefund.walletRefund} has been added to your Kisaankart wallet and ₹${cancelRefund.creditRestore} back to your KK Credit.`
+      : cancelRefund.walletRefund > 0
+        ? ` ₹${cancelRefund.walletRefund} has been added to your Kisaankart wallet.`
+        : cancelRefund.creditRestore > 0
+          ? ` ₹${cancelRefund.creditRestore} has been added back to your KK Credit.`
+          : "";
 
     // Socket Broadcasts
     const populatedOrder = await Order.findById(order._id)
@@ -1742,8 +1751,8 @@ export const updateOrderStatus = async (req, res) => {
     await createUserNotification({
       userId: order.userId,
       type: "order_update",
-      title: "Order Status Updated",
-      message: `Your order #${order._id.toString().slice(-6)} is now ${status}.`,
+      title: status === "Cancelled" ? "Order cancelled" : "Order Status Updated",
+      message: `Your order #${order._id.toString().slice(-6)} is now ${status}.${status === "Cancelled" ? cancelRefundText : ""}`,
       link: `/order-detail/${order._id}`,
       meta: {
         orderId: order._id.toString(),
@@ -1801,7 +1810,7 @@ export const updateOrderStatus = async (req, res) => {
       }
     }
 
-    return handleResponse(res, 200, `Order status updated to ${status}`, order);
+    return handleResponse(res, 200, status === "Cancelled" && cancelRefundText ? `Order cancelled.${cancelRefundText}` : `Order status updated to ${status}`, order);
   } catch (error) {
     console.error("Update order status error details:", error);
     return handleResponse(res, 500, "Server error: " + error.message);
