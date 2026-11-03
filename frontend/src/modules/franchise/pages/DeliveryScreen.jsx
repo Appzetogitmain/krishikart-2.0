@@ -25,7 +25,7 @@ import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/Fr
 import { byDeliveryTime } from '@/lib/deliverySlots';
 import { printBills, canBill } from '../utils/printBill';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
-import { estimateWeightKg, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
+import { estimateWeightKg, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG, maxPackedWeightKg } from '@/lib/deliveryVehicles';
 
 const paymentText = (val) => {
     const m = String(val || 'COD').toUpperCase();
@@ -92,7 +92,7 @@ function AssignBox({ order, partners, onAssign, onSaved }) {
                 <p className={cn('text-[13px] font-semibold mb-1.5', saved ? 'text-slate-600' : 'text-amber-700')}>Packed weight (kg)</p>
                 <div className="relative">
                     <input type="number" inputMode="decimal" min="0" step="0.1" value={weight} placeholder="0"
-                        onChange={(e) => setWeight(e.target.value === '' ? '' : Math.min(MAX_ORDER_WEIGHT_KG, Math.max(0, Math.round(Number(e.target.value) * 100) / 100 || 0)))}
+                        onChange={(e) => setWeight(e.target.value === '' ? '' : Math.min(maxPackedWeightKg(order.items), Math.max(0, Math.round(Number(e.target.value) * 100) / 100 || 0)))}
                         className={cn('w-full h-12 rounded-xl border bg-white text-center text-lg font-bold tabular-nums outline-none focus:border-green-600 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none',
                             saved ? 'border-slate-200' : 'border-amber-300')}
                         aria-label="Packed weight in kg" />

@@ -13,16 +13,32 @@ export const VEHICLE_NUMBER_RE = /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/;
 
 export const isTwoWheeler = (type) => TWO_WHEELERS.includes(String(type || "").toLowerCase());
 
+// Packed quantity once packed (it is 0 until then), else the ordered quantity
+const qtyOf = (i) => (Number(i?.packedQuantity) > 0 ? Number(i.packedQuantity) : Number(i?.quantity) || 0);
+
 /** Rough weight from the ordered quantities (kg / g / litre / ml); used when no packed weight was entered */
 export function estimateWeightKg(items = []) {
   let kg = 0;
   for (const i of items) {
-    const q = Number(i.packedQuantity ?? i.quantity) || 0;
+    const q = qtyOf(i);
     const u = String(i.unit || "").toLowerCase();
     if (u === "kg" || u === "ltr" || u === "l") kg += q;
     else if (u === "gm" || u === "g" || u === "ml") kg += q / 1000;
   }
   return Math.round(kg * 100) / 100;
+}
+
+const WEIGHABLE = new Set(["kg", "ltr", "l", "gm", "g", "ml"]);
+
+/**
+ * Most the packed weight can be (client, Nov 2026: "5 kg paneer, 122 kg makes no sense"): when every item is
+ * sold by weight / volume, never more than what was ordered (packed). Items sold by piece / box / dozen have no
+ * known weight, so such orders only get the overall limit.
+ */
+export function maxPackedWeightKg(items = []) {
+  const list = (items || []).filter((i) => qtyOf(i) > 0);
+  if (!list.length || !list.every((i) => WEIGHABLE.has(String(i.unit || "").toLowerCase()))) return MAX_ORDER_WEIGHT_KG;
+  return estimateWeightKg(list);
 }
 
 /** Weight that decides the vehicle: what the franchise entered at packing, else the estimate */

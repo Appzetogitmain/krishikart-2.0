@@ -39,7 +39,7 @@ import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/Fr
 import { byDeliveryTime } from '@/lib/deliverySlots';
 import { printBills, canBill } from '../utils/printBill';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
-import { estimateWeightKg, hasPackInfo, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
+import { estimateWeightKg, hasPackInfo, vehicleFor, vehicleLabel, isTwoWheeler, TWO_WHEELER_MAX_KG, MAX_ORDER_WEIGHT_KG, maxPackedWeightKg } from '@/lib/deliveryVehicles';
 
 /**
  * The same product across all orders in the list, added up (e.g. Potato 85 KG from 4 hotels), with the
@@ -171,10 +171,10 @@ function mergeItems(orders) {
 }
 
 // Weight typed in the pack popups: up to 2 decimals, within the allowed range
-const cleanKg = (v) => {
+const cleanKg = (v, max = MAX_ORDER_WEIGHT_KG) => {
     if (v === '' || v === null || v === undefined) return '';
     const n = Math.round(Number(v) * 100) / 100;
-    return Number.isFinite(n) && n >= 0 ? Math.min(MAX_ORDER_WEIGHT_KG, n) : '';
+    return Number.isFinite(n) && n >= 0 ? Math.min(max, n) : '';
 };
 const weightOf = (o) => (Number(o?.packedWeightKg) > 0 ? Number(o.packedWeightKg) : estimateWeightKg(o?.items));
 const VehicleHint = ({ kg }) => (Number(kg) > 0 ? (
@@ -1130,7 +1130,7 @@ export default function OrdersScreen() {
                                                 aria-label={`Weight in kg for order ${String(o.id).slice(-6).toUpperCase()}`}
                                                 value={val === 0 || val === undefined ? '' : val}
                                                 onChange={(e) => {
-                                                    const n = cleanKg(e.target.value);
+                                                    const n = cleanKg(e.target.value, maxPackedWeightKg(o.items));
                                                     setGroupPack((prev) => ({ ...prev, counts: { ...prev.counts, [o.id]: n } }));
                                                 }}
                                                 className="w-24 h-11 rounded-xl border-2 border-slate-200 text-center text-lg font-bold text-slate-900 outline-none focus:border-green-600 tabular-nums"
@@ -1217,13 +1217,17 @@ export default function OrdersScreen() {
                                             step="0.1"
                                             aria-label="Packed weight in kg"
                                             value={packageCount === 0 ? '' : packageCount}
-                                            onChange={(e) => setPackageCount(e.target.value === '' ? '' : cleanKg(e.target.value))}
+                                            max={maxPackedWeightKg(packingOrder?.items)}
+                                            onChange={(e) => setPackageCount(e.target.value === '' ? '' : cleanKg(e.target.value, maxPackedWeightKg(packingOrder?.items)))}
                                             className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 px-6 text-3xl font-black text-slate-900 outline-none focus:border-slate-900 transition-all text-center tabular-nums"
                                             placeholder="0"
                                             autoFocus
                                         />
                                         <span className="absolute right-6 top-1/2 -translate-y-1/2 text-lg font-black text-slate-400">kg</span>
                                     </div>
+                                    {maxPackedWeightKg(packingOrder?.items) < MAX_ORDER_WEIGHT_KG && (
+                                        <p className="text-[12px] font-semibold text-slate-500 text-center">Maximum {maxPackedWeightKg(packingOrder?.items)} kg (what was ordered)</p>
+                                    )}
                                     <div className="flex justify-center"><VehicleHint kg={packageCount} /></div>
                                     <p className="text-[12px] font-semibold text-slate-500 text-center leading-relaxed">
                                         Weigh the packed order. Up to {TWO_WHEELER_MAX_KG} kg goes on a bike / scooter, more on an auto / 4-wheeler - the delivery partner is assigned automatically. Printed on the delivery slip (Bilty).
