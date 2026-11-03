@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node api.js && node index.js",
-    "dev": "node api.js && nodemon index.js",
+    "start": "node init && node index.js",
+    "dev": "node init && nodemon index.js",
     "seed": "node seedProducts.js",
     "migrate-mongo": "node scripts/migrate-mongo.js",
     "capitalize-names": "node scripts/capitalize-names.js",

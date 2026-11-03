@@ -33,7 +33,7 @@ import { getSocket } from '@/lib/socket';
 import DocumentViewer from '../../vendor/components/documents/DocumentViewer';
 import { printBills, canBill } from '../utils/printBill';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
-import { estimateWeightKg, vehicleFor, MAX_ORDER_WEIGHT_KG } from '@/lib/deliveryVehicles';
+import { estimateWeightKg, vehicleFor, maxPackedWeightKg } from '@/lib/deliveryVehicles';
 
 export default function OrderDetailScreen() {
     const { id } = useParams();
@@ -700,7 +700,7 @@ export default function OrderDetailScreen() {
                                                     inputMode="decimal"
                                                     aria-label="Packed weight in kg"
                                                     value={packKg ?? (estimateWeightKg(order.items) || '')}
-                                                    onChange={(e) => setPackKg(e.target.value === '' ? '' : Math.min(MAX_ORDER_WEIGHT_KG, Math.max(0, Math.round(Number(e.target.value) * 100) / 100 || 0)))}
+                                                    onChange={(e) => setPackKg(e.target.value === '' ? '' : Math.min(maxPackedWeightKg(order.items), Math.max(0, Math.round(Number(e.target.value) * 100) / 100 || 0)))}
                                                     className="w-20 h-10 text-center text-sm font-black border border-emerald-200 rounded-sm focus:outline-none focus:border-emerald-500 bg-white"
                                                 />
                                                 <button

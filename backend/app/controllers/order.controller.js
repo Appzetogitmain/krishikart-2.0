@@ -34,7 +34,7 @@ import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
 import { autoDispatchOrder, dispatchOrderToPartner } from "../utils/deliveryDispatch.js";
-import { MAX_ORDER_WEIGHT_KG, hasPackInfo } from "../constants/delivery.js";
+import { MAX_ORDER_WEIGHT_KG, hasPackInfo, maxPackedWeightKg } from "../constants/delivery.js";
 import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments, creditProblem, chargeDoorCredit } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
 
@@ -1467,6 +1467,10 @@ export const updateOrderStatus = async (req, res) => {
       if (!(kg > 0) || kg > MAX_ORDER_WEIGHT_KG) {
         return handleResponse(res, 400, `Please enter the packed weight in kg (more than 0, up to ${MAX_ORDER_WEIGHT_KG}).`);
       }
+      const maxKg = maxPackedWeightKg(order.items);
+      if (kg > maxKg) {
+        return handleResponse(res, 400, `This order has ${maxKg} kg of goods, so the packed weight cannot be more than ${maxKg} kg.`);
+      }
       order.packedWeightKg = kg;
     }
 
@@ -2382,6 +2386,10 @@ export const setOrderPackageCount = async (req, res) => {
     if (!order) return handleResponse(res, 404, "Order not found");
     if (!order.franchiseId || order.franchiseId.toString() !== req.franchise._id.toString()) {
       return handleResponse(res, 403, "Not authorized to manage this order");
+    }
+    if (byWeight && kg > maxPackedWeightKg(order.items)) {
+      const maxKg = maxPackedWeightKg(order.items);
+      return handleResponse(res, 400, `This order has ${maxKg} kg of goods, so the packed weight cannot be more than ${maxKg} kg.`);
     }
     if (!byWeight && count > maxPackagesFor(order)) {
       return handleResponse(res, 400, `This order has ${maxPackagesFor(order)} units in total, so it cannot be packed in ${count} packages.`);
