@@ -155,6 +155,14 @@ const orderSchema = new mongoose.Schema({
         default: null
     },
     items: [orderItemSchema],
+    // Delivery request sent to all suitable partners; the first to accept gets the order (utils/deliveryDispatch.js)
+    deliveryOffer: {
+        offeredTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' }],
+        offeredAt: { type: Date, default: null },
+        acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery', default: null },
+        acceptedAt: { type: Date, default: null },
+        alertedAt: { type: Date, default: null }, // franchise told nobody accepted in time
+    },
     // Delivery partners who handed this task back; auto-assignment skips them
     deliveryRejectedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Delivery' }],
     // true when the system picked the delivery partner (not the franchise)

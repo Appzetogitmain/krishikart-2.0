@@ -11,6 +11,8 @@ const DeliveryOrderContext = createContext();
 export function DeliveryOrderProvider({ children }) {
     const { delivery } = useDeliveryAuth();
     const [dispatchedOrders, setDispatchedOrders] = useState([]);
+    // Delivery requests sent to several partners: the first to accept gets the order (client, Nov 2026)
+    const [offers, setOffers] = useState([]);
     const [returnPickups, setReturnPickups] = useState([]);
     const [loading, setLoading] = useState(false);
     const [activeDeliveryId, setActiveDeliveryIdState] = useState(() => localStorage.getItem('activeDeliveryId'));
@@ -60,16 +62,62 @@ export function DeliveryOrderProvider({ children }) {
         else stopRinging();
     }, [ringingTaskIds.length, startRinging, stopRinging]);
 
-    // Stop ringing for tasks that left the list (rejected, cancelled, reassigned) or were accepted
+    // Stop ringing for tasks that left the list (rejected, cancelled, reassigned, taken by someone else) or were accepted
     useEffect(() => {
         if (ringingTaskIds.length === 0) return;
-        const present = new Set(dispatchedOrders.map((o) => String(o.id)));
+        const present = new Set([...dispatchedOrders, ...offers].map((o) => String(o.id)));
         ringingTaskIds.forEach((id) => {
             if (present.has(id)) ringSeenRef.current.add(id);
             const gone = !present.has(id) && ringSeenRef.current.has(id);
             if (gone || id === String(activeDeliveryId)) stopRingingFor(id);
         });
-    }, [dispatchedOrders]);
+    }, [dispatchedOrders, offers]);
+
+    const fetchOffers = async () => {
+        try {
+            const response = await api.get('/orders/delivery/offers');
+            if (response.data.success) setOffers(response.data.results || []);
+        } catch (error) {
+            console.error('Fetch delivery requests error:', error);
+        }
+    };
+
+    const dropOffer = (orderId) => {
+        const id = String(orderId);
+        setOffers((prev) => prev.filter((o) => String(o.id) !== id));
+        stopRingingFor(id);
+    };
+
+    /** Accept a request: the first partner to accept gets the order */
+    const acceptOffer = async (orderId) => {
+        try {
+            const response = await api.put(`/orders/delivery/${orderId}/accept-offer`);
+            dropOffer(orderId);
+            toast.success(response.data?.message || 'The order is yours');
+            await Promise.all([fetchDispatchedOrders(), fetchOffers()]);
+            const mine = response.data?.result?.orderIds || [orderId];
+            if (!localStorage.getItem('activeDeliveryId')) setActiveDeliveryId(String(mine[0]));
+            return true;
+        } catch (error) {
+            dropOffer(orderId);
+            toast.error(error.response?.data?.message || 'Could not accept this request');
+            fetchOffers();
+            return false;
+        }
+    };
+
+    /** Decline a request: it leaves this app for good and goes to other partners */
+    const declineOffer = async (orderId) => {
+        try {
+            await api.put(`/orders/delivery/${orderId}/decline-offer`);
+            toast.success('Request declined');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not decline the request');
+        } finally {
+            dropOffer(orderId);
+            fetchOffers();
+        }
+    };
 
     const fetchDispatchedOrders = async () => {
         setLoading(true);
@@ -164,6 +212,7 @@ export function DeliveryOrderProvider({ children }) {
             const syncDeliveryTasks = () => {
                 joinDeliveryRoom(delivery._id);
                 fetchDispatchedOrders();
+                fetchOffers();
                 fetchReturnPickups();
             };
 
@@ -173,6 +222,13 @@ export function DeliveryOrderProvider({ children }) {
                 setIsAlertOpen(true);
                 // Deliveries are now assigned and accepted automatically (client, Oct 2026): one chime, and the
                 // task becomes the active delivery when the partner has none. Older servers still ring until accepted.
+                if (data?.offer) {
+                    // A request also sent to other partners: rings until this partner accepts or declines
+                    if (data?.orderId) startRingingFor(data.orderId);
+                    toast.success("New delivery request - accept it before someone else does");
+                    fetchOffers();
+                    return;
+                }
                 if (data?.autoAccepted) {
                     playNotificationSound();
                     if (data?.orderId && !localStorage.getItem('activeDeliveryId')) setActiveDeliveryId(String(data.orderId));
@@ -212,6 +268,17 @@ export function DeliveryOrderProvider({ children }) {
                 fetchDispatchedOrders();
             };
             socket.on('task_removed', handleTaskRemoved);
+            // Another partner accepted a request this partner also had
+            const handleOfferTaken = (data) => {
+                if (!data?.orderId) return;
+                dropOffer(data.orderId);
+                setNewTaskData((cur) => {
+                    if (cur?.orderId && String(cur.orderId) === String(data.orderId)) setIsAlertOpen(false);
+                    return cur;
+                });
+                toast.info(`Order #${String(data.orderId).slice(-6).toUpperCase()} was taken by another delivery partner`);
+            };
+            socket.on('offer_taken', handleOfferTaken);
             socket.on('cod_remittance_reviewed', handleCashReviewed);
             socket.on('account_status', handleAccountNews);
             socket.on('docs_status', handleAccountNews);
@@ -220,6 +287,7 @@ export function DeliveryOrderProvider({ children }) {
                 socket.off('connect', syncDeliveryTasks);
                 socket.off('new_task', handleNewTask);
                 socket.off('task_removed', handleTaskRemoved);
+                socket.off('offer_taken', handleOfferTaken);
                 socket.off('cod_remittance_reviewed', handleCashReviewed);
                 socket.off('account_status', handleAccountNews);
                 socket.off('docs_status', handleAccountNews);
@@ -227,12 +295,16 @@ export function DeliveryOrderProvider({ children }) {
         }
     }, [delivery]);
 
-    const taskCount = useMemo(() => availableRequests.length, [availableRequests]);
+    const taskCount = useMemo(() => availableRequests.length + offers.length, [availableRequests, offers]);
 
     return (
         <DeliveryOrderContext.Provider value={{
             dispatchedOrders,
             availableRequests,
+            offers,
+            fetchOffers,
+            acceptOffer,
+            declineOffer,
             activeDeliveryId,
             setActiveDeliveryId,
             returnPickups,
@@ -244,7 +316,8 @@ export function DeliveryOrderProvider({ children }) {
             ringingTaskIds,
             reopenTaskAlert: (orderId) => {
                 // Show the same details as the first alert (address, amount), from the task list if needed
-                const o = dispatchedOrders.find((x) => String(x.id || x._id) === String(orderId));
+                const offer = offers.find((x) => String(x.id || x._id) === String(orderId));
+                const o = offer || dispatchedOrders.find((x) => String(x.id || x._id) === String(orderId));
                 const fromList = o ? {
                     customerName: o.customerName,
                     address: o.customerAddress,
@@ -255,7 +328,7 @@ export function DeliveryOrderProvider({ children }) {
                     paymentMethod: o.paymentMethod,
                     itemCount: o.items?.length || o.itemCount,
                 } : {};
-                setNewTaskData({ orderId, type: 'DELIVERY', message: `Delivery task waiting for you: #${String(orderId).slice(-6)}`, ...fromList, ...(taskInfoRef.current[String(orderId)] || {}) });
+                setNewTaskData({ orderId, type: 'DELIVERY', message: `Delivery task waiting for you: #${String(orderId).slice(-6)}`, ...fromList, ...(taskInfoRef.current[String(orderId)] || {}), ...(offer ? { offer: true } : {}) });
                 setIsAlertOpen(true);
             },
             fetchDispatchedOrders,

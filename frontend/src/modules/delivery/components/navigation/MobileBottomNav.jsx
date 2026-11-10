@@ -6,7 +6,7 @@ import { ROUTES } from '../../utils/constants';
 import { useDeliveryOrders } from '../../contexts/DeliveryOrderContext';
 
 const MobileBottomNav = () => {
-    const { availableRequests, returnPickups } = useDeliveryOrders();
+    const { availableRequests, offers = [], returnPickups } = useDeliveryOrders();
 
     const navItems = [
         { icon: Home, label: 'Home', path: ROUTES.DASHBOARD },
@@ -14,7 +14,7 @@ const MobileBottomNav = () => {
             icon: ClipboardList,
             label: 'Requests',
             path: ROUTES.REQUESTS,
-            badge: availableRequests.length > 0 ? availableRequests.length : null,
+            badge: availableRequests.length + offers.length > 0 ? availableRequests.length + offers.length : null,
             badgeColor: 'bg-emerald-500'
         },
         { icon: MapPin, label: 'Active', path: ROUTES.ACTIVE },

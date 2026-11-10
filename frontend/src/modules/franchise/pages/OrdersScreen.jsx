@@ -626,6 +626,9 @@ export default function OrdersScreen() {
                             <p className="text-[16px] font-bold text-slate-900">Order #{String(row.id).slice(-6).toUpperCase()}</p>
                             <span className={cn('px-3 py-1 rounded-lg text-[13px] font-semibold', cls)}>{label}</span>
                             {row.status === 'procuring' && <RefreshCw size={14} className="text-amber-600 animate-spin" />}
+                            {row.status === 'packed' && row.offerCount > 0 && (
+                                <span className="px-3 py-1 rounded-lg text-[13px] font-semibold bg-violet-50 text-violet-700">Request sent to {row.offerCount} delivery partner{row.offerCount > 1 ? 's' : ''}</span>
+                            )}
                         </div>
                         <p translate="no" className="text-[16px] font-semibold text-slate-800 mt-0.5">{row.hotelName}</p>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[13px] text-slate-500">

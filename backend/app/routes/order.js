@@ -19,6 +19,9 @@ import {
     assignDeliveryPartner,
     setOrderPackageCount,
     getDispatchedOrders,
+    getDeliveryOffers,
+    acceptDeliveryOffer,
+    declineDeliveryOffer,
     getDeliveryOrderHistory,
     rejectDeliveryTask,
     refuseOrderAtDoor,
@@ -114,6 +117,9 @@ router.put(
 
 // Delivery Routes
 router.get("/delivery/dispatched", protectDelivery, requireApproval, getDispatchedOrders);
+router.get("/delivery/offers", protectDelivery, requireApproval, getDeliveryOffers);
+router.put("/delivery/:id/accept-offer", protectDelivery, requireApproval, acceptDeliveryOffer);
+router.put("/delivery/:id/decline-offer", protectDelivery, requireApproval, declineDeliveryOffer);
 router.get("/delivery/history", protectDelivery, requireApproval, getDeliveryOrderHistory);
 router.put("/delivery/:id/reject", protectDelivery, requireApproval, rejectDeliveryTask);
 router.put("/delivery/:id/refused-at-door", protectDelivery, requireApproval, refuseOrderAtDoor);

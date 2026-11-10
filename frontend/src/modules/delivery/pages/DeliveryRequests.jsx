@@ -8,7 +8,21 @@ import { useDeliveryOrders } from '../contexts/DeliveryOrderContext';
 import { useConfirm } from '../hooks/useConfirm';
 
 const DeliveryRequests = () => {
-    const { availableRequests: requests, loading: refreshing, fetchDispatchedOrders: handleRefresh, rejectTask, setActiveDeliveryId } = useDeliveryOrders();
+    const { availableRequests: requests, loading: refreshing, fetchDispatchedOrders, fetchOffers, rejectTask, setActiveDeliveryId, offers, acceptOffer, declineOffer } = useDeliveryOrders();
+    const handleRefresh = () => { fetchDispatchedOrders(); fetchOffers(); };
+
+    const handleAcceptOffer = async (id) => {
+        if (await acceptOffer(id)) navigate(ROUTES.ACTIVE);
+    };
+    const handleDeclineOffer = async (id) => {
+        const confirmed = await confirm({
+            title: `Decline request ${shortRef(id)}?`,
+            message: 'It goes to other delivery partners and will not come back to you.',
+            confirmLabel: 'Yes, decline',
+            tone: 'danger',
+        });
+        if (confirmed) await declineOffer(id);
+    };
     const navigate = useNavigate();
     const [confirm, confirmDialog] = useConfirm();
 
@@ -44,7 +58,7 @@ const DeliveryRequests = () => {
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h1 className="text-2xl font-bold text-foreground">Delivery Requests</h1>
-                        <p className="text-muted-foreground text-sm">{requests.length} available requests</p>
+                        <p className="text-muted-foreground text-sm">{offers.length > 0 ? `${offers.length} new · ` : ''}{requests.length} assigned to you</p>
                     </div>
                     <button
                         onClick={handleRefresh}
@@ -55,10 +69,23 @@ const DeliveryRequests = () => {
                 </div>
             </div>
 
+            {/* New requests: sent to several partners, the first to accept gets the order */}
+            {offers.length > 0 && (
+                <div className="px-6 pt-6" data-offers>
+                    <p className="text-sm font-bold text-foreground">New requests</p>
+                    <p className="text-xs text-muted-foreground mb-3">Also sent to other partners - the first to accept gets the order.</p>
+                    {offers.map((request) => (
+                        <div key={request.id} className="mb-3">
+                            <DeliveryCard request={request} onAccept={handleAcceptOffer} onReject={handleDeclineOffer} acceptLabel="Accept" rejectLabel="Decline" />
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Requests List */}
             <div className="p-6">
                 <AnimatePresence mode="popLayout">
-                    {requests.length > 0 ? (
+                    {requests.length > 0 || offers.length > 0 ? (
                         requests.map((request, index) => (
                             <motion.div
                                 key={request.id}

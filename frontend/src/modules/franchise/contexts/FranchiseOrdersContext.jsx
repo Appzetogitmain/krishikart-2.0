@@ -194,6 +194,16 @@ export function FranchiseOrdersProvider({ children }) {
             toast.success(data?.message || 'Delivery partner assigned automatically', { duration: 6000 });
             fetchOrders();
         };
+        // Delivery request sent to partners (first to accept gets it), or nobody accepted in time
+        const handleOfferSent = (data) => {
+            toast.info(data?.message || 'Delivery request sent to delivery partners', { duration: 6000 });
+            fetchOrders();
+        };
+        const handleOfferUnanswered = (data) => {
+            playNotificationSound();
+            toast.warning(data?.message || 'No delivery partner has accepted yet. Please assign one by hand.', { duration: 12000 });
+            fetchOrders();
+        };
         const handleAutoAssignFailed = (data) => {
             playNotificationSound();
             toast.warning(data?.message || 'No delivery partner is online. Please assign one by hand.', { duration: 10000 });
@@ -215,6 +225,8 @@ export function FranchiseOrdersProvider({ children }) {
         socket.on('return_status_changed', handleReturnStatus);
         socket.on('delivery_auto_assigned', handleAutoAssigned);
         socket.on('delivery_auto_assign_failed', handleAutoAssignFailed);
+        socket.on('delivery_offer_sent', handleOfferSent);
+        socket.on('delivery_offer_unanswered', handleOfferUnanswered);
         socket.on('ORDER_REJECTED', handleTaskHandedBack);
 
         return () => {
@@ -228,6 +240,8 @@ export function FranchiseOrdersProvider({ children }) {
             socket.off('return_status_changed', handleReturnStatus);
             socket.off('delivery_auto_assigned', handleAutoAssigned);
             socket.off('delivery_auto_assign_failed', handleAutoAssignFailed);
+            socket.off('delivery_offer_sent', handleOfferSent);
+            socket.off('delivery_offer_unanswered', handleOfferUnanswered);
             socket.off('ORDER_REJECTED', handleTaskHandedBack);
         };
     }, [franchise?._id]);
@@ -297,6 +311,8 @@ export function FranchiseOrdersProvider({ children }) {
             deliveryPartnerId: o.deliveryPartnerId?._id || o.deliveryPartnerId,
             deliveryPartner: o.deliveryPartnerId,
             autoDispatched: !!o.autoDispatched,
+            // Open delivery request: how many partners have it, waiting for the first to accept
+            offerCount: o.deliveryOffer?.offeredAt && !o.deliveryOffer?.acceptedBy ? (o.deliveryOffer.offeredTo || []).length : 0,
             statusHistory: o.statusHistory || []
         }));
     }, [liveOrders]);

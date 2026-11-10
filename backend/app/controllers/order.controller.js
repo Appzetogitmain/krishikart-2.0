@@ -33,7 +33,7 @@ import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
-import { autoDispatchOrder, dispatchOrderToPartner } from "../utils/deliveryDispatch.js";
+import { offerOrderToPartners, dispatchOrderToPartner, acceptOffer, declineOffer, reofferAfterHandBack } from "../utils/deliveryDispatch.js";
 import { MAX_ORDER_WEIGHT_KG, hasPackInfo, maxPackedWeightKg } from "../constants/delivery.js";
 import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments, creditProblem, chargeDoorCredit } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
@@ -1807,10 +1807,10 @@ export const updateOrderStatus = async (req, res) => {
 
     // Packed with a box count: hand it to a delivery partner automatically (franchise can still change it)
     if (status === "Packed" && isFranchise && hasPackInfo(order)) {
-      const partner = await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
-      if (partner) {
+      const offer = await offerOrderToPartners(order._id, { notifyFranchiseIfNone: true });
+      if (offer.total) {
         const fresh = await Order.findById(order._id);
-        return handleResponse(res, 200, `Order packed and given to ${partner.fullName}`, fresh || order);
+        return handleResponse(res, 200, `Order packed and sent to ${offer.total} delivery partner${offer.total > 1 ? "s" : ""} - the first to accept gets it`, fresh || order);
       }
     }
 
@@ -2406,13 +2406,13 @@ export const setOrderPackageCount = async (req, res) => {
       message: byWeight ? `Packed weight entered: ${kg} kg` : `Package count entered: ${count}`,
     });
     await order.save();
-    const partner = await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
+    const offer = await offerOrderToPartners(order._id, { notifyFranchiseIfNone: true });
     const saved = byWeight ? "Weight saved" : "Package count saved";
-    return handleResponse(res, 200, partner ? `${saved}. Given to ${partner.fullName}` : saved, {
+    return handleResponse(res, 200, offer.total ? `${saved}. Sent to ${offer.total} delivery partner${offer.total > 1 ? "s" : ""}` : saved, {
       _id: order._id,
       numberOfPackages: order.numberOfPackages,
       packedWeightKg: order.packedWeightKg,
-      deliveryPartnerName: partner?.fullName || null,
+      offeredTo: offer.total,
     });
   } catch (error) {
     console.error("setOrderPackageCount:", error);
@@ -2503,19 +2503,8 @@ export const assignDeliveryPartner = async (req, res) => {
 };
 
 // Get dispatched orders for delivery partner
-export const getDispatchedOrders = async (req, res) => {
-  try {
-    const partnerId = req.delivery?._id;
-    const orders = await Order.find({
-      orderStatus: "Dispatched",
-      deliveryPartnerId: partnerId,
-    })
-      .populate("userId", "fullName mobile address creditLimit usedCredit creditBlocked creditOverdueDate")
-      .populate("franchiseId", "franchiseName city area mobile location formattedAddress storeQRCode")
-      .sort({ updatedAt: -1 });
-
-    // Map to format delivery app expects
-    const formatted = orders.map((order) => {
+/** One delivery task / request as the delivery app shows it */
+function formatDeliveryTask(order) {
       let distance = "N/A";
 
       // Calculate real distance if coords available (GeoJSON uses [lng, lat])
@@ -2595,7 +2584,21 @@ export const getDispatchedOrders = async (req, res) => {
         shippingAddress: order.shippingAddress,
         codTracking: order.codTracking || {},
       };
-    });
+}
+
+export const getDispatchedOrders = async (req, res) => {
+  try {
+    const partnerId = req.delivery?._id;
+    const orders = await Order.find({
+      orderStatus: "Dispatched",
+      deliveryPartnerId: partnerId,
+    })
+      .populate("userId", "fullName mobile address creditLimit usedCredit creditBlocked creditOverdueDate")
+      .populate("franchiseId", "franchiseName city area mobile location formattedAddress storeQRCode")
+      .sort({ updatedAt: -1 });
+
+    // Map to format delivery app expects
+    const formatted = orders.map(formatDeliveryTask);
 
     return handleResponse(res, 200, "Dispatched orders fetched", formatted);
   } catch (error) {
@@ -2926,13 +2929,60 @@ export const rejectDeliveryTask = async (req, res) => {
     if (order.franchiseId) {
       emitToFranchise(order.franchiseId, "ORDER_REJECTED", { orderId: id });
     }
-    // Straight to the next available partner; if nobody is free it waits for the franchise / the scheduler
-    await autoDispatchOrder(order._id, { notifyFranchiseIfNone: true });
+    // Out again as a new request to every other suitable partner; if nobody is free the franchise is told
+    await reofferAfterHandBack(order._id);
 
     return handleResponse(res, 200, "Task rejected successfully");
   } catch (error) {
     console.error("Reject delivery task error:", error);
     return handleResponse(res, 500, "Server error");
+  }
+};
+
+/**
+ * Delivery requests waiting for this partner (sent to every suitable partner; the first to accept gets it).
+ * GET /orders/delivery/offers
+ */
+export const getDeliveryOffers = async (req, res) => {
+  try {
+    const partnerId = req.delivery?._id;
+    const orders = await Order.find({
+      orderStatus: { $in: ["Packed", "Ready"] },
+      "deliveryOffer.offeredTo": partnerId,
+      "deliveryOffer.acceptedBy": null,
+      deliveryRejectedBy: { $ne: partnerId },
+    })
+      .populate("userId", "fullName mobile address creditLimit usedCredit creditBlocked creditOverdueDate")
+      .populate("franchiseId", "franchiseName city area mobile location formattedAddress storeQRCode")
+      .sort({ "deliveryOffer.offeredAt": 1 });
+    return handleResponse(res, 200, "Delivery requests", orders.map((o) => ({ ...formatDeliveryTask(o), isOffer: true })));
+  } catch (error) {
+    console.error("getDeliveryOffers:", error);
+    return handleResponse(res, 500, "Could not load delivery requests");
+  }
+};
+
+/** PUT /orders/delivery/:id/accept-offer - the first partner to accept gets the order */
+export const acceptDeliveryOffer = async (req, res) => {
+  try {
+    const result = await acceptOffer(req.params.id, req.delivery._id);
+    if (!result.ok) return handleResponse(res, 409, result.message);
+    return handleResponse(res, 200, result.orderIds.length > 1 ? `${result.orderIds.length} orders are yours (same customer, one trip)` : "The order is yours", { orderIds: result.orderIds });
+  } catch (error) {
+    console.error("acceptDeliveryOffer:", error);
+    return handleResponse(res, 500, "Could not accept the request");
+  }
+};
+
+/** PUT /orders/delivery/:id/decline-offer - the request leaves this partner's app for good */
+export const declineDeliveryOffer = async (req, res) => {
+  try {
+    const result = await declineOffer(req.params.id, req.delivery._id);
+    if (!result.ok) return handleResponse(res, 409, result.message);
+    return handleResponse(res, 200, "Request declined");
+  } catch (error) {
+    console.error("declineDeliveryOffer:", error);
+    return handleResponse(res, 500, "Could not decline the request");
   }
 };
 

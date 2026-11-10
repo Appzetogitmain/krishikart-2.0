@@ -1,7 +1,4 @@
 # Added by code-review-graph
 .code-review-graph/
-temp_auto_push.bat
-temp_interactive_push.bat
-branch_structure.json
 config.bat
 node_modules

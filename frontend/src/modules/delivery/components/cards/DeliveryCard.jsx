@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Package, Clock, ChevronRight, Check, X } from 'lucide-react';
 
-const DeliveryCard = ({ request, onAccept, onReject }) => {
+const DeliveryCard = ({ request, onAccept, onReject, acceptLabel = 'Start Delivery', rejectLabel = 'Reject' }) => {
     const priorityColors = {
         high: 'bg-red-100 text-red-700 border-red-200',
         medium: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -89,13 +89,13 @@ const DeliveryCard = ({ request, onAccept, onReject }) => {
                     onClick={() => onReject(request.id)}
                     className="flex-1 py-4 flex items-center justify-center gap-2 text-sm font-bold text-destructive hover:bg-destructive/5 active:bg-destructive/10 transition-colors border-r border-border"
                 >
-                    <X className="w-4 h-4" /> Reject
+                    <X className="w-4 h-4" /> {rejectLabel}
                 </button>
                 <button
                     onClick={() => onAccept(request.id)}
                     className="flex-1 py-4 flex items-center justify-center gap-2 text-sm font-bold text-primary hover:bg-primary/5 active:bg-primary/10 transition-colors"
                 >
-                    <Check className="w-4 h-4" /> Start Delivery
+                    <Check className="w-4 h-4" /> {acceptLabel}
                 </button>
             </div>
         </motion.div>

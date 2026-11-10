@@ -72,6 +72,11 @@ function AssignBox({ order, partners, onAssign, onSaved }) {
 
     return (
         <div className="space-y-3">
+            {order.offerCount > 0 && (
+                <p className="rounded-xl bg-violet-50 border border-violet-100 px-3 py-2 text-[13px] font-semibold text-violet-700">
+                    Request sent to {order.offerCount} delivery partner{order.offerCount > 1 ? 's' : ''} - waiting for the first to accept. You can also assign one here.
+                </p>
+            )}
             <div>
                 <label className="block text-[13px] font-semibold text-slate-600 mb-1.5" htmlFor={`dp-${order.id}`}>Select Delivery Partner</label>
                 {partners.length ? (

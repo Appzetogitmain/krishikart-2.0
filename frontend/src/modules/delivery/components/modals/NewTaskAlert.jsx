@@ -7,7 +7,7 @@ import { useConfirm } from '../../hooks/useConfirm';
 
 export default function NewTaskAlert({ isOpen, onClose, data }) {
     const navigate = useNavigate();
-    const { ringingTaskIds, reopenTaskAlert, setActiveDeliveryId, rejectTask } = useDeliveryOrders();
+    const { ringingTaskIds, reopenTaskAlert, setActiveDeliveryId, rejectTask, acceptOffer, declineOffer } = useDeliveryOrders();
     const [confirm, confirmDialog] = useConfirm();
 
     // The pop-up was dismissed but a task is still ringing: keep a way back to it
@@ -35,6 +35,13 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
     const shortRef = `#${String(data.orderId).slice(-6).toUpperCase()}`;
 
     const handleAccept = async () => {
+        // A request sent to several partners: accept straight away, the first one wins
+        if (data.offer) {
+            const ok = await acceptOffer(data.orderId);
+            onClose();
+            if (ok) navigate(ROUTES.ACTIVE);
+            return;
+        }
         const confirmed = await confirm({
             title: `Accept task ${shortRef}?`,
             message: 'This becomes your active delivery.',
@@ -47,6 +54,18 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
     };
 
     const handleReject = async () => {
+        if (data.offer) {
+            const sure = await confirm({
+                title: `Decline request ${shortRef}?`,
+                message: 'It goes to other delivery partners and will not come back to you.',
+                confirmLabel: 'Yes, decline',
+                tone: 'danger',
+            });
+            if (!sure) return;
+            await declineOffer(data.orderId);
+            onClose();
+            return;
+        }
         const confirmed = await confirm({
             title: `Reject task ${shortRef}?`,
             message: 'The order goes back to the franchise to assign someone else.',
