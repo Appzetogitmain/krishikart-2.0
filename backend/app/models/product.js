@@ -59,6 +59,12 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 1
     },
+    // Approx. weight of ONE unit when sold by piece / dozen / box (kg). Caps the packed weight a franchise can
+    // enter; empty = 1 kg a piece, 2 kg a dozen, 20 kg a box (backend/app/constants/delivery.js)
+    unitWeightKg: {
+        type: Number,
+        default: null
+    },
     bulkUnit: {
         type: String,
         enum: ['kg', 'gm', 'pcs', 'ltr', 'ml', 'box', 'dz'],

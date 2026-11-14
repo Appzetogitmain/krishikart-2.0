@@ -133,6 +133,7 @@ export const createProduct = async (req, res) => {
             bestPrice: bestPrice ? Number(bestPrice) : undefined,
             stock: stock ? Number(stock) : 0,
             unit: unit || 'kg',
+            unitWeightKg: Number(req.body.unitWeightKg) > 0 ? Number(req.body.unitWeightKg) : null,
             description,
             shortDescription,
             tags: normalizeTags(tags),

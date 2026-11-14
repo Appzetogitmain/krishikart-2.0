@@ -35,15 +35,31 @@ export function estimateWeightKg(items = []) {
 
 const WEIGHABLE = new Set(['kg', 'ltr', 'l', 'gm', 'g', 'ml']);
 
+/** Weight of one unit for items sold by piece / dozen / box when the product does not say (kg) */
+export const DEFAULT_UNIT_KG = { pcs: 1, dz: 2, box: 20 };
+
+const unitKgOf = (item) => {
+    const own = Number(item?.productId?.unitWeightKg ?? item?.unitWeightKg);
+    if (own > 0) return own;
+    return DEFAULT_UNIT_KG[String(item?.unit || '').toLowerCase()] ?? DEFAULT_UNIT_KG.pcs;
+};
+
 /**
- * Most the packed weight can be: never more than what was ordered when every item is sold by weight / volume
- * (5 kg paneer -> max 5 kg). Orders with piece / box / dozen items only get the overall limit.
+ * Most the packed weight can be: weight / volume items exactly as ordered (5 kg paneer -> 5 kg); piece / dozen /
+ * box items at their weight per unit (the product's own, else 1 kg a piece, 2 kg a dozen, 20 kg a box).
  * Same rule as backend/app/constants/delivery.js maxPackedWeightKg.
  */
 export function maxPackedWeightKg(items = []) {
-    const list = (items || []).filter((i) => qtyOf(i) > 0);
-    if (!list.length || !list.every((i) => WEIGHABLE.has(String(i.unit || '').toLowerCase()))) return MAX_ORDER_WEIGHT_KG;
-    return estimateWeightKg(list);
+    let kg = 0;
+    for (const i of items || []) {
+        const q = qtyOf(i);
+        if (!(q > 0)) continue;
+        const u = String(i.unit || '').toLowerCase();
+        if (WEIGHABLE.has(u)) kg += u === 'gm' || u === 'g' || u === 'ml' ? q / 1000 : q;
+        else kg += q * unitKgOf(i);
+    }
+    if (!(kg > 0)) return MAX_ORDER_WEIGHT_KG;
+    return Math.min(MAX_ORDER_WEIGHT_KG, Math.round(kg * 100) / 100);
 }
 
 /** Packed and the franchise said how big it is (weight now; box count on older orders) */

@@ -52,6 +52,7 @@ export default function EditProductScreen() {
         stock: '',
         unit: 'kg',
         unitValue: '1',
+        unitWeightKg: '',
         bulkUnit: 'kg',
         description: '',
         shortDescription: '',
@@ -110,6 +111,7 @@ export default function EditProductScreen() {
                     stock: product.stock || '',
                     unit: product.unit || 'kg',
                     unitValue: product.unitValue || '1',
+                    unitWeightKg: product.unitWeightKg ?? '',
                     bulkUnit: product.bulkUnit || 'kg',
                     description: product.description || '',
                     shortDescription: product.shortDescription || '',
@@ -664,6 +666,20 @@ export default function EditProductScreen() {
                                                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                             </div>
                                         </div>
+                                    </div>
+                                    <div className="space-y-1.5 flex-1">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Weight of 1 piece / dozen / box (kg)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            name="unitWeightKg"
+                                            value={formData.unitWeightKg}
+                                            onChange={handleChange}
+                                            placeholder={formData.unit === 'dz' ? 'Default 2 kg' : formData.unit === 'box' ? 'Default 20 kg' : 'Default 1 kg'}
+                                            className="w-full bg-slate-50/50 border border-slate-200 rounded-sm px-4 py-2.5 text-sm font-bold focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                                        />
+                                        <p className="text-[11px] text-slate-400 ml-0.5">Only for items sold by piece / dozen / box. Franchises can't enter a packed weight above this x quantity. Leave empty for the default.</p>
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Selling Price (₹)</label>

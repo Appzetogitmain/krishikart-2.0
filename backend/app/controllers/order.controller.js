@@ -35,6 +35,15 @@ import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/delivery
 import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
 import { offerOrderToPartners, dispatchOrderToPartner, acceptOffer, declineOffer, reofferAfterHandBack } from "../utils/deliveryDispatch.js";
 import { MAX_ORDER_WEIGHT_KG, hasPackInfo, maxPackedWeightKg } from "../constants/delivery.js";
+
+/** { productId: kg per unit } for items sold by piece / dozen / box whose product has its own unit weight */
+async function unitWeightsOf(items = []) {
+  const ids = (items || []).filter((i) => !["kg", "gm", "g", "ltr", "l", "ml"].includes(String(i.unit || "").toLowerCase()))
+    .map((i) => i.productId?._id || i.productId).filter(Boolean);
+  if (!ids.length) return {};
+  const products = await Product.find({ _id: { $in: ids } }).select("unitWeightKg").lean();
+  return Object.fromEntries(products.filter((p) => Number(p.unitWeightKg) > 0).map((p) => [String(p._id), Number(p.unitWeightKg)]));
+}
 import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments, creditProblem, chargeDoorCredit } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
 
@@ -1467,7 +1476,7 @@ export const updateOrderStatus = async (req, res) => {
       if (!(kg > 0) || kg > MAX_ORDER_WEIGHT_KG) {
         return handleResponse(res, 400, `Please enter the packed weight in kg (more than 0, up to ${MAX_ORDER_WEIGHT_KG}).`);
       }
-      const maxKg = maxPackedWeightKg(order.items);
+      const maxKg = maxPackedWeightKg(order.items, await unitWeightsOf(order.items));
       if (kg > maxKg) {
         return handleResponse(res, 400, `This order has ${maxKg} kg of goods, so the packed weight cannot be more than ${maxKg} kg.`);
       }
@@ -2387,8 +2396,9 @@ export const setOrderPackageCount = async (req, res) => {
     if (!order.franchiseId || order.franchiseId.toString() !== req.franchise._id.toString()) {
       return handleResponse(res, 403, "Not authorized to manage this order");
     }
-    if (byWeight && kg > maxPackedWeightKg(order.items)) {
-      const maxKg = maxPackedWeightKg(order.items);
+    const maxKgForOrder = byWeight ? maxPackedWeightKg(order.items, await unitWeightsOf(order.items)) : null;
+    if (byWeight && kg > maxKgForOrder) {
+      const maxKg = maxKgForOrder;
       return handleResponse(res, 400, `This order has ${maxKg} kg of goods, so the packed weight cannot be more than ${maxKg} kg.`);
     }
     if (!byWeight && count > maxPackagesFor(order)) {

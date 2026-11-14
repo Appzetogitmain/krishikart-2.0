@@ -31,14 +31,35 @@ export function estimateWeightKg(items = []) {
 const WEIGHABLE = new Set(["kg", "ltr", "l", "gm", "g", "ml"]);
 
 /**
- * Most the packed weight can be (client, Nov 2026: "5 kg paneer, 122 kg makes no sense"): when every item is
- * sold by weight / volume, never more than what was ordered (packed). Items sold by piece / box / dozen have no
- * known weight, so such orders only get the overall limit.
+ * Items sold by piece / dozen / box have no weight on the order. A product can say how much one unit weighs
+ * (Product.unitWeightKg, set by the admin - e.g. jackfruit 8 kg per piece); otherwise these upper limits apply.
  */
-export function maxPackedWeightKg(items = []) {
-  const list = (items || []).filter((i) => qtyOf(i) > 0);
-  if (!list.length || !list.every((i) => WEIGHABLE.has(String(i.unit || "").toLowerCase()))) return MAX_ORDER_WEIGHT_KG;
-  return estimateWeightKg(list);
+export const DEFAULT_UNIT_KG = { pcs: 1, dz: 2, box: 20 };
+
+const unitKgOf = (item, perUnitKg = {}) => {
+  const pid = String(item?.productId?._id || item?.productId || "");
+  const own = Number(perUnitKg[pid] ?? item?.productId?.unitWeightKg ?? item?.unitWeightKg);
+  if (own > 0) return own;
+  return DEFAULT_UNIT_KG[String(item?.unit || "").toLowerCase()] ?? DEFAULT_UNIT_KG.pcs;
+};
+
+/**
+ * Most the packed weight can be (client, Nov 2026: "5 kg paneer, 122 kg makes no sense" / "5000 kg for 4 mangoes"):
+ * items sold by weight / volume count exactly what was ordered (packed); items sold by piece / dozen / box count
+ * their weight per unit (product's own, else 1 kg a piece, 2 kg a dozen, 20 kg a box).
+ * perUnitKg: optional { productId: kg per unit } looked up from the products.
+ */
+export function maxPackedWeightKg(items = [], perUnitKg = {}) {
+  let kg = 0;
+  for (const i of items || []) {
+    const q = qtyOf(i);
+    if (!(q > 0)) continue;
+    const u = String(i.unit || "").toLowerCase();
+    if (WEIGHABLE.has(u)) kg += u === "gm" || u === "g" || u === "ml" ? q / 1000 : q;
+    else kg += q * unitKgOf(i, perUnitKg);
+  }
+  if (!(kg > 0)) return MAX_ORDER_WEIGHT_KG;
+  return Math.min(MAX_ORDER_WEIGHT_KG, Math.round(kg * 100) / 100);
 }
 
 /** Weight that decides the vehicle: what the franchise entered at packing, else the estimate */

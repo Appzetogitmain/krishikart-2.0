@@ -1229,11 +1229,11 @@ export default function OrdersScreen() {
                                         <span className="absolute right-6 top-1/2 -translate-y-1/2 text-lg font-black text-slate-400">kg</span>
                                     </div>
                                     {maxPackedWeightKg(packingOrder?.items) < MAX_ORDER_WEIGHT_KG && (
-                                        <p className="text-[12px] font-semibold text-slate-500 text-center">Maximum {maxPackedWeightKg(packingOrder?.items)} kg (what was ordered)</p>
+                                        <p className="text-[12px] font-semibold text-slate-500 text-center">Maximum {maxPackedWeightKg(packingOrder?.items)} kg (from what was ordered)</p>
                                     )}
                                     <div className="flex justify-center"><VehicleHint kg={packageCount} /></div>
                                     <p className="text-[12px] font-semibold text-slate-500 text-center leading-relaxed">
-                                        Weigh the packed order. Up to {TWO_WHEELER_MAX_KG} kg goes on a bike / scooter, more on an auto / 4-wheeler - the delivery partner is assigned automatically. Printed on the delivery slip (Bilty).
+                                        Weigh the packed order. Up to {TWO_WHEELER_MAX_KG} kg goes on a bike / scooter, more on an auto / 4-wheeler - the request then goes to delivery partners automatically. Printed on the delivery slip (Bilty).
                                     </p>
                                 </div>
 
