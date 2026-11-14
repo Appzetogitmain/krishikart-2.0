@@ -11,7 +11,8 @@ import {
     Star,
     Settings,
     FileText,
-    Trash2
+    Trash2,
+    MapPin
 } from 'lucide-react';
 import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -36,6 +37,7 @@ const Profile = () => {
 
     const menuItems = [
         { label: 'My Documents', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50', path: '/delivery/documents' },
+        { label: 'My City & Address', icon: MapPin, color: 'text-rose-500', bg: 'bg-rose-50', path: '/delivery/address' },
         { label: 'Vehicle Information', icon: Truck, color: 'text-amber-500', bg: 'bg-amber-50', path: '/delivery/vehicle' },
         { label: 'COD Remittance', icon: Settings, color: 'text-emerald-500', bg: 'bg-emerald-50', path: '/delivery/cod-remittance' },
         { label: 'My Reports', icon: FileText, color: 'text-indigo-500', bg: 'bg-indigo-50', path: '/delivery/reports' },
@@ -85,6 +87,26 @@ const Profile = () => {
                             <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </motion.button>
                     ))}
+                </div>
+
+                {/* City and address: requests come only from stores in this city */}
+                <div className="mt-8" data-my-address>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground px-2 mb-4">My City & Address</h2>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/delivery/address')}
+                        className="w-full text-left bg-white rounded-3xl border border-border p-5 flex items-start gap-4 active:scale-[0.99] transition-all"
+                    >
+                        <div className="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center shrink-0">
+                            <MapPin className="w-5 h-5 text-rose-500" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-base font-bold text-foreground">{delivery?.city || 'City not set'}</p>
+                            <p className="text-sm text-muted-foreground break-words">{delivery?.address || 'Add your address'}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Requests come only from stores in this city</p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground mt-1" />
+                    </button>
                 </div>
 
                 {/* Vehicle Info Card */}

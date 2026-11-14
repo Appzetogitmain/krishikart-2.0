@@ -15,6 +15,7 @@ const PickupConfirmation = lazy(() => import('../pages/PickupConfirmation'));
 const DeliveryCompletion = lazy(() => import('../pages/DeliveryCompletion'));
 const B2BAssignment = lazy(() => import('../pages/B2BAssignment'));
 const VehicleInfo = lazy(() => import('../pages/VehicleInfoScreen'));
+const AddressScreen = lazy(() => import('../pages/AddressScreen'));
 const HelpSupport = lazy(() => import('../pages/HelpSupportScreen'));
 const NotificationSettings = lazy(() => import('../pages/NotificationSettingsScreen'));
 const PrivacySecurity = lazy(() => import('../pages/PrivacySecurityScreen'));
@@ -79,6 +80,7 @@ export const deliveryRoutes = (
                 <Route path="completion" element={withSuspense(DeliveryCompletion)} />
                 <Route path="assignment" element={withSuspense(B2BAssignment)} />
                 <Route path="vehicle" element={withSuspense(VehicleInfo)} />
+                <Route path="address" element={withSuspense(AddressScreen)} />
                 <Route path="documents" element={withSuspense(MyDocumentsScreen)} />
                 <Route path="notifications" element={withSuspense(NotificationSettings)} />
                 <Route path="privacy" element={withSuspense(PrivacySecurity)} />

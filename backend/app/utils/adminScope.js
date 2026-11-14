@@ -102,14 +102,16 @@ const distanceKm = (a, b) => {
     return 12742 * Math.asin(Math.sqrt(h));
 };
 
-/** Delivery partners whose nearest store is in scope (partners have no city of their own). */
+/** Delivery partners of the cities in scope: the city they chose, else their nearest store's city. */
 export async function deliveryIdsInScope(scope) {
     if (!scope) return null;
     if (scope._deliverySet) return scope._deliverySet;
     const stores = scope._allFranchises.filter((f) => Array.isArray(f.location?.coordinates) && f.location.coordinates.some((n) => n));
-    const partners = await Delivery.find({}).select("location").lean();
+    const partners = await Delivery.find({}).select("location city").lean();
     const set = new Set();
     for (const p of partners) {
+        // The city the partner chose decides; older accounts fall back to the nearest store
+        if (p.city) { if (scope.cityKeys.has(cityKeyOf(p.city))) set.add(String(p._id)); continue; }
         const c = p.location?.coordinates;
         if (!Array.isArray(c) || !c.some((n) => n)) continue;
         let best = null, bestD = Infinity;

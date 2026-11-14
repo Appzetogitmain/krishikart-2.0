@@ -2,6 +2,65 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShieldCheck, XCircle, FileText, Calendar, Building, User, Mail, Phone, MapPin, ExternalLink, Download, AlertCircle, CheckCircle2, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import api from '@/lib/axios';
+import { toast } from 'sonner';
+
+/** A delivery partner's city (decides which stores' requests they get) and address; the admin can correct them */
+function DeliveryCityEditor({ partner }) {
+    const [cities, setCities] = useState([]);
+    const [city, setCity] = useState(partner.city || '');
+    const [address, setAddress] = useState(partner.address || '');
+    const [saved, setSaved] = useState({ city: partner.city || '', address: partner.address || '' });
+    const [saving, setSaving] = useState(false);
+    useEffect(() => {
+        api.get('/delivery/cities').then((r) => setCities((r.data?.results || r.data?.result || []).map((c) => c?.name || c).filter((c) => typeof c === 'string'))).catch(() => setCities([]));
+    }, []);
+    useEffect(() => {
+        setCity(partner.city || '');
+        setAddress(partner.address || '');
+        setSaved({ city: partner.city || '', address: partner.address || '' });
+    }, [partner._id]); // eslint-disable-line react-hooks/exhaustive-deps
+    const changed = city !== saved.city || address.trim() !== saved.address;
+    const save = async () => {
+        if (!city) return toast.error('Choose a city');
+        setSaving(true);
+        try {
+            const r = await api.put(`/masteradmin/delivery-partners/${partner._id || partner.id}/status`, { city, address: address.trim() });
+            const next = { city: r.data?.result?.city || city, address: r.data?.result?.address ?? address.trim() };
+            setSaved(next);
+            setCity(next.city);
+            partner.city = next.city;
+            partner.address = next.address;
+            toast.success('City and address saved');
+        } catch (e) {
+            toast.error(e.response?.data?.message || 'Could not save');
+        } finally {
+            setSaving(false);
+        }
+    };
+    return (
+        <div className="mt-8 pt-8 border-t border-slate-100" data-delivery-city>
+            <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-1">City & Address</h5>
+            <p className="text-[12px] text-slate-500 mb-4">
+                Delivery requests go to this partner only from stores in this city.
+                {!saved.city && ' Not set yet - the partner gets no requests until a city is chosen.'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <select value={city} onChange={(e) => setCity(e.target.value)} className="h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold" aria-label="City">
+                    <option value="">Choose city</option>
+                    {city && !cities.some((c) => c.toLowerCase() === city.toLowerCase()) && <option value={city}>{city}</option>}
+                    {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" aria-label="Address" className="sm:col-span-2 h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm" />
+            </div>
+            {changed && (
+                <button type="button" onClick={save} disabled={saving} className="mt-3 h-10 px-5 rounded-xl bg-slate-900 text-white text-sm font-bold disabled:opacity-60">
+                    {saving ? 'Saving...' : 'Save city & address'}
+                </button>
+            )}
+        </div>
+    );
+}
 
 function DocPreviewModal({ isOpen, onClose, url, title }) {
     if (!isOpen || !url) return null;
@@ -286,7 +345,7 @@ export default function ApprovalDetailDrawer({ isOpen, onClose, item, type, onAp
                                                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                                         <MapPin size={12} /> Location
                                                     </div>
-                                                    <p className="font-black text-slate-900">{[item.area, item.city].filter(Boolean).join(', ') || item.farmLocation || 'Not provided'}</p>
+                                                    <p className="font-black text-slate-900">{isDelivery ? ([item.address, item.city].filter(Boolean).join(', ') || 'Not provided') : ([item.area, item.city].filter(Boolean).join(', ') || item.farmLocation || 'Not provided')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -301,6 +360,8 @@ export default function ApprovalDetailDrawer({ isOpen, onClose, item, type, onAp
                                             </div>
                                         </div>
                                         
+                                        {isDelivery && <DeliveryCityEditor partner={item} />}
+
                                         {(isFranchise || isVendor) && (
                                             <div className="mt-8 pt-8 border-t border-slate-100">
                                                 <h5 className="text-sm font-black text-slate-900 uppercase tracking-tight mb-2">Requested Categories</h5>

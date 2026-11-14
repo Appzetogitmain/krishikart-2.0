@@ -27,7 +27,8 @@ import {
   getMyCodRemittances,
   updateAvailability,
   saveFCMToken,
-  testPushByToken
+  testPushByToken,
+  listDeliveryCities,
 } from "../controllers/delivery.controller.js";
 
 const router = express.Router();
@@ -39,6 +40,8 @@ router.post("/register", upload.fields([
 
 
 router.post("/send-otp", sendDeliveryOTP);
+// Cities a partner can work in (the franchise cities) - public, used at signup
+router.get("/cities", listDeliveryCities);
 router.post("/verify-otp", verifyDeliveryOTP);
 
 router.get("/me", protectDelivery, getDeliveryMe);

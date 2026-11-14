@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import MobileBottomNav from '../navigation/MobileBottomNav';
 import PageTransition from './PageTransition';
 import NewTaskAlert from '../modals/NewTaskAlert';
+import CityPrompt from '../modals/CityPrompt';
 import { useDeliveryOrders } from '../../contexts/DeliveryOrderContext';
 
 const DeliveryLayout = () => {
@@ -22,6 +23,7 @@ const DeliveryLayout = () => {
                 onClose={() => setIsAlertOpen(false)}
                 data={newTaskData}
             />
+            <CityPrompt />
         </div>
     );
 };
