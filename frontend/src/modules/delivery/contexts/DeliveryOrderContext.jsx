@@ -218,10 +218,19 @@ export function DeliveryOrderProvider({ children }) {
 
             const handleNewTask = (data) => {
                 if (data?.orderId) taskInfoRef.current[String(data.orderId)] = data;
+                // This partner accepted a request (or a same-customer order came along in that trip): just confirm it,
+                // no "assigned to you" pop-up - nothing is ever given to a partner without them accepting
+                if (data?.accepted) {
+                    if (data?.orderId) dropOffer(data.orderId);
+                    toast.success(data?.message || 'The order is yours');
+                    fetchDispatchedOrders();
+                    fetchOffers();
+                    return;
+                }
                 setNewTaskData(data);
                 setIsAlertOpen(true);
-                // Deliveries are now assigned and accepted automatically (client, Oct 2026): one chime, and the
-                // task becomes the active delivery when the partner has none. Older servers still ring until accepted.
+                // Requests go to every suitable partner and ring until this partner accepts or declines;
+                // orders the franchise assigns by hand chime once. Older servers still ring until accepted.
                 if (data?.offer) {
                     // A request also sent to other partners: rings until this partner accepts or declines
                     if (data?.orderId) startRingingFor(data.orderId);

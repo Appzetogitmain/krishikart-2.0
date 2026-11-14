@@ -28,12 +28,12 @@ import {
 } from "../utils/checkoutOrderSplit.js";
 import { createAdminNotification } from "../utils/adminNotification.js";
 import { createUserNotification } from "../utils/userNotification.js";
-import { resolveDeliverySchedule, getDeliveryOffDays } from "../utils/deliverySchedule.js";
+import { resolveDeliverySchedule, getDeliveryOffDays, getISTDayKey } from "../utils/deliverySchedule.js";
 import { CREDIT_BLOCKED_MESSAGE } from "../constants/credit.js";
 import { refundCancelledOrder } from "../utils/orderRefund.js";
 import { createDeliveryOtps, otpsOf, verifyDeliveryOtp } from "../utils/deliveryOtp.js";
 import { deliveryTaskSummary, taskSummaryLine } from "../utils/deliveryTask.js";
-import { offerOrderToPartners, dispatchOrderToPartner, acceptOffer, declineOffer, reofferAfterHandBack } from "../utils/deliveryDispatch.js";
+import { offerOrderToPartners, dispatchOrderToPartner, acceptOffer, declineOffer, reofferAfterHandBack, samePlace } from "../utils/deliveryDispatch.js";
 import { MAX_ORDER_WEIGHT_KG, hasPackInfo, maxPackedWeightKg } from "../constants/delivery.js";
 
 /** { productId: kg per unit } for items sold by piece / dozen / box whose product has its own unit weight */
@@ -2965,7 +2965,17 @@ export const getDeliveryOffers = async (req, res) => {
       .populate("userId", "fullName mobile address creditLimit usedCredit creditBlocked creditOverdueDate")
       .populate("franchiseId", "franchiseName city area mobile location formattedAddress storeQRCode")
       .sort({ "deliveryOffer.offeredAt": 1 });
-    return handleResponse(res, 200, "Delivery requests", orders.map((o) => ({ ...formatDeliveryTask(o), isOffer: true })));
+    // Requests for the same customer (or same place) on the same day go together: accepting one takes the others
+    // along in that trip, so the partner is told before accepting
+    const dayOf = (o) => getISTDayKey(o.scheduledDate || o.createdAt);
+    const together = (a, b) => String(a.franchiseId?._id || a.franchiseId) === String(b.franchiseId?._id || b.franchiseId) && dayOf(a) === dayOf(b)
+      && (String(a.userId?._id || a.userId) === String(b.userId?._id || b.userId) || samePlace(a, b));
+    const ref = (o) => "#" + String(o._id).slice(-6).toUpperCase();
+    return handleResponse(res, 200, "Delivery requests", orders.map((o) => ({
+      ...formatDeliveryTask(o),
+      isOffer: true,
+      tripWith: orders.filter((x) => String(x._id) !== String(o._id) && together(o, x)).map(ref),
+    })));
   } catch (error) {
     console.error("getDeliveryOffers:", error);
     return handleResponse(res, 500, "Could not load delivery requests");

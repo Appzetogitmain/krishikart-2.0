@@ -72,6 +72,8 @@ export async function dispatchOrderToPartner(order, partnerId, { by = "franchise
     orderId: order._id,
     type: "DELIVERY",
     autoAccepted: true,
+    // The partner took it from a request themselves: their app confirms it, no "assigned to you" pop-up
+    accepted: by === "offer",
     message: by === "offer" ? `Order ${ref(order._id)} is yours` : `New delivery assigned to you: ${ref(order._id)}`,
     ...taskInfo,
   });

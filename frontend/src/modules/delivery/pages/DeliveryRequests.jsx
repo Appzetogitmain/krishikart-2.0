@@ -76,6 +76,11 @@ const DeliveryRequests = () => {
                     <p className="text-xs text-muted-foreground mb-3">Also sent to other partners - the first to accept gets the order.</p>
                     {offers.map((request) => (
                         <div key={request.id} className="mb-3">
+                            {request.tripWith?.length > 0 && (
+                                <p className="mb-1.5 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs font-semibold text-amber-800">
+                                    Same customer: {request.tripWith.join(', ')} also come{request.tripWith.length > 1 ? '' : 's'} with this one if you accept (one trip)
+                                </p>
+                            )}
                             <DeliveryCard request={request} onAccept={handleAcceptOffer} onReject={handleDeclineOffer} acceptLabel="Accept" rejectLabel="Decline" />
                         </div>
                     ))}

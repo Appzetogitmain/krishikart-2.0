@@ -322,7 +322,8 @@ const orderSchema = new mongoose.Schema({
         {
             status: String,
             updatedAt: { type: Date, default: Date.now },
-            updatedBy: String // role like 'user', 'franchise', 'delivery'
+            updatedBy: String, // role like 'user', 'franchise', 'delivery'
+            message: String // e.g. "Delivery request accepted by the partner"
         }
     ],
     shippingAddress: {

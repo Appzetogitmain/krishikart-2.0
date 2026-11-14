@@ -524,7 +524,7 @@ export default function OrdersScreen() {
                         setIsPackageModalOpen(true);
                     }}
                     className={cn(btn, 'border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100')}
-                    title="Enter the packed weight (kg). A bike / scooter (up to 20 kg) or auto / 4-wheeler is then assigned automatically."
+                    title="Enter the packed weight (kg). The request then goes to nearby bike / scooter (up to 20 kg) or auto / 4-wheeler partners - the first to accept takes it."
                 >
                     <Package size={18} /> Enter weight
                 </button>
@@ -662,7 +662,7 @@ export default function OrdersScreen() {
                     {activeTab === 'ready' && row.status === 'dispatched' && row.deliveryPartner && (
                         <span className="mr-auto inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700">
                             <UserCircle2 size={18} /> {row.deliveryPartner?.fullName}
-                            {row.autoDispatched && <span className="px-2 py-0.5 rounded-md bg-violet-50 text-[12px] font-semibold">Auto-assigned</span>}
+                            {row.autoDispatched && <span className="px-2 py-0.5 rounded-md bg-violet-50 text-[12px] font-semibold">{row.acceptedRequest ? 'Accepted the request' : 'Auto-assigned'}</span>}
                         </span>
                     )}
                     {renderActions(row)}
@@ -774,6 +774,14 @@ export default function OrdersScreen() {
                     {riders.length > 0 && (
                         <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700">
                             <Truck size={18} /> On the way with <span translate="no">{riders.join(', ')}</span>
+                            {orders.some((o) => o.status === 'dispatched' && o.acceptedRequest) && (
+                                <span className="px-2 py-0.5 rounded-md bg-violet-50 text-[12px] font-semibold">Accepted the request</span>
+                            )}
+                        </span>
+                    )}
+                    {riders.length === 0 && orders.some((o) => o.status === 'packed' && o.offerCount > 0) && (
+                        <span className="px-3 py-1 rounded-lg text-[13px] font-semibold bg-violet-50 text-violet-700">
+                            {(() => { const n = Math.max(...orders.map((o) => o.offerCount || 0)); return `Request sent to ${n} delivery partner${n > 1 ? 's' : ''} - waiting for the first to accept`; })()}
                         </span>
                     )}
                     {orders.filter(canBill).length > 1 && (
@@ -838,7 +846,7 @@ export default function OrdersScreen() {
                                     <span className="text-[15px] font-bold text-slate-900 tabular-nums whitespace-nowrap">₹{Number(row.total || 0).toLocaleString('en-IN')}</span>
                                     <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
                                         {row.status === 'dispatched' && row.deliveryPartner && (
-                                            <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700"><UserCircle2 size={18} /> {row.deliveryPartner?.fullName}{row.autoDispatched && <span className="px-2 py-0.5 rounded-md bg-violet-50 text-[12px] font-semibold">Auto-assigned</span>}</span>
+                                            <span className="inline-flex items-center gap-2 text-[14px] font-semibold text-violet-700"><UserCircle2 size={18} /> {row.deliveryPartner?.fullName}{row.autoDispatched && <span className="px-2 py-0.5 rounded-md bg-violet-50 text-[12px] font-semibold">{row.acceptedRequest ? 'Accepted the request' : 'Auto-assigned'}</span>}</span>
                                         )}
                                         {renderActions(row)}
                                     </div>

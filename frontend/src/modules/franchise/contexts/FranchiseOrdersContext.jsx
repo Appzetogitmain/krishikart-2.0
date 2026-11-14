@@ -189,9 +189,9 @@ export function FranchiseOrdersProvider({ children }) {
                 duration: 10000,
             });
         };
-        // The system gave a packed order to a delivery partner (or found nobody online)
+        // A delivery partner accepted the request for a packed order
         const handleAutoAssigned = (data) => {
-            toast.success(data?.message || 'Delivery partner assigned automatically', { duration: 6000 });
+            toast.success(data?.message || 'A delivery partner accepted the request', { duration: 6000 });
             fetchOrders();
         };
         // Delivery request sent to partners (first to accept gets it), or nobody accepted in time
@@ -311,6 +311,8 @@ export function FranchiseOrdersProvider({ children }) {
             deliveryPartnerId: o.deliveryPartnerId?._id || o.deliveryPartnerId,
             deliveryPartner: o.deliveryPartnerId,
             autoDispatched: !!o.autoDispatched,
+            // A partner took the delivery request themselves (vs. the old automatic assignment)
+            acceptedRequest: (o.statusHistory || []).some((h) => h?.status === 'Dispatched' && h?.updatedBy === 'delivery'),
             // Open delivery request: how many partners have it, waiting for the first to accept
             offerCount: o.deliveryOffer?.offeredAt && !o.deliveryOffer?.acceptedBy ? (o.deliveryOffer.offeredTo || []).length : 0,
             statusHistory: o.statusHistory || []

@@ -125,9 +125,11 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
                                     <Package className="w-8 h-8 text-emerald-500" />
                                 </motion.div>
                                 <h3 className="text-xl font-bold text-white mb-1">
-                                    {data.type === 'RETURN' ? 'New Return Pickup!' : 'New Delivery Task!'}
+                                    {data.type === 'RETURN' ? 'New Return Pickup!' : data.offer ? 'New Delivery Request!' : 'New Delivery Task!'}
                                 </h3>
-                                <p className="text-emerald-100 text-sm font-medium">You have been assigned a new task</p>
+                                <p className="text-emerald-100 text-sm font-medium">
+                                    {data.offer ? 'Sent to nearby partners - the first to accept gets it' : 'You have been assigned a new task'}
+                                </p>
                             </div>
 
                             {/* Content */}
@@ -184,14 +186,14 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
                                                     className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
                                                     style={{ WebkitTapHighlightColor: 'transparent' }}
                                                 >
-                                                    Accept
+                                                    {data.offer ? 'Accept order' : 'Accept'}
                                                 </button>
                                                 <button
                                                     onClick={handleReject}
                                                     className="flex items-center justify-center gap-2 border-2 border-rose-200 text-rose-600 font-semibold py-3 px-4 rounded-xl hover:bg-rose-50 transition-all active:scale-[0.98]"
                                                     style={{ WebkitTapHighlightColor: 'transparent' }}
                                                 >
-                                                    Reject
+                                                    {data.offer ? 'Decline' : 'Reject'}
                                                 </button>
                                             </div>
                                             <button
