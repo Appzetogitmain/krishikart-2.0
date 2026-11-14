@@ -16,6 +16,7 @@ import AuditLog from "../models/auditLog.js";
 import handleResponse from "../utils/helper.js";
 import bcrypt from "bcryptjs";
 import Delivery from "../models/delivery.js";
+import { matchFranchiseCity } from "../utils/deliveryCity.js";
 import os from "os";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import {
@@ -2788,6 +2789,12 @@ export const updateDeliveryStatus = async (req, res) => {
     const { isApproved, status } = req.body;
 
     const updateData = {};
+    if (req.body.city !== undefined) {
+      const city = await matchFranchiseCity(req.body.city);
+      if (!city) return handleResponse(res, 400, "Choose one of the franchise cities");
+      updateData.city = city.name;
+    }
+    if (req.body.address !== undefined) updateData.address = String(req.body.address || "").trim();
     if (isApproved !== undefined) {
       updateData.isApproved = isApproved;
       updateData.approvalStatus = isApproved ? "approved" : "rejected";

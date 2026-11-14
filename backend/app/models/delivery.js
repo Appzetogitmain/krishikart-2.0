@@ -29,6 +29,11 @@ const deliverySchema = new mongoose.Schema(
       required: true,
     },
 
+    // Where the partner works (client, Nov 2026): requests come only from franchises in this city.
+    // One of the franchise cities (GET /delivery/cities); empty on older accounts until the partner picks it.
+    city: { type: String, trim: true, default: "" },
+    address: { type: String, trim: true, default: "" },
+
     otp: String,
     otpExpiresAt: Date,
     otpAttempts: { type: Number, default: 0 },

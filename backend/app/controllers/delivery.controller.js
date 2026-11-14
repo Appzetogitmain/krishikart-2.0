@@ -7,6 +7,19 @@ import { handleResponse } from "../utils/helper.js";
 import mongoose from "mongoose";
 import admin from "../services/firebaseAdmin.js";
 import { emitToFranchise, emitToAdmin } from "../lib/socket.js";
+import Franchise from "../models/franchise.js";
+import { cityKeyOf } from "../utils/pricing.js";
+import { franchiseCities, partnerCityKey, storesForCityLookup } from "../utils/deliveryCity.js";
+
+/** GET /delivery/cities - the cities a partner can choose (where there is a franchise) */
+export const listDeliveryCities = async (req, res) => {
+    try {
+        return handleResponse(res, 200, "Cities", (await franchiseCities()).map((c) => ({ name: c.name })));
+    } catch (err) {
+        console.error("listDeliveryCities:", err);
+        return handleResponse(res, 500, "Could not load cities");
+    }
+};
 
 /**
  * @desc Get All Active Delivery Partners
@@ -15,8 +28,16 @@ import { emitToFranchise, emitToAdmin } from "../lib/socket.js";
  */
 export const getAllDeliveryPartners = async (req, res) => {
     try {
-        const partners = await Delivery.find({ status: 'active', isVerified: true, isOnline: true, isApproved: true })
-            .select('fullName mobile vehicleNumber vehicleType isOnline');
+        const all = await Delivery.find({ status: 'active', isVerified: true, isOnline: true, isApproved: true })
+            .select('fullName mobile vehicleNumber vehicleType isOnline city address location')
+            .lean();
+        // Only partners who work in this store's city (client, Nov 2026)
+        const store = await Franchise.findById(req.franchise?._id).select('city').lean();
+        const storeCity = cityKeyOf(store?.city);
+        const stores = await storesForCityLookup();
+        const partners = all
+            .filter((p) => !storeCity || partnerCityKey(p, stores) === storeCity)
+            .map(({ location, ...p }) => p); // eslint-disable-line no-unused-vars
 
         return handleResponse(res, 200, "Delivery partners fetched successfully", partners);
     } catch (err) {

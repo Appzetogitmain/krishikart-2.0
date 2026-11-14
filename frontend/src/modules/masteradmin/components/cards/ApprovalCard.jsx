@@ -42,6 +42,11 @@ export default function ApprovalCard({ item, type, onApprove, onReject, onViewDo
                                 {new Date(item.createdAt || item.submittedAt || item.requestedAt).toLocaleDateString('en-GB')}
                             </span>
                         </div>
+                        {isDelivery && (
+                            <p className={cn('mt-1 text-[11px] font-semibold', item.city ? 'text-slate-600' : 'text-rose-600')}>
+                                {item.city ? `City: ${item.city}` : 'City not set'}
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className={cn(

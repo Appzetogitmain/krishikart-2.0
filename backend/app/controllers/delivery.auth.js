@@ -14,6 +14,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { VEHICLE_TYPES, VEHICLE_NUMBER_RE } from "../constants/delivery.js";
+import { matchFranchiseCity } from "../utils/deliveryCity.js";
 
 /* 🔐 TOKEN */
 const generateToken = (id) =>
@@ -43,6 +44,10 @@ export const registerDelivery = async (req, res) => {
     if (!fullName || !mobile || !vehicleNumber || !vehicleType) {
       return handleResponse(res, 400, "All fields (Name, Mobile, Vehicle) are required");
     }
+    const address = String(req.body.address || "").trim();
+    const city = await matchFranchiseCity(req.body.city);
+    if (!city) return handleResponse(res, 400, "Please choose the city you will deliver in");
+    if (address.length < 5) return handleResponse(res, 400, "Please enter your address");
 
     if (!/^[a-zA-Z\s]+$/.test(fullName))
       return handleResponse(res, 400, "Name should only contain alphabets");
@@ -76,6 +81,8 @@ export const registerDelivery = async (req, res) => {
         mobile,
         vehicleNumber,
         vehicleType,
+        city: city.name,
+        address,
         aadharImage: aadharImageUrl,
         panImage: panImageUrl,
         licenseImage: licenseImageUrl
@@ -421,6 +428,17 @@ export const updateDeliveryProfile = async (req, res) => {
     const delivery = await Delivery.findById(req.delivery._id);
 
     if (!delivery) return handleResponse(res, 404, "Delivery partner not found");
+
+    if (req.body.city !== undefined) {
+      const city = await matchFranchiseCity(req.body.city);
+      if (!city) return handleResponse(res, 400, "Please choose one of the cities in the list");
+      delivery.city = city.name;
+    }
+    if (req.body.address !== undefined) {
+      const address = String(req.body.address || "").trim();
+      if (address.length < 5) return handleResponse(res, 400, "Please enter your address");
+      delivery.address = address;
+    }
 
     if (fullName) delivery.fullName = fullName;
     if (vehicleNumber) delivery.vehicleNumber = vehicleNumber;

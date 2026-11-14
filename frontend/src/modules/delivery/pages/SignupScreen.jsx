@@ -7,6 +7,7 @@ import api from '../../../lib/axios';
 import { toast } from 'sonner';
 import { openFlutterCamera } from '../../../lib/flutterCamera';
 import { VEHICLES } from '@/lib/deliveryVehicles';
+import CityAddressFields from '../components/common/CityAddressFields';
 
 // MP09CS1234, MP09R1234 (autos often have a one-letter series), DL1CAB1234
 const VEHICLE_REGEX = /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/;
@@ -17,6 +18,8 @@ const SignupScreen = () => {
         name: '',
         phone: '',
         vehicleNumber: '',
+        city: '',
+        address: '',
         vehicleType: 'bike', // bike / scooter: orders up to 20 kg; auto / four_wheeler: heavier orders
         aadharImage: null,
         panImage: null,
@@ -106,6 +109,14 @@ const SignupScreen = () => {
             toast.error('Enter the vehicle number like MP09CS1234');
             return;
         }
+        if (!formData.city) {
+            toast.error('Please choose the city you will deliver in');
+            return;
+        }
+        if ((formData.address || '').trim().length < 5) {
+            toast.error('Please enter your address');
+            return;
+        }
         if (!formData.aadharImage || !formData.panImage || !formData.licenseImage) {
             toast.error('Please upload all document images (Aadhar, PAN, and License)');
             return;
@@ -118,6 +129,8 @@ const SignupScreen = () => {
             data.append('mobile', formData.phone);
             data.append('vehicleNumber', vehicleNumber);
             data.append('vehicleType', formData.vehicleType);
+            data.append('city', formData.city);
+            data.append('address', formData.address.trim());
             data.append('aadharImage', formData.aadharImage);
             data.append('panImage', formData.panImage);
             data.append('licenseImage', formData.licenseImage);
@@ -267,6 +280,11 @@ const SignupScreen = () => {
                                         />
                                     </div>
                                 </div>
+
+                                <CityAddressFields
+                                    value={{ city: formData.city, address: formData.address }}
+                                    onChange={(v) => setFormData((prev) => ({ ...prev, city: v.city, address: v.address }))}
+                                />
 
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Vehicle Number</label>

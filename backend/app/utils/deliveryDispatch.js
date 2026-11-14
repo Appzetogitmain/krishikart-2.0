@@ -9,6 +9,8 @@ import { deliveryTaskSummary, taskSummaryLine } from "./deliveryTask.js";
 import { getDistance } from "./geo.js";
 import { getISTDayKey, getShiftStartHour } from "./deliverySchedule.js";
 import { TWO_WHEELER_MAX_KG, isTwoWheeler, orderWeightKg, hasPackInfo } from "../constants/delivery.js";
+import { cityKeyOf } from "./pricing.js";
+import { partnerCityKey, storesForCityLookup } from "./deliveryCity.js";
 
 /**
  * Delivery requests (client, Nov 2026 - replaces the Oct 2026 "give it to one partner, no accepting" rule):
@@ -117,17 +119,22 @@ const dayOf = (o) => getISTDayKey(o.scheduledDate || o.createdAt || new Date());
 
 /**
  * Every partner who may get the request: active, verified, approved and online; has not declined this order;
- * the right vehicle for its weight (over 20 kg: auto / four-wheeler only); within 25 km of the store (or no
- * location saved yet). Sorted best first: two-wheelers first for light orders, then fewest running deliveries
- * and nearest to the store.
+ * the right vehicle for its weight (over 20 kg: auto / four-wheeler only); works in the STORE'S CITY (their chosen
+ * city, else the nearest store's city - see deliveryCity.js; no city = no requests); and, when their location is
+ * known, within 25 km of the store. Sorted best first: two-wheelers first for light orders, then fewest running
+ * deliveries and nearest to the store.
  */
 export async function eligiblePartners(order, { exclude = [] } = {}) {
   const skip = new Set([...exclude, ...(order.deliveryRejectedBy || [])].map(String));
   const partners = await Delivery.find({ status: "active", isVerified: true, isApproved: true, isOnline: true })
-    .select("fullName location vehicleType")
+    .select("fullName location vehicleType city")
     .lean();
   const weight = orderWeightKg(order);
-  const candidates = partners.filter((p) => !skip.has(String(p._id)) && fits(p, weight));
+  const franchise = await Franchise.findById(order.franchiseId).select("location city").lean();
+  const storeCity = cityKeyOf(franchise?.city);
+  if (!storeCity) return [];
+  const stores = await storesForCityLookup();
+  const candidates = partners.filter((p) => !skip.has(String(p._id)) && fits(p, weight) && partnerCityKey(p, stores) === storeCity);
   if (!candidates.length) return [];
   const ids = candidates.map((p) => p._id);
   const loads = await Order.aggregate([
@@ -135,7 +142,6 @@ export async function eligiblePartners(order, { exclude = [] } = {}) {
     { $group: { _id: "$deliveryPartnerId", n: { $sum: 1 } } },
   ]);
   const loadOf = new Map(loads.map((l) => [String(l._id), l.n]));
-  const franchise = await Franchise.findById(order.franchiseId).select("location").lean();
   const store = franchise?.location?.coordinates;
   return candidates
     .map((p) => {
