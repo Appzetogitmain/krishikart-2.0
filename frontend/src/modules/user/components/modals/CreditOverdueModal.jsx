@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, CreditCard, ArrowRight, ShieldAlert, PhoneCall } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +8,7 @@ import { useWallet } from '../../contexts/WalletContext';
 
 export default function CreditOverdueModal({ isOpen, usedCredit, dueDate }) {
     const { repayCredit } = useWallet();
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
     if (!isOpen) return null;
@@ -14,11 +17,10 @@ export default function CreditOverdueModal({ isOpen, usedCredit, dueDate }) {
         setLoading(true);
         try {
             const result = await repayCredit();
-            if (!result.success) {
-                alert(result.message || "Payment failed");
-            }
-        } catch (err) {
-            alert("Something went wrong");
+            if (result.success) toast.success(result.message || 'Payment received');
+            else if (result.message !== 'Payment cancelled') toast.error(result.message || 'Payment failed');
+        } catch {
+            toast.error('Something went wrong');
         } finally {
             setLoading(false);
         }
@@ -45,7 +47,7 @@ export default function CreditOverdueModal({ isOpen, usedCredit, dueDate }) {
                     <div className="p-8 space-y-6">
                         <div className="space-y-4 text-center">
                             <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                                Your **KK Credit** balance of <span className="text-red-600 font-black">₹{usedCredit.toLocaleString()}</span> is overdue.
+                                Your <strong>KK Credit</strong> balance of <span className="text-red-600 font-black">₹{usedCredit.toLocaleString()}</span> is overdue.
                                 <br /><br />
                                 Please clear this amount to continue shopping.
                             </p>
@@ -79,6 +81,14 @@ export default function CreditOverdueModal({ isOpen, usedCredit, dueDate }) {
                                     </>
                                 )}
                             </Button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/credit-info')}
+                                className="w-full h-11 rounded-2xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                            >
+                                See my credit orders &amp; pay part
+                            </button>
 
                             <p className="text-[10px] text-slate-400 text-center uppercase font-black tracking-widest italic leading-relaxed">
                                 This message will close once your payment is received.

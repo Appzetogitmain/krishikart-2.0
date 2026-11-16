@@ -177,12 +177,13 @@ export function WalletProvider({ children }) {
         }
     }, [user, loadRazorpay, syncWalletFromUser]);
 
-    const repayCredit = useCallback(async () => {
+    /** Pay KK Credit dues: the full amount owed, or `amount` (payments clear the oldest orders first). */
+    const repayCredit = useCallback(async (amount) => {
         try {
             const sdkLoaded = await loadRazorpay();
             if (!sdkLoaded) return { success: false, message: 'Could not open the payment page. Please check your internet connection.' };
 
-            const createRes = await api.post('/user/wallet/repay-credit/create-order');
+            const createRes = await api.post('/user/wallet/repay-credit/create-order', amount ? { amount } : {});
             if (!createRes.data?.success || !createRes.data?.result?.id) {
                 return { success: false, message: createRes.data?.message || 'Failed to initialize payment' };
             }
@@ -200,7 +201,7 @@ export function WalletProvider({ children }) {
                     amount: order.amount,
                     currency: order.currency || 'INR',
                     name: 'Kisaankart',
-                    description: 'KK Credit Repayment',
+                    description: 'KK Credit dues',
                     order_id: order.id,
                     prefill,
                     theme: { color: '#ef4444' },
@@ -209,8 +210,9 @@ export function WalletProvider({ children }) {
                             const verifyRes = await api.post('/user/wallet/repay-credit/verify', response);
                             if (verifyRes.data?.success) {
                                 syncWalletFromUser(verifyRes.data.result || {});
-                                resolve({ success: true, message: 'Credit balance cleared!' });
-                                window.location.reload(); 
+                                // Updates the account everywhere (closes the overdue notice when all is paid)
+                                await auth?.refreshUser?.();
+                                resolve({ success: true, message: verifyRes.data?.message || 'Payment received' });
                                 return;
                             }
                             resolve({ success: false, message: 'Payment verification failed' });
@@ -223,9 +225,9 @@ export function WalletProvider({ children }) {
                 paymentObject.open();
             });
         } catch (error) {
-            return { success: false, message: 'Repayment failed' };
+            return { success: false, message: error?.response?.data?.message || 'Repayment failed' };
         }
-    }, [user, loadRazorpay, syncWalletFromUser]);
+    }, [user, auth, loadRazorpay, syncWalletFromUser]);
 
     const payWithWallet = useCallback((amount) => {
         if (balance >= amount) {

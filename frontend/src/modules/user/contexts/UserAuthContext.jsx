@@ -69,6 +69,21 @@ export function UserAuthProvider({ children }) {
         }
     };
 
+    // Re-read the account (e.g. after paying KK Credit dues)
+    const refreshUser = async () => {
+        try {
+            const response = await api.get('/user/me');
+            if (response.data.success) {
+                setUser(response.data.result);
+                localStorage.setItem('userData', JSON.stringify(response.data.result));
+                return response.data.result;
+            }
+        } catch (error) {
+            console.error("Failed to refresh user profile", error);
+        }
+        return null;
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem('userToken');
@@ -93,6 +108,7 @@ export function UserAuthProvider({ children }) {
         <UserAuthContext.Provider value={{
             user,
             loginSuccess,
+            refreshUser,
             logout,
             isAuthenticated: !!user,
             loading

@@ -18,6 +18,7 @@ import crypto from "crypto";
 import admin from "../services/firebaseAdmin.js";
 import razorpay from "../utils/razorpay.js";
 import { createUserNotification } from "../utils/userNotification.js";
+import { buildCreditStatement, refreshCreditDueDate } from "../utils/creditStatement.js";
 
 
 /**
@@ -633,9 +634,21 @@ export const createCreditRepaymentOrder = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return handleResponse(res, 404, "User not found");
 
-    const amount = Number(user.usedCredit || 0);
-    if (amount <= 0) {
+    const outstanding = Math.round(Number(user.usedCredit || 0) * 100) / 100;
+    if (outstanding <= 0) {
       return handleResponse(res, 400, "No outstanding credit balance to pay.");
+    }
+    // Pay everything (default) or a part of it - e.g. only the overdue orders
+    let amount = outstanding;
+    if (req.body?.amount !== undefined && req.body?.amount !== null && req.body?.amount !== "") {
+      const asked = Math.round(Number(req.body.amount) * 100) / 100;
+      if (!Number.isFinite(asked) || asked < 1) {
+        return handleResponse(res, 400, "Please enter at least ₹1.");
+      }
+      if (asked > outstanding) {
+        return handleResponse(res, 400, `You only owe ₹${outstanding}. Please enter ₹${outstanding} or less.`);
+      }
+      amount = asked;
     }
 
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -703,45 +716,54 @@ export const verifyCreditRepayment = async (req, res) => {
       return handleResponse(res, 200, "Payment already processed", existingUser);
     }
 
-    const user = await User.findById(userId);
-    if (!user) return handleResponse(res, 404, "User not found");
-
-    const paidAmount = recharge.amount;
-    user.usedCredit = Math.max(0, user.usedCredit - paidAmount);
-
-    // If credit is fully cleared, reset overdue date
-    if (user.usedCredit === 0) {
-      user.creditOverdueDate = null;
-    }
-
-    user.walletTransactions = user.walletTransactions || [];
-    user.walletTransactions.unshift({
-      txnId: `CRD-PAY-${Date.now()}`,
-      type: "Paid", // Or add "Credit Repayment" to enum. I'll use "Paid" for consistency with existing walletTransactions enum or check schema
-      amount: paidAmount,
-      status: "Success",
-      note: "KK Credit repayment via Razorpay",
-      createdAt: new Date(),
-    });
-
-    await user.save();
+    const paidAmount = Math.round(Number(recharge.amount || 0) * 100) / 100;
+    // One atomic update (an order paid on credit at the same moment can't be lost)
+    const updated = await User.findOneAndUpdate({ _id: userId }, [
+      {
+        $set: {
+          usedCredit: { $max: [0, { $round: [{ $subtract: [{ $ifNull: ["$usedCredit", 0] }, paidAmount] }, 2] }] },
+          walletTransactions: {
+            $concatArrays: [
+              { $literal: [{ txnId: `CRD-PAY-${Date.now()}`, type: "Paid", amount: paidAmount, status: "Success", note: `KK Credit repayment via Razorpay (${razorpay_payment_id})`, createdAt: new Date() }] },
+              { $ifNull: ["$walletTransactions", []] },
+            ],
+          },
+        },
+      },
+    ], { new: true, updatePipeline: true });
+    if (!updated) return handleResponse(res, 404, "User not found");
+    // The deadline moves to the oldest order that is still unpaid (none left -> no deadline)
+    await refreshCreditDueDate(userId);
+    const user = await User.findById(userId).select("-password -otp");
 
     await createUserNotification({
       userId,
       type: "wallet",
       title: "Credit Repaid",
-      message: `Your KK Credit repayment of Rs${Number(paidAmount || 0).toFixed(2)} was successful.`,
-      link: "/wallet",
+      message: `Your KK Credit repayment of Rs${Number(paidAmount || 0).toFixed(2)} was successful.${Number(user.usedCredit) > 0 ? ` Still to pay: Rs${Number(user.usedCredit).toFixed(2)}.` : " All your credit dues are clear."}`,
+      link: "/credit-info",
       meta: {
         amount: Number(paidAmount || 0),
         transactionType: "credit_repayment",
       },
     });
 
-    return handleResponse(res, 200, "Credit balance cleared successfully", user);
+    return handleResponse(res, 200, Number(user.usedCredit) > 0 ? "Payment received" : "Credit balance cleared successfully", user);
   } catch (error) {
     console.error("Credit repayment verify error:", error);
     return handleResponse(res, 500, "Server error");
+  }
+};
+
+/** GET /user/credit/statement - the customer's credit orders, what is due and when, and payments */
+export const getCreditStatement = async (req, res) => {
+  try {
+    const st = await buildCreditStatement(req.user._id);
+    if (!st) return handleResponse(res, 404, "User not found");
+    return handleResponse(res, 200, "Credit statement", st);
+  } catch (error) {
+    console.error("Credit statement error:", error);
+    return handleResponse(res, 500, "Could not load your credit details");
   }
 };
 

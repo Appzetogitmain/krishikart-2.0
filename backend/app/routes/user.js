@@ -12,6 +12,7 @@ import {
     verifyWalletRecharge,
     createCreditRepaymentOrder,
     verifyCreditRepayment,
+    getCreditStatement,
     redeemLoyaltyPoints,
     saveFCMToken,
     testPushByToken,
@@ -51,6 +52,7 @@ router.post("/wallet/recharge/create-order", protect, createWalletRechargeOrder)
 router.post("/wallet/recharge/verify", protect, verifyWalletRecharge);
 router.post("/wallet/repay-credit/create-order", protect, createCreditRepaymentOrder);
 router.post("/wallet/repay-credit/verify", protect, verifyCreditRepayment);
+router.get("/credit/statement", protect, getCreditStatement);
 router.post("/wallet/redeem-loyalty", protect, redeemLoyaltyPoints);
 
 // Cart Routes

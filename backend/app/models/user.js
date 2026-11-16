@@ -146,6 +146,11 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    // Last credit-due reminder sent ("YYYY-MM-DD-am" / "-pm", IST) so each one goes out once
+    creditReminderSlot: {
+      type: String,
+      default: ""
+    },
     // Admin hold on KK Credit: no new credit purchases while true (repaying dues still works)
     creditBlocked: {
       type: Boolean,

@@ -24,6 +24,7 @@ export default function AppLayout() {
         if (!user || !user.usedCredit || user.usedCredit <= 0 || !user.creditOverdueDate) return false;
         return new Date() > new Date(user.creditOverdueDate);
     }, [user])
+    // The credit page itself shows the dues and how to pay them
 
     // Scroll to top on route change. Coming BACK to Home (e.g. from a product page) returns to
     // where the customer was instead of jumping to the top.
@@ -108,7 +109,7 @@ export default function AppLayout() {
 
             {/* Strict Credit Overdue Modal */}
             <CreditOverdueModal
-                isOpen={isCreditOverdue}
+                isOpen={isCreditOverdue && location.pathname !== '/credit-info'}
                 usedCredit={user?.usedCredit || 0}
                 dueDate={user?.creditOverdueDate}
             />

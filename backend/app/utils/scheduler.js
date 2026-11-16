@@ -2,6 +2,7 @@ import Order from '../models/order.js';
 import { sendNotificationToUser } from './pushNotificationHelper.js';
 import { getISTDayKey, getISTMinutesOfDay, getShiftStartHour } from './deliverySchedule.js';
 import { sweepAutoDispatch } from './deliveryDispatch.js';
+import { sendCreditReminders } from './creditReminders.js';
 
 /**
  * Checks for upcoming scheduled orders and sends reminders to delivery partners.
@@ -66,4 +67,9 @@ export const startScheduler = () => {
     // Packed orders still without a delivery partner (nobody was online, or an advance booking's day came)
     setInterval(sweepAutoDispatch, 2 * 60 * 1000);
     setTimeout(sweepAutoDispatch, 20 * 1000);
+
+    // KK Credit due reminders: daily from 3 days after an order went on credit, twice a day once overdue
+    const creditReminders = () => sendCreditReminders().catch((e) => console.error("[Scheduler] credit reminders:", e));
+    setInterval(creditReminders, 15 * 60 * 1000);
+    setTimeout(creditReminders, 60 * 1000);
 };
