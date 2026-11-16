@@ -29,8 +29,8 @@ import AboutScreen from './modules/user/pages/AboutScreen'
 import WishlistScreen from './modules/user/pages/WishlistScreen'
 import CreditInfoScreen from './modules/user/pages/CreditInfoScreen'
 import LocationMapPicker from './modules/user/pages/LocationMapPicker'
-import TermsScreen from './modules/user/pages/TermsScreen'
-import PrivacyPolicyScreen from './modules/user/pages/PrivacyPolicyScreen'
+// Footer legal pages: the client's official documents (src/lib/legalDocuments.js)
+import LegalDocumentScreen from './modules/user/pages/LegalDocumentScreen'
 import SecurityScreen from './modules/user/pages/SecurityScreen'
 import { WishlistProvider } from './modules/user/contexts/WishlistContext'
 import { FilterProvider } from './modules/user/contexts/FilterContext'
@@ -168,8 +168,9 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingOrHome />} />
               <Route path="/splash" element={<SplashScreen />} />
-              <Route path="/terms" element={<TermsScreen />} />
-              <Route path="/privacy" element={<PrivacyPolicyScreen />} />
+              <Route path="/terms" element={<LegalDocumentScreen key="terms" docKey="terms" />} />
+              <Route path="/terms-of-use" element={<LegalDocumentScreen key="termsOfUse" docKey="termsOfUse" />} />
+              <Route path="/privacy" element={<LegalDocumentScreen key="privacy" docKey="privacy" />} />
               <Route path="/security" element={<SecurityScreen />} />
             <Route path="/login" element={<UserProviders><LoginScreen /></UserProviders>} />
 

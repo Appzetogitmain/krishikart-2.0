@@ -170,6 +170,14 @@ export default function LegalPagesManagementScreen() {
                     </div>
 
                     <div className="p-4 space-y-4">
+                        {(activeTab === 'terms' || activeTab === 'privacy') && (
+                            <p className="rounded-md bg-amber-50 border border-amber-100 px-3 py-2 text-[12px] text-amber-800" data-legal-note>
+                                The website footer pages (Privacy Policy, Terms &amp; Conditions, Terms of Use) show the official KisaanKart documents.
+                                {activeTab === 'privacy'
+                                    ? ' The privacy text here is used only on the privacy pages inside the vendor, franchise and delivery apps.'
+                                    : ' The terms text here is no longer shown on the website.'}
+                            </p>
+                        )}
                         {activeTab === 'terms' && (
                             <>
                                 <label className="block space-y-2">

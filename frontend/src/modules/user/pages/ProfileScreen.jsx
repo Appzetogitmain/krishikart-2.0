@@ -4,7 +4,7 @@ import {
   User, Package, Wallet,
   ChevronRight, Bell, Heart,
   Info, Power, CreditCard,
-  Trash2, MapPin
+  Trash2, MapPin, Shield, ScrollText, FileText
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PageTransition from '../components/layout/PageTransition'
@@ -79,6 +79,14 @@ export default function ProfileScreen() {
         { icon: Bell, label: "Notifications", path: "/notifications" },
         { icon: Heart, label: "My list", path: "/wishlist" },
         { icon: Info, label: "Contact us", path: "/help-support" },
+      ]
+    },
+    {
+      title: "Legal",
+      items: [
+        { icon: Shield, label: "Privacy Policy", path: "/privacy" },
+        { icon: ScrollText, label: "Terms & Conditions", path: "/terms" },
+        { icon: FileText, label: "Terms of Use", path: "/terms-of-use" },
       ]
     }
   ]

@@ -43,16 +43,25 @@ export default function DesktopFooter() {
                         </ul>
                     </div>
 
-
+                    {/* Legal: the official KisaanKart documents */}
+                    <div>
+                        <h4 className="text-slate-900 font-bold mb-6">Legal</h4>
+                        <ul className="space-y-4">
+                            <li><Link to="/privacy" className="text-slate-500 hover:text-primary text-sm transition-colors">Privacy Policy</Link></li>
+                            <li><Link to="/terms" className="text-slate-500 hover:text-primary text-sm transition-colors">Terms & Conditions</Link></li>
+                            <li><Link to="/terms-of-use" className="text-slate-500 hover:text-primary text-sm transition-colors">Terms of Use</Link></li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div className="mt-20 pt-8 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-slate-400 text-xs">
-                        &copy; {new Date().getFullYear()} Kisaan Kart. All rights reserved.
+                        &copy; {new Date().getFullYear()} KisaanKart, operated by Zook Spaces Private Limited. All rights reserved.
                     </p>
                     <div className="flex gap-8">
                         <Link to="/privacy" className="text-slate-400 hover:text-slate-600 text-xs">Privacy Policy</Link>
-                        <Link to="/terms" className="text-slate-400 hover:text-slate-600 text-xs">Terms of Service</Link>
+                        <Link to="/terms" className="text-slate-400 hover:text-slate-600 text-xs">Terms & Conditions</Link>
+                        <Link to="/terms-of-use" className="text-slate-400 hover:text-slate-600 text-xs">Terms of Use</Link>
                         <Link to="/security" className="text-slate-400 hover:text-slate-600 text-xs">Security</Link>
                     </div>
                 </div>

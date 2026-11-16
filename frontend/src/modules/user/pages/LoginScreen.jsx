@@ -294,7 +294,7 @@ export default function LoginScreen() {
                             <ShieldCheck className="text-green-500 w-5 h-5" />
                             <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
                                 Your data is kept safe and secure. <br /> 
-                                By continuing, you agree to our <button type="button" onClick={() => navigate('/terms')} className="text-primary border-b border-primary/20">Terms & Conditions</button>.
+                                By continuing, you agree to our <button type="button" onClick={() => navigate('/terms')} className="text-primary border-b border-primary/20">Terms & Conditions</button>, <button type="button" onClick={() => navigate('/terms-of-use')} className="text-primary border-b border-primary/20">Terms of Use</button> and <button type="button" onClick={() => navigate('/privacy')} className="text-primary border-b border-primary/20">Privacy Policy</button>.
                             </p>
                         </div>
                     </div>
