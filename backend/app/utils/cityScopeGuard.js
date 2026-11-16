@@ -32,7 +32,7 @@ import {
 const HEAD_OFFICE_MSG = "This is managed by the main admin (head office).";
 const OTHER_CITY_MSG = "This belongs to another city. You can only work on your own city.";
 
-const ADMIN_PREFIXES = ["/masteradmin", "/orders/admin", "/procurement/admin", "/stock-returns/admin", "/reports/admin", "/coupons/admin", "/catalog/categories", "/catalog/subcategories", "/products"];
+const ADMIN_PREFIXES = ["/masteradmin", "/orders/admin", "/procurement/admin", "/stock-returns/admin", "/reports/admin", "/coupons/admin", "/banners/admin", "/catalog/categories", "/catalog/subcategories", "/products"];
 
 const compile = (pattern) => {
     const keys = [];
@@ -81,6 +81,8 @@ const BLOCKED = [
     rule("POST", "/masteradmin/recommendations"),
     rule("POST,PUT,PATCH,DELETE", "/coupons/admin/*"),
     rule("POST", "/coupons/admin"),
+    rule("*", "/banners/admin/*"),
+    rule("*", "/banners/admin"),
     rule("POST,PUT,PATCH,DELETE", "/products/*"),
     rule("POST", "/products"),
     rule("POST,PUT,PATCH,DELETE", "/catalog/categories/*"),

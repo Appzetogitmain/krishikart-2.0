@@ -39,7 +39,8 @@ import {
   Ticket,
   HelpCircle,
   Navigation,
-  AlertCircle
+  AlertCircle,
+  Images
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -148,6 +149,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }) {
           label: "Coupons",
           path: "/masteradmin/coupons",
           permissionKey: "campaigns",
+        },
+        {
+          icon: Images,
+          label: "Offer Banners",
+          path: "/masteradmin/offer-banners",
+          permissionKey: "campaigns",
+          headOfficeOnly: true, // one set of banners for every city
         },
         {
           icon: Truck,

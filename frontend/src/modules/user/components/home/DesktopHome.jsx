@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, BadgeCheck, Clock, Leaf, PackageCheck, ShieldCheck, Sprout, Truck } from 'lucide-react'
 import ProductCard from '../common/ProductCard'
-import { useCart } from '../../contexts/CartContext'
 import { optimizedImage } from '../../utils/optimizedImage'
 
 /*
@@ -10,22 +9,13 @@ import { optimizedImage } from '../../utils/optimizedImage'
  * trust strip. Phones keep the existing home screen; these sections only render from md up.
  */
 
-const money = (v) => `₹${Math.round(Number(v) || 0).toLocaleString('en-IN')}`
-
-// Free-delivery amount as set by the admin (delivery_constraints.freeMov)
-function useFreeDeliveryAbove() {
-    const { deliveryConstraints } = useCart()
-    const v = Number(deliveryConstraints?.freeMov)
-    return v > 0 ? v : null
-}
-
 export function DesktopHero() {
     const navigate = useNavigate()
-    const freeAbove = useFreeDeliveryAbove()
     const points = [
         { icon: Leaf, text: <>Farm Fresh<br />Produce</> },
         { icon: BadgeCheck, text: <>Best Quality<br />Guaranteed</> },
-        { icon: Truck, text: freeAbove ? <>Free Home Delivery<br />above {money(freeAbove)}</> : <>Home<br />Delivery</> },
+        // Client (Nov 2026): no amount here - free delivery depends on the order
+        { icon: Truck, text: <>Free Home Delivery<br />Available as per Order</> },
     ]
     return (
         <section className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-green-50 via-green-50 to-lime-50 border border-green-100 min-h-[340px] flex">
@@ -137,9 +127,8 @@ export function DesktopDeals({ products }) {
 }
 
 export function DesktopTrustStrip() {
-    const freeAbove = useFreeDeliveryAbove()
     const items = [
-        { icon: Truck, title: 'Free Home Delivery', sub: freeAbove ? `on orders above ${money(freeAbove)}` : 'right to your door' },
+        { icon: Truck, title: 'Free Home Delivery', sub: 'Available as per order' },
         { icon: ShieldCheck, title: 'Farm Fresh Produce', sub: 'Sourced directly from farmers' },
         { icon: Leaf, title: 'Best Quality Guaranteed', sub: 'Fresh & healthy products' },
         { icon: PackageCheck, title: 'Easy Returns', sub: 'Hassle free returns' },

@@ -39,6 +39,7 @@ import { useFilter } from '../contexts/FilterContext'
 import { appendLocationToProductParams, getBrowseLocationParams } from '../utils/storefrontParams'
 import ServiceUnavailable from '../components/common/ServiceUnavailable'
 import { optimizedImage } from '../utils/optimizedImage'
+import OfferBannerCarousel from '../components/home/OfferBannerCarousel'
 import { DesktopHero, DesktopCategories, DesktopDeals, DesktopTrustStrip, pickDeals } from '../components/home/DesktopHome'
 
 const isMobile = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
@@ -226,6 +227,9 @@ export default function HomeScreen() {
                     </div>
                 ) : (
                     <div className="bg-[var(--color-brand-subtle)] md:bg-white pb-32 min-h-screen pt-24 md:pt-0">
+                        {/* Offer banners from the admin (phones and computers), sliding on their own */}
+                        <OfferBannerCarousel className="max-w-[1440px] mx-auto px-5 md:px-8 pt-6 md:pt-2 pb-1 md:pb-8" />
+
                         {/* Desktop (client mockup): hero, categories, today's deals, trust strip */}
                         <div className="hidden md:block max-w-[1440px] mx-auto px-8 pt-2 space-y-10">
                             <DesktopHero />

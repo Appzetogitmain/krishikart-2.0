@@ -15,6 +15,7 @@ import reportRoutes from "../../app/routes/reports.js";
 import auditLogRoutes from "../../app/routes/auditLogs.js";
 import cityRatesRoutes from "../../app/routes/cityRates.js";
 import stockReturnRoutes from "../../app/routes/stockReturn.routes.js";
+import bannerRoutes from "../../app/routes/banner.routes.js";
 import auditTrail from "../utils/auditTrail.js";
 import cityScopeGuard from "../utils/cityScopeGuard.js";
 
@@ -41,6 +42,7 @@ const setupRoutes = (app) => {
     apiRouter.use("/stock-returns", stockReturnRoutes);
     apiRouter.use("/geo", geoRoute);
     apiRouter.use("/coupons", couponRoutes);
+    apiRouter.use("/banners", bannerRoutes);
     apiRouter.use("/reports", reportRoutes);
 
     // Apply all routes under /api
