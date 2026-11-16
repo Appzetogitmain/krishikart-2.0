@@ -455,7 +455,40 @@ body {
     padding: 0 1px;
 }
 
+/* Flashing "Best rate" chip on product cards: a soft glow pulse plus a light sweep */
+.kk-best-rate {
+    position: relative;
+    overflow: hidden;
+    animation: kk-best-rate-pulse 1.6s ease-in-out infinite;
+}
+.kk-best-rate::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 50%, transparent 70%);
+    background-size: 250% 100%;
+    animation: kk-best-rate-sweep 2.4s ease-in-out infinite;
+    pointer-events: none;
+}
+@keyframes kk-best-rate-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); background-color: #dcfce7; }
+    50% { box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22); background-color: #bbf7d0; }
+}
+@keyframes kk-best-rate-sweep {
+    0% { background-position: 160% 0; }
+    60%, 100% { background-position: -60% 0; }
+}
+/* Rates box on the product page, when opened from the "Best rate" chip */
+.kk-rates-focus {
+    animation: kk-rates-focus 1.2s ease-out 2;
+}
+@keyframes kk-rates-focus {
+    0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.45); }
+    100% { box-shadow: 0 0 0 14px rgba(22, 163, 74, 0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+    .kk-best-rate, .kk-best-rate::after, .kk-rates-focus { animation: none; }
     .kk-press, .kk-press-img { transition: none; }
     .kk-press:active, .kk-press:hover { transform: none; }
     .kk-shimmer, .kk-pop { animation: none; }

@@ -17,3 +17,17 @@ export function unitPriceForQuantity(unitPrice, bulkPricing, quantity) {
         .find((t) => Number(quantity) >= Number(t.minQty))
     return tier ? Number(tier.price) : base
 }
+
+/**
+ * The cheapest rate the customer can get for this product (its best bulk tier), or null.
+ * Shown as the flashing "Best rate" on product cards.
+ */
+export function bestBulkRate(unitPrice, bulkPricing) {
+    const tiers = usefulBulkTiers(unitPrice, bulkPricing)
+    if (!tiers.length) return null
+    const best = tiers.reduce((a, b) => (Number(b.price) < Number(a.price) ? b : a))
+    return { price: Number(best.price), minQty: Number(best.minQty) }
+}
+
+/** "kg", "pc", "dozen"... for "₹59/kg" */
+export const perUnitLabel = (unit) => (unit === 'pcs' || unit === 'pc' ? 'pc' : (unit || 'unit'))

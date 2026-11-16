@@ -11,6 +11,7 @@ import MobileQuantitySheet from './MobileQuantitySheet'
 import HighlightText from './HighlightText'
 import { useRequireAuth } from '../../hooks/useRequireAuth'
 import { optimizedImage } from '../../utils/optimizedImage'
+import { bestBulkRate, perUnitLabel } from '../../utils/pricing'
 
 /** Light haptic tap on phones that support it (ignored elsewhere). */
 const tapFeedback = () => {
@@ -56,6 +57,13 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
     )
     const hasComparePrice = strikePrice > displayPrice
     const discountPercent = hasComparePrice ? Math.round((1 - displayPrice / strikePrice) * 100) : 0
+    // Cheapest bulk rate of this product (city-wise rates come from the API) - flashes on the card
+    const bestRate = bestBulkRate(displayPrice, product.bulkPricing)
+    const per = perUnitLabel(product.unit)
+    const openRates = (e) => {
+        e.stopPropagation()
+        navigate(`/product/${productId}`, { state: { showRates: true } })
+    }
     const isLoved = isWishlisted(productId)
     const productImage = optimizedImage(product.primaryImage || product.image, 400)
 
@@ -158,7 +166,14 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                                         <span className="text-[11px] font-bold text-slate-400 line-through">₹{strikePrice}</span>
                                     )}
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 md:text-[10px] md:normal-case md:tracking-normal">{product.unit}</p>
+                                {bestRate ? (
+                                    <button type="button" onClick={openRates} data-best-rate
+                                        className="kk-best-rate mt-1 inline-flex items-center rounded-md bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-800 whitespace-nowrap">
+                                        ₹{bestRate.price}/{per} Best rate
+                                    </button>
+                                ) : (
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 md:text-[10px] md:normal-case md:tracking-normal">{product.unit}</p>
+                                )}
                             </div>
 
                             <div className="shrink-0 ml-auto min-h-8 flex items-center" onClick={(e) => e.stopPropagation()}>
@@ -275,7 +290,7 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                                 </div>
                             )}
                             {/* One badge at a time so the photo stays visible: a real discount wins */}
-                            {discountPercent <= 0 && Number(product.bestPrice) > 0 && (
+                            {discountPercent <= 0 && !bestRate && Number(product.bestPrice) > 0 && (
                                 <div className="bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm uppercase tracking-tighter whitespace-nowrap">
                                     Best Rate
                                 </div>
@@ -299,6 +314,18 @@ export default function ProductCard({ product, layout = 'grid', highlight = '' }
                             {product.unitValue} {product.unit}
                         </p>
                     </div>
+
+                    {/* Best (bulk) rate, flashing; tap shows all the rates of this product */}
+                    {bestRate && (
+                        <button type="button" onClick={openRates} data-best-rate
+                            title={`₹${bestRate.price}/${per} when you buy ${bestRate.minQty} ${product.unit} or more - tap to see all rates`}
+                            className="self-start text-left">
+                            <span className="kk-best-rate inline-flex items-center rounded-md bg-green-100 px-1.5 py-0.5 text-[11px] font-bold text-green-800 whitespace-nowrap md:px-2 md:py-1 md:text-[14px]">
+                                ₹{bestRate.price}/{per} Best rate
+                            </span>
+                            <span className="block mt-0.5 text-[10px] font-medium text-slate-500 md:text-[12px]">on {bestRate.minQty} {product.unit}+</span>
+                        </button>
+                    )}
 
                     {/* Bottom Row: Price & Add */}
                     {/* Once in the cart, the quantity control gets its own full-width row so it never

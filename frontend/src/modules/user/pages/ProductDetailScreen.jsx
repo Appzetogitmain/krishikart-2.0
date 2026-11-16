@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation as useRouterLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -32,7 +32,7 @@ import { useLocation } from '../contexts/LocationContext'
 import { getBrowseLocationParams } from '../utils/storefrontParams'
 import { optimizedImage } from '../utils/optimizedImage'
 import { useRequireAuth } from '../hooks/useRequireAuth'
-import { unitPriceForQuantity, usefulBulkTiers } from '../utils/pricing'
+import { unitPriceForQuantity, usefulBulkTiers, bestBulkRate, perUnitLabel } from '../utils/pricing'
 
 export default function ProductDetailScreen() {
   const { id } = useParams()
@@ -41,6 +41,9 @@ export default function ProductDetailScreen() {
   const { toggleWishlist, isWishlisted } = useWishlist()
   const { requireAuth } = useRequireAuth()
   const locationCtx = useLocation()
+  const routerLocation = useRouterLocation()
+  // Opened from a card's "Best rate" chip: jump to the rates box
+  const showRates = !!routerLocation.state?.showRates
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -143,6 +146,17 @@ export default function ProductDetailScreen() {
   }
 
 
+  useEffect(() => {
+    if (!showRates || !product) return undefined
+    const t = setTimeout(() => {
+      const el = document.getElementById('product-rates')
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.remove('kk-rates-focus'); void el.offsetWidth; el.classList.add('kk-rates-focus')
+    }, 350)
+    return () => clearTimeout(t)
+  }, [showRates, product])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -167,6 +181,8 @@ export default function ProductDetailScreen() {
   const standardUnit = Number(product.effectiveStorefrontPrice ?? product.price ?? 0)
   // Only bulk rates that are actually cheaper than the normal rate are shown
   const bulkTiers = usefulBulkTiers(standardUnit, product.bulkPricing)
+  const bestRate = bestBulkRate(standardUnit, product.bulkPricing)
+  const per = perUnitLabel(product.unit)
   const hasComparePrice = comparePrice > Number(currentPrice || 0)
 
   return (
@@ -299,42 +315,63 @@ export default function ProductDetailScreen() {
                     </div>
                   )}
                 </div>
+                {bestRate && (
+                  <button type="button" data-best-rate
+                    onClick={() => document.getElementById('product-rates')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                    className="kk-best-rate mt-2 inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-[13px] font-bold text-green-800 md:text-[15px]">
+                    ₹{bestRate.price}/{per} Best rate · on {bestRate.minQty} {product.unit}+
+                  </button>
+                )}
               </div>
 
               {/* Bulk Pricing Grid */}
               {bulkTiers.length > 0 && (
-                <div className="mb-8 p-6 rounded-[28px] md:rounded-xl bg-white border border-slate-100 shadow-sm">
+                <div id="product-rates" data-product-rates className="mb-8 p-6 rounded-[28px] md:rounded-xl bg-white border border-slate-100 shadow-sm scroll-mt-24">
                   <div className="flex items-center gap-2 mb-4">
                     <TrendingDown size={18} className="text-orange-500" />
-                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest md:normal-case md:tracking-normal">Bulk savings for businesses</h3>
+                    <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest md:normal-case md:tracking-normal">Best rates - buy more, pay less per {per}</h3>
+                  </div>
+                  <div className="mb-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-[12px] text-slate-600">
+                    <span>Normal rate</span>
+                    <span className="font-bold text-slate-900">₹{standardUnit}/{per}</span>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {bulkTiers.map((tier, idx) => {
-                      const isUnlocked = quantity >= tier.minQty;
+                      const isUnlocked = Number(quantity) >= tier.minQty;
+                      const isBest = bestRate && Number(tier.price) === bestRate.price;
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={idx}
+                          onClick={() => setQuantity(tier.minQty)}
+                          title={`Set quantity to ${tier.minQty} ${product.unit}`}
                           className={cn(
-                            "flex items-center justify-between p-3 rounded-2xl md:rounded-lg transition-all border",
+                            "w-full text-left flex items-center justify-between p-3 rounded-2xl md:rounded-lg transition-all border",
                             isUnlocked
-                              ? "bg-white border-primary/20 shadow-sm"
-                              : "bg-transparent border-transparent grayscale opacity-50"
+                              ? "bg-green-50 border-green-300 shadow-sm"
+                              : "bg-white border-slate-100 hover:border-green-200"
                           )}
                         >
                           <div className="flex items-center gap-3">
                             <div className={cn(
-                              "w-fit px-3 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold",
+                              "w-fit shrink-0 whitespace-nowrap px-3 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold",
                               isUnlocked ? "bg-primary text-white" : "bg-slate-200 text-slate-500"
                             )}>
                               {tier.minQty}+ {product.unit}
                             </div>
-                            <span className="text-xs font-medium text-slate-600">Buy {tier.minQty} or more</span>
+                            <span className="text-xs font-medium text-slate-600">
+                              {isUnlocked ? 'Applied to your quantity' : `Buy ${tier.minQty} or more`}
+                              {isBest && <span className="mt-1 block w-fit whitespace-nowrap rounded bg-green-600 px-1.5 py-0.5 text-[10px] font-bold text-white">Best rate</span>}
+                            </span>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <span className="text-sm font-bold text-slate-900">₹{tier.price}</span>
-                            <span className="text-[10px] text-slate-400 font-medium"> / {product.unit}</span>
+                            <span className="text-[10px] text-slate-400 font-medium">/{per}</span>
+                            {standardUnit > tier.price && (
+                              <span className="block text-[10px] font-bold text-green-700">Save ₹{Math.round((standardUnit - tier.price) * 100) / 100}/{per}</span>
+                            )}
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
