@@ -34,13 +34,40 @@ export function buildFullAddress(details = {}) {
     return parts.join(', ')
 }
 
+/** Same address typed with different spaces/case counts as one */
+export const addressKey = (text) => String(text ?? '').replace(/\s+/g, ' ').replace(/\s*,\s*/g, ',').trim().toLowerCase()
+
+/** One entry per address and per id (Home/Work win over an "Other" with the same text). */
+export function dedupeAddresses(list = []) {
+    const ordered = [...list.filter((a) => a?.tag && a.tag !== 'other'), ...list.filter((a) => !a?.tag || a.tag === 'other')]
+    const kept = new Map()
+    const byAddress = new Set()
+    const ids = new Set()
+    const tags = new Set()
+    for (const a of ordered) {
+        if (!a) continue
+        if (a.tag && a.tag !== 'other') {
+            if (tags.has(a.tag)) continue
+            tags.add(a.tag)
+        }
+        const key = addressKey(a.fullAddress)
+        if (byAddress.has(key)) continue
+        byAddress.add(key)
+        const entry = { ...a }
+        if (!entry.id || ids.has(entry.id)) entry.id = `${entry.tag || 'other'}_${Date.now()}_${kept.size}`
+        ids.add(entry.id)
+        kept.set(a, entry)
+    }
+    return list.map((a) => kept.get(a)).filter(Boolean)
+}
+
 export function loadSavedAddresses(userId) {
     try {
         const userKey = getSavedAddressesStorageKey(userId)
         const raw = localStorage.getItem(userKey)
         if (raw) {
             const parsed = JSON.parse(raw)
-            return Array.isArray(parsed) ? parsed : []
+            return Array.isArray(parsed) ? dedupeAddresses(parsed) : []
         }
 
         const legacyRaw = localStorage.getItem(SAVED_ADDRESSES_KEY)
@@ -79,12 +106,14 @@ export async function fetchSavedAddresses(userId) {
         const res = await api.get('/user/addresses')
         let list = res.data?.results || res.data?.result || []
         if (!Array.isArray(list)) list = []
-        const missingLocal = local.filter((l) => !list.some((s) => s.fullAddress === l.fullAddress))
+        // Only addresses really missing on the account (not the same one with other spacing, not one already there by id)
+        const missingLocal = local.filter((l) => !list.some((s) => s.id === l.id || addressKey(s.fullAddress) === addressKey(l.fullAddress)))
         if (missingLocal.length) {
             const merged = [...list, ...missingLocal]
             const saved = await api.put('/user/addresses', { addresses: merged })
             list = saved.data?.results || saved.data?.result || merged
         }
+        list = dedupeAddresses(list)
         try { localStorage.setItem(getSavedAddressesStorageKey(userId), JSON.stringify(list)) } catch { /* ignore */ }
         return list
     } catch (error) {
@@ -126,7 +155,7 @@ export function upsertAddressByTag(savedAddresses, tag, details, extra = {}) {
         ]
     }
 
-    const existingIdx = savedAddresses.findIndex((a) => a.fullAddress === fullAddress)
+    const existingIdx = savedAddresses.findIndex((a) => addressKey(a.fullAddress) === addressKey(fullAddress))
     if (existingIdx > -1) {
         const next = [...savedAddresses]
         next[existingIdx] = withExtra({ ...next[existingIdx], details, updatedAt: now }, next[existingIdx])

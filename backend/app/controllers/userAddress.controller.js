@@ -86,6 +86,41 @@ const sanitize = (entry, index) => {
     };
 };
 
+/** Same address written with different spaces/case counts as one */
+const addressKey = (text) => String(text ?? "").replace(/\s+/g, " ").replace(/\s*,\s*/g, ",").trim().toLowerCase();
+
+/**
+ * One entry per address and per id (client, Nov 2026: the same address showed twice at checkout,
+ * both ticked, because both copies had the same id). Home/Work win over an "Other" with the same
+ * text; a duplicate passes on its map pin and latest use to the one kept.
+ */
+export const dedupeAddresses = (list = []) => {
+    const ordered = [...list.filter((a) => a.tag !== "other"), ...list.filter((a) => a.tag === "other")];
+    const kept = new Map(); // original entry -> entry kept
+    const byAddress = new Map();
+    const ids = new Set();
+    const tags = new Set();
+    for (const a of ordered) {
+        if (a.tag !== "other") {
+            if (tags.has(a.tag)) continue;
+            tags.add(a.tag);
+        }
+        const key = addressKey(a.fullAddress);
+        const same = byAddress.get(key);
+        if (same) {
+            if (!same.location && a.location) same.location = a.location;
+            if (a.lastUsedAt && (!same.lastUsedAt || new Date(a.lastUsedAt) > new Date(same.lastUsedAt))) same.lastUsedAt = a.lastUsedAt;
+            continue;
+        }
+        const entry = { ...a };
+        if (!entry.id || ids.has(entry.id)) entry.id = `${entry.tag || "other"}_${Date.now()}_${kept.size}`;
+        ids.add(entry.id);
+        byAddress.set(key, entry);
+        kept.set(a, entry);
+    }
+    return list.map((a) => kept.get(a)).filter(Boolean); // original order
+};
+
 /** Starting list for a customer who has never saved addresses: their past order addresses. */
 const seedFromHistory = async (user) => {
     const orders = await Order.find({ userId: user._id })
@@ -135,7 +170,12 @@ export const getSavedAddresses = async (req, res) => {
             const fresh = await User.findById(user._id).select("savedAddresses").lean();
             return handleResponse(res, 200, "Saved addresses", fresh?.savedAddresses || seeded);
         }
-        return handleResponse(res, 200, "Saved addresses", user.toObject().savedAddresses);
+        // Lists saved before the duplicate fix are cleaned once here
+        const stored = user.toObject().savedAddresses.map(({ _id, ...a }) => a);
+        const cleaned = dedupeAddresses(stored);
+        const changed = cleaned.length !== stored.length || cleaned.some((a, i) => a.id !== stored[i]?.id);
+        if (changed) await User.updateOne({ _id: user._id }, { $set: { savedAddresses: cleaned } });
+        return handleResponse(res, 200, "Saved addresses", changed ? cleaned : stored);
     } catch (error) {
         console.error("getSavedAddresses:", error);
         return handleResponse(res, 500, "Could not load your saved addresses");
@@ -148,14 +188,8 @@ export const putSavedAddresses = async (req, res) => {
         const input = Array.isArray(req.body?.addresses) ? req.body.addresses : null;
         if (!input) return handleResponse(res, 400, "Please send the list of addresses");
         const list = input.slice(0, MAX_ADDRESSES).map(sanitize).filter(Boolean);
-        // Only one Home and one Work address
-        const seenTags = new Set();
-        const deduped = list.filter((a) => {
-            if (a.tag === "other") return true;
-            if (seenTags.has(a.tag)) return false;
-            seenTags.add(a.tag);
-            return true;
-        });
+        // Only one Home and one Work address, and no address twice
+        const deduped = dedupeAddresses(list);
         await User.updateOne({ _id: req.user._id }, { $set: { savedAddresses: deduped } });
         return handleResponse(res, 200, "Addresses saved", deduped);
     } catch (error) {
