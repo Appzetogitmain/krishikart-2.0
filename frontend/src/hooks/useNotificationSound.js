@@ -33,13 +33,18 @@ function playFallbackBeep() {
         playBeep(1108.73, 0.15, 0.25);
 
         setTimeout(() => {
-            playBeep(880, 0, 0.15);
-            playBeep(1108.73, 0.15, 0.25);
+            // The context can already be closed (too many sounds at once): skip, don't throw
+            if (ctx.state === 'closed') return;
+            try {
+                playBeep(880, 0, 0.15);
+                playBeep(1108.73, 0.15, 0.25);
+            } catch { /* ignore */ }
         }, 800);
 
-        if (ctx.state === 'suspended') ctx.resume();
+        // Both return promises that reject once the context is closed: never leave them unhandled
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
         // Each beep gets its own context; release it once the pattern is done
-        setTimeout(() => ctx.close?.(), 2000);
+        setTimeout(() => { if (ctx.state !== 'closed') ctx.close?.()?.catch?.(() => {}); }, 2000);
     } catch (_) {
         // Silent fallback
     }

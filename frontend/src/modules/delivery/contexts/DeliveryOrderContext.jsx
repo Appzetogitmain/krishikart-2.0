@@ -62,6 +62,27 @@ export function DeliveryOrderProvider({ children }) {
         else stopRinging();
     }, [ringingTaskIds.length, startRinging, stopRinging]);
 
+    // High alert while something is waiting (client, Nov 2026): the phone vibrates and the tab title
+    // flashes, so a request is noticed even when the partner isn't looking at the screen
+    useEffect(() => {
+        if (ringingTaskIds.length === 0) return undefined;
+        const baseTitle = document.title;
+        const buzz = () => { try { navigator.vibrate?.([400, 200, 400, 200, 800]); } catch { /* not supported */ } };
+        buzz();
+        const vib = setInterval(buzz, 4000);
+        let flip = false;
+        const flash = setInterval(() => {
+            flip = !flip;
+            document.title = flip ? `🔔 New delivery request (${ringingTaskIds.length})` : baseTitle;
+        }, 1000);
+        return () => {
+            clearInterval(vib);
+            clearInterval(flash);
+            document.title = baseTitle;
+            try { navigator.vibrate?.(0); } catch { /* not supported */ }
+        };
+    }, [ringingTaskIds.length]);
+
     // Stop ringing for tasks that left the list (rejected, cancelled, reassigned, taken by someone else) or were accepted
     useEffect(() => {
         if (ringingTaskIds.length === 0) return;
@@ -81,6 +102,38 @@ export function DeliveryOrderProvider({ children }) {
             console.error('Fetch delivery requests error:', error);
         }
     };
+
+    // Requests this app has already alerted about (live event or found on a refresh)
+    const alertedOffersRef = useRef(new Set());
+    const alertOpenRef = useRef(false);
+    alertOpenRef.current = isAlertOpen;
+
+    // Pop-up with the details of a task / request (from the live event or the lists)
+    const openTaskAlert = (orderId, offerList = offers) => {
+        const offer = offerList.find((x) => String(x.id || x._id) === String(orderId));
+        const o = offer || dispatchedOrders.find((x) => String(x.id || x._id) === String(orderId));
+        const fromList = o ? {
+            customerName: o.customerName,
+            address: o.customerAddress,
+            pickupFrom: o.franchise,
+            pickupAddress: o.franchiseAddress,
+            orderTotal: o.totalAmount,
+            amountToCollect: o.paymentMethod === 'COD' ? o.totalAmount : 0,
+            paymentMethod: o.paymentMethod,
+            itemCount: o.items?.length || o.itemCount,
+        } : {};
+        setNewTaskData({ orderId, type: 'DELIVERY', message: `Delivery task waiting for you: #${String(orderId).slice(-6)}`, ...fromList, ...(taskInfoRef.current[String(orderId)] || {}), ...(offer ? { offer: true } : {}) });
+        setIsAlertOpen(true);
+    };
+
+    // A request can arrive while the app is closed, in the background or briefly offline (no live
+    // event): whenever the list shows a request not alerted yet, ring and pop up just like a live one
+    useEffect(() => {
+        const fresh = offers.filter((o) => !alertedOffersRef.current.has(String(o.id)));
+        if (!fresh.length) return;
+        fresh.forEach((o) => { alertedOffersRef.current.add(String(o.id)); startRingingFor(o.id); });
+        if (!alertOpenRef.current) openTaskAlert(fresh[0].id, offers);
+    }, [offers]);
 
     const dropOffer = (orderId) => {
         const id = String(orderId);
@@ -233,7 +286,10 @@ export function DeliveryOrderProvider({ children }) {
                 // orders the franchise assigns by hand chime once. Older servers still ring until accepted.
                 if (data?.offer) {
                     // A request also sent to other partners: rings until this partner accepts or declines
-                    if (data?.orderId) startRingingFor(data.orderId);
+                    if (data?.orderId) {
+                        alertedOffersRef.current.add(String(data.orderId));
+                        startRingingFor(data.orderId);
+                    }
                     toast.success("New delivery request - accept it before someone else does");
                     fetchOffers();
                     return;
@@ -269,6 +325,12 @@ export function DeliveryOrderProvider({ children }) {
 
             syncDeliveryTasks();
             socket.on('connect', syncDeliveryTasks);
+            // Live events can be missed on phones (screen off, app in the background, weak network):
+            // check for new requests when the app comes back and every 20 seconds while it is open
+            const onVisible = () => { if (document.visibilityState === 'visible') { fetchOffers(); fetchDispatchedOrders(); } };
+            document.addEventListener('visibilitychange', onVisible);
+            window.addEventListener('focus', onVisible);
+            const poll = setInterval(() => { if (document.visibilityState === 'visible') fetchOffers(); }, 20000);
             socket.on('new_task', handleNewTask);
             // The franchise gave this task to someone else
             const handleTaskRemoved = (data) => {
@@ -293,6 +355,9 @@ export function DeliveryOrderProvider({ children }) {
             socket.on('docs_status', handleAccountNews);
 
             return () => {
+                document.removeEventListener('visibilitychange', onVisible);
+                window.removeEventListener('focus', onVisible);
+                clearInterval(poll);
                 socket.off('connect', syncDeliveryTasks);
                 socket.off('new_task', handleNewTask);
                 socket.off('task_removed', handleTaskRemoved);
@@ -323,23 +388,8 @@ export function DeliveryOrderProvider({ children }) {
             setIsAlertOpen,
             newTaskData,
             ringingTaskIds,
-            reopenTaskAlert: (orderId) => {
-                // Show the same details as the first alert (address, amount), from the task list if needed
-                const offer = offers.find((x) => String(x.id || x._id) === String(orderId));
-                const o = offer || dispatchedOrders.find((x) => String(x.id || x._id) === String(orderId));
-                const fromList = o ? {
-                    customerName: o.customerName,
-                    address: o.customerAddress,
-                    pickupFrom: o.franchise,
-                    pickupAddress: o.franchiseAddress,
-                    orderTotal: o.totalAmount,
-                    amountToCollect: o.paymentMethod === 'COD' ? o.totalAmount : 0,
-                    paymentMethod: o.paymentMethod,
-                    itemCount: o.items?.length || o.itemCount,
-                } : {};
-                setNewTaskData({ orderId, type: 'DELIVERY', message: `Delivery task waiting for you: #${String(orderId).slice(-6)}`, ...fromList, ...(taskInfoRef.current[String(orderId)] || {}), ...(offer ? { offer: true } : {}) });
-                setIsAlertOpen(true);
-            },
+            // Show the same details as the first alert (address, amount), from the task list if needed
+            reopenTaskAlert: (orderId) => openTaskAlert(orderId),
             fetchDispatchedOrders,
             fetchReturnPickups,
             updateStatus,

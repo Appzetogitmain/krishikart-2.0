@@ -8,8 +8,9 @@ const MetricCard = ({ title, value, icon: Icon, color, suffix = "" }) => {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white p-4 rounded-2xl border border-border flex items-center space-x-4 shadow-sm"
         >
-            <div className={`p-3 rounded-xl ${color} bg-opacity-10`}>
-                <Icon className={`w-6 h-6 ${color.replace('bg-', 'text-')}`} />
+            <div className={`p-3 rounded-xl ${color}`}>
+                {/* White icon on the coloured square (it used to be the same colour, so invisible) */}
+                <Icon className="w-6 h-6 text-white" />
             </div>
             <div>
                 <p className="text-sm font-medium text-muted-foreground">{title}</p>

@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import MetricCard from '../components/cards/MetricCard';
 import ReturnToFranchiseCard from '../components/cards/ReturnToFranchiseCard';
+import DeliveryCard from '../components/cards/DeliveryCard';
+import { useConfirm } from '../hooks/useConfirm';
+import { ROUTES } from '../utils/constants';
 import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
 import { useDeliveryOrders } from '../contexts/DeliveryOrderContext';
 import api from '@/lib/axios';
@@ -21,7 +24,22 @@ import { toast } from 'sonner';
 const Dashboard = () => {
     const navigate = useNavigate();
     const { delivery, setDelivery, loading: authLoading, isAuthenticated, logout } = useDeliveryAuth();
-    const { dispatchedOrders, taskCount } = useDeliveryOrders();
+    const { dispatchedOrders, taskCount, offers, acceptOffer, declineOffer } = useDeliveryOrders();
+    const [confirm, confirmDialog] = useConfirm();
+
+    // New requests right on Home (client, Nov 2026): accept or decline without opening another tab
+    const handleAcceptOffer = async (id) => {
+        if (await acceptOffer(id)) navigate(ROUTES.ACTIVE);
+    };
+    const handleDeclineOffer = async (id) => {
+        const ok = await confirm({
+            title: `Decline request #${String(id).slice(-6).toUpperCase()}?`,
+            message: 'It goes to other delivery partners and will not come back to you.',
+            confirmLabel: 'Yes, decline',
+            tone: 'danger',
+        });
+        if (ok) await declineOffer(id);
+    };
     const [isOnline, setIsOnline] = useState(delivery?.isOnline ?? true);
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -208,6 +226,31 @@ const Dashboard = () => {
                     </div>
                 </motion.div>
 
+                {offers.length > 0 && (
+                    <div className="rounded-3xl border-2 border-rose-300 bg-rose-50/60 p-4 shadow-lg shadow-rose-100" data-home-offers>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="relative flex h-3 w-3">
+                                <span className="absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75 animate-ping" />
+                                <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-600" />
+                            </span>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-rose-700">
+                                New delivery request{offers.length > 1 ? `s (${offers.length})` : ''}
+                            </h3>
+                        </div>
+                        <p className="text-xs text-rose-700/80 mb-3">Also sent to other partners - the first to accept gets the order.</p>
+                        {offers.map((request) => (
+                            <div key={request.id} className="mb-3 last:mb-0">
+                                {request.tripWith?.length > 0 && (
+                                    <p className="mb-1.5 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs font-semibold text-amber-800">
+                                        Same customer: {request.tripWith.join(', ')} also come{request.tripWith.length > 1 ? '' : 's'} with this one if you accept (one trip)
+                                    </p>
+                                )}
+                                <DeliveryCard request={request} onAccept={handleAcceptOffer} onReject={handleDeclineOffer} acceptLabel="Accept" rejectLabel="Decline" />
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-2 gap-4">
                     <MetricCard
@@ -378,6 +421,7 @@ const Dashboard = () => {
                     </div>
                 )}
             </AnimatePresence>
+            {confirmDialog}
         </div>
     );
 };

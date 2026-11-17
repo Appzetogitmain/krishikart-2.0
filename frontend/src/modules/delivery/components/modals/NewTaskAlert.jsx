@@ -31,6 +31,8 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
     if (!data) return null;
 
     const isDeliveryTask = data.type !== 'RETURN' && !!data.orderId;
+    // A request to several partners is a high alert: red, pulsing, can't be closed by a stray tap
+    const urgent = !!data.offer;
 
     const shortRef = `#${String(data.orderId).slice(-6).toUpperCase()}`;
 
@@ -94,8 +96,9 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm"
-                        onClick={onClose}
+                        className={urgent ? "fixed inset-0 z-50 bg-rose-950/70 backdrop-blur-sm" : "fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm"}
+                        onClick={urgent ? undefined : onClose}
+                        data-task-alert-backdrop
                     />
 
                     <motion.div
@@ -104,9 +107,14 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-sm"
                     >
-                        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-emerald-100">
+                        <div className={urgent ? "bg-white rounded-2xl shadow-2xl overflow-hidden ring-4 ring-rose-500/60 animate-[kk-alert-glow_1.2s_ease-in-out_infinite]" : "bg-white rounded-2xl shadow-2xl overflow-hidden border border-emerald-100"} data-task-alert={urgent ? 'urgent' : 'normal'}>
                             {/* Header */}
-                            <div className="bg-emerald-500 p-6 text-center relative">
+                            <div className={urgent ? "bg-gradient-to-br from-rose-600 to-orange-500 p-6 text-center relative" : "bg-emerald-500 p-6 text-center relative"}>
+                                {urgent && (
+                                    <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-white animate-pulse">
+                                        <Bell className="w-3.5 h-3.5" /> High alert · respond now
+                                    </p>
+                                )}
                                 <button
                                     onClick={onClose}
                                     className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
@@ -122,12 +130,13 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
                                     transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
                                     className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner"
                                 >
-                                    <Package className="w-8 h-8 text-emerald-500" />
+                                    <Package className={urgent ? "w-8 h-8 text-rose-600" : "w-8 h-8 text-emerald-500"} />
                                 </motion.div>
                                 <h3 className="text-xl font-bold text-white mb-1">
                                     {data.type === 'RETURN' ? 'New Return Pickup!' : data.offer ? 'New Delivery Request!' : 'New Delivery Task!'}
                                 </h3>
-                                <p className="text-emerald-100 text-sm font-medium">
+                                {isDeliveryTask && <p className="text-white/80 text-xs font-bold tracking-wider mb-1">Order {shortRef}</p>}
+                                <p className={urgent ? "text-white/90 text-sm font-semibold" : "text-emerald-100 text-sm font-medium"}>
                                     {data.offer ? 'Sent to nearby partners - the first to accept gets it' : 'You have been assigned a new task'}
                                 </p>
                             </div>
@@ -183,8 +192,9 @@ export default function NewTaskAlert({ isOpen, onClose, data }) {
                                             <div className="grid grid-cols-2 gap-3">
                                                 <button
                                                     onClick={handleAccept}
-                                                    className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
+                                                    className={urgent ? "flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base py-4 px-4 rounded-xl transition-all shadow-lg shadow-emerald-600/30 active:scale-[0.98] animate-pulse" : "flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98]"}
                                                     style={{ WebkitTapHighlightColor: 'transparent' }}
+                                                    data-alert-accept
                                                 >
                                                     {data.offer ? 'Accept order' : 'Accept'}
                                                 </button>
