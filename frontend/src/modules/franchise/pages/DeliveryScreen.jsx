@@ -37,8 +37,10 @@ const paymentText = (val) => {
 };
 
 /**
- * A packed order waiting to go out (usually because no partner was free for the automatic assignment): pick the
- * delivery partner and the packed weight, then one button saves the weight and assigns the partner.
+ * A packed order waiting to go out. Client (Nov 2026): orders go to delivery partners as a request -
+ * every suitable partner of the city gets it and the first to accept takes it. Here the franchise only
+ * enters the packed weight (when it is missing) and sends the request; assigning a partner by hand is
+ * kept as an option (or when nobody is online), and is no longer done together with the request.
  * Up to 20 kg goes on a bike / scooter, more on an auto / 4-wheeler.
  */
 function AssignBox({ order, partners, onAssign, onSaved }) {
@@ -46,14 +48,40 @@ function AssignBox({ order, partners, onAssign, onSaved }) {
     const [weight, setWeight] = useState(saved || estimateWeightKg(order.items) || '');
     const [partnerId, setPartnerId] = useState('');
     const [busy, setBusy] = useState(false);
+    const [manual, setManual] = useState(false);
+    const [noneOnline, setNoneOnline] = useState(false);
     useEffect(() => { if (saved) setWeight(saved); }, [saved]);
     const kg = Number(weight) || 0;
     const heavy = kg > TWO_WHEELER_MAX_KG;
+    const waiting = order.offerCount > 0;
     // Bigger vehicles first for heavy orders
     const sorted = [...partners].sort((a, b) => (heavy ? Number(isTwoWheeler(a.vehicleType)) - Number(isTwoWheeler(b.vehicleType)) : 0));
     const chosen = partners.find((p) => p._id === partnerId);
 
-    const send = async () => {
+    // Save the weight: the server sends the request to every suitable partner of the city
+    const sendRequest = async () => {
+        if (!(kg > 0)) return toast.error('Enter the packed weight (kg)');
+        setBusy(true);
+        try {
+            const { data } = await api.put(`/orders/franchise/${order.id}/packages`, { packedWeightKg: kg });
+            const total = Number(data?.result?.offeredTo) || 0;
+            if (total > 0) {
+                setNoneOnline(false);
+                toast.success(data?.message || `Sent to ${total} delivery partner${total > 1 ? 's' : ''}`);
+            } else {
+                setNoneOnline(true);
+                setManual(true);
+                toast.error('No delivery partner is online in your city right now. Assign one yourself or try again soon.');
+            }
+            if (onSaved) await onSaved();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not send the request');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const assignMyself = async () => {
         if (!partnerId) return toast.error('Select a delivery partner');
         if (!(kg > 0)) return toast.error('Enter the packed weight (kg)');
         setBusy(true);
@@ -64,35 +92,23 @@ function AssignBox({ order, partners, onAssign, onSaved }) {
             }
             await onAssign(order.id, partnerId);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Could not save the weight');
+            toast.error(error.response?.data?.message || 'Could not assign the partner');
         } finally {
             setBusy(false);
         }
     };
 
     return (
-        <div className="space-y-3">
-            {order.offerCount > 0 && (
-                <p className="rounded-xl bg-violet-50 border border-violet-100 px-3 py-2 text-[13px] font-semibold text-violet-700">
-                    Request sent to {order.offerCount} delivery partner{order.offerCount > 1 ? 's' : ''} - waiting for the first to accept. You can also assign one here.
+        <div className="space-y-3" data-assign-box>
+            {waiting ? (
+                <p className="rounded-xl bg-violet-50 border border-violet-100 px-3 py-2 text-[13px] font-semibold text-violet-700" data-request-waiting>
+                    Request sent to {order.offerCount} delivery partner{order.offerCount > 1 ? 's' : ''} - waiting for the first to accept.
                 </p>
-            )}
-            <div>
-                <label className="block text-[13px] font-semibold text-slate-600 mb-1.5" htmlFor={`dp-${order.id}`}>Select Delivery Partner</label>
-                {partners.length ? (
-                    <select id={`dp-${order.id}`} value={partnerId} onChange={(e) => setPartnerId(e.target.value)}
-                        className="w-full h-12 rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-900 outline-none focus:border-green-600">
-                        <option value="">Choose partner</option>
-                        {sorted.map((dp) => (
-                            <option key={dp._id} value={dp._id}>
-                                {dp.fullName}{dp.vehicleType ? ` (${vehicleLabel(dp.vehicleType)})` : ''}{dp.mobile || dp.phone ? ` - ${dp.mobile || dp.phone}` : ''}{heavy && isTwoWheeler(dp.vehicleType) ? ' - over 20 kg' : ''}
-                            </option>
-                        ))}
-                    </select>
-                ) : (
-                    <p className="text-[14px] text-slate-500 p-3 text-center border border-dashed border-slate-200 rounded-xl">No delivery partners are available in your area right now</p>
-                )}
-            </div>
+            ) : noneOnline ? (
+                <p className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-[13px] font-semibold text-amber-800" data-none-online>
+                    No delivery partner is online in your city right now. Assign one below, or send the request again later.
+                </p>
+            ) : null}
             <div>
                 <p className={cn('text-[13px] font-semibold mb-1.5', saved ? 'text-slate-600' : 'text-amber-700')}>Packed weight (kg)</p>
                 <div className="relative">
@@ -104,14 +120,44 @@ function AssignBox({ order, partners, onAssign, onSaved }) {
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[15px] font-bold text-slate-400">kg</span>
                 </div>
                 {kg > 0 && <p className={cn('text-[13px] font-semibold mt-1.5', heavy ? 'text-violet-700' : 'text-green-700')}>Goes on: {vehicleFor(kg)}</p>}
-                {chosen && heavy && isTwoWheeler(chosen.vehicleType) && (
-                    <p className="text-[13px] font-semibold text-rose-600 mt-1">{chosen.fullName} has a {vehicleLabel(chosen.vehicleType).toLowerCase()} - over {TWO_WHEELER_MAX_KG} kg needs an auto / 4-wheeler.</p>
-                )}
             </div>
-            <button type="button" onClick={send} disabled={busy || !partners.length}
-                className="w-full h-12 rounded-xl bg-green-700 text-white text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-green-800 disabled:opacity-50">
-                <Send size={18} /> {busy ? 'Sending…' : 'Assign & Send for Delivery'}
-            </button>
+            {!waiting && (
+                <button type="button" onClick={sendRequest} disabled={busy} data-send-request
+                    className="w-full h-12 rounded-xl bg-green-700 text-white text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-green-800 disabled:opacity-50">
+                    <Send size={18} /> {busy ? 'Sending…' : noneOnline ? 'Send request again' : 'Send request to delivery partners'}
+                </button>
+            )}
+            {!manual ? (
+                <button type="button" onClick={() => setManual(true)} data-assign-myself
+                    className="w-full text-[13px] font-semibold text-slate-500 hover:text-slate-800 underline underline-offset-2">
+                    Assign a partner myself instead
+                </button>
+            ) : (
+                <div className="rounded-xl border border-slate-200 p-3 space-y-2.5">
+                    <label className="block text-[13px] font-semibold text-slate-600" htmlFor={`dp-${order.id}`}>Assign a delivery partner yourself</label>
+                    {partners.length ? (
+                        <select id={`dp-${order.id}`} value={partnerId} onChange={(e) => setPartnerId(e.target.value)}
+                            className="w-full h-12 rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-900 outline-none focus:border-green-600">
+                            <option value="">Choose partner</option>
+                            {sorted.map((dp) => (
+                                <option key={dp._id} value={dp._id}>
+                                    {dp.fullName}{dp.vehicleType ? ` (${vehicleLabel(dp.vehicleType)})` : ''}{dp.mobile || dp.phone ? ` - ${dp.mobile || dp.phone}` : ''}{heavy && isTwoWheeler(dp.vehicleType) ? ' - over 20 kg' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    ) : (
+                        <p className="text-[14px] text-slate-500 p-3 text-center border border-dashed border-slate-200 rounded-xl">No delivery partners are available in your area right now</p>
+                    )}
+                    {chosen && heavy && isTwoWheeler(chosen.vehicleType) && (
+                        <p className="text-[13px] font-semibold text-rose-600">{chosen.fullName} has a {vehicleLabel(chosen.vehicleType).toLowerCase()} - over {TWO_WHEELER_MAX_KG} kg needs an auto / 4-wheeler.</p>
+                    )}
+                    {waiting && <p className="text-[12px] text-slate-500">This takes the order out of the request - the partner you pick gets it straight away.</p>}
+                    <button type="button" onClick={assignMyself} disabled={busy || !partners.length} data-assign-partner
+                        className="w-full h-11 rounded-xl border-2 border-green-700 text-green-800 text-[14px] font-bold hover:bg-green-50 disabled:opacity-50">
+                        {busy ? 'Assigning…' : 'Assign this partner'}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
@@ -247,7 +293,7 @@ export default function DeliveryScreen() {
             <FranchisePageHeader icon={Truck} title="Deliveries" subtitle="Send ready orders with a delivery partner and track them" />
 
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4 px-4 lg:px-6">
-                <StatTile tone="orange" icon={Package} label="Ready to Send" value={readyCount} note="Packed, choose a partner" onClick={() => setActiveTab('ready')} active={activeTab === 'ready'} />
+                <StatTile tone="orange" icon={Package} label="Ready to Send" value={readyCount} note="Packed, request to partners" onClick={() => setActiveTab('ready')} active={activeTab === 'ready'} />
                 <StatTile tone="purple" icon={Truck} label="On the Way" value={outCount} note="With delivery partners" onClick={() => setActiveTab('way')} active={activeTab === 'way'} />
                 <StatTile tone="green" icon={CheckCircle2} label="Delivered" value={completedCount} note="Total delivered" onClick={() => setActiveTab('history')} active={activeTab === 'history'} />
                 <StatTile tone="blue" icon={Users} label="Delivery Partners" value={deliveryPartners.length} note="Available now" />
