@@ -36,6 +36,8 @@ export function planPartialDelivery(order, returned) {
         if (!item) return { error: "A returned item is not part of this order" };
         const carried = handedQty(item);
         if (qty > carried) return { error: `${item.name}: only ${carried} ${item.unit || ""} was delivered, so ${qty} cannot be returned.`.replace(/\s+/g, " ") };
+        // Client (Nov 2026): a returned item (rotten, damaged...) comes back as the whole lot, never a part of it
+        if (qty < carried) return { error: `${item.name}: give back the whole ${carried} ${item.unit || ""} or keep it all - part of an item can't be returned.`.replace(/\s+/g, " ") };
         lines.push({ productId: item.productId?._id || item.productId, name: item.name, unit: item.unit || "", quantity: qty, price: Number(item.price) || 0, value: round2(qty * (Number(item.price) || 0)) });
     }
     const keptAny = (order.items || []).some((i) => handedQty(i) - (wanted.get(pidOf(i)) || 0) > 0);

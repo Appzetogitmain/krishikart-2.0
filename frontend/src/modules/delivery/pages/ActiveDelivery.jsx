@@ -437,30 +437,26 @@ const ActiveDelivery = () => {
                             <div className="space-y-3">
                                 <div>
                                     <p className="text-base font-black text-slate-900">Customer kept only some items</p>
-                                    <p className="text-xs text-slate-500 mt-1">Set how much of each item the customer is giving back. Bring those back to {franchiseName}.</p>
+                                    <p className="text-xs text-slate-500 mt-1">Mark the items the customer is giving back - a returned item comes back as the whole lot. Bring them back to {franchiseName}.</p>
                                 </div>
                                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl">
                                     {(order.items || []).map((i) => {
                                         const pid = pidOf(i);
                                         const max = carriedOf(i);
-                                        const back = Number(returned[pid]) || 0;
-                                        const clamp = (v) => Math.min(max, Math.max(0, r2(v)));
-                                        const set = (v) => setReturned((r) => ({ ...r, [pid]: clamp(v) }));
-                                        // Quick double taps must both count: change from the latest value, not this render's
-                                        const step = (d) => setReturned((r) => ({ ...r, [pid]: clamp((Number(r[pid]) || 0) + d) }));
+                                        // Client (Nov 2026): an item is kept or returned in full - no part of an item comes back
+                                        const back = Number(returned[pid]) > 0;
+                                        const choose = (giveBack) => setReturned((r) => ({ ...r, [pid]: giveBack ? max : 0 }));
                                         return (
-                                            <div key={pid} className={`flex items-center gap-3 px-3 py-3 ${back > 0 ? 'bg-rose-50/60' : ''}`}>
+                                            <div key={pid} className={`flex items-center gap-3 px-3 py-3 ${back ? 'bg-rose-50/60' : ''}`} data-return-item={pid}>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-bold text-slate-900 break-words">{i.name}</p>
-                                                    <p className="text-[11px] text-slate-500">Delivered {max} {i.unit || ''} · keeps <b className="text-slate-800">{r2(max - back)}</b></p>
+                                                    <p className="text-[11px] text-slate-500">{max} {i.unit || ''} · {back ? <b className="text-rose-700">all {max} {i.unit || ''} coming back</b> : 'customer keeps all'}</p>
                                                 </div>
-                                                <div className="flex items-center gap-1">
-                                                    <button type="button" onClick={() => step(-1)} disabled={back <= 0} className="w-9 h-10 rounded-lg border border-slate-200 font-black disabled:opacity-30">−</button>
-                                                    <input type="number" inputMode="decimal" min="0" max={max} step="any" value={back || ''} placeholder="0"
-                                                        onChange={(e) => set(parseFloat(e.target.value) || 0)}
-                                                        className="w-14 h-10 rounded-lg border border-slate-200 text-center text-sm font-black outline-none focus:border-rose-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                                                        aria-label={`${i.name} returned`} />
-                                                    <button type="button" onClick={() => step(1)} disabled={back >= max} className="w-9 h-10 rounded-lg border border-slate-200 font-black disabled:opacity-30">+</button>
+                                                <div className="flex rounded-xl border border-slate-200 overflow-hidden shrink-0" role="group" aria-label={`${i.name}: keep or return`}>
+                                                    <button type="button" onClick={() => choose(false)} aria-pressed={!back} data-keep
+                                                        className={`px-3 h-10 text-xs font-black ${!back ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500'}`}>Keeps all</button>
+                                                    <button type="button" onClick={() => choose(true)} aria-pressed={back} data-return
+                                                        className={`px-3 h-10 text-xs font-black border-l border-slate-200 ${back ? 'bg-rose-600 text-white' : 'bg-white text-slate-500'}`}>Returns all</button>
                                                 </div>
                                             </div>
                                         );
