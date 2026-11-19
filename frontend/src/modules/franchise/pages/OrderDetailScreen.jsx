@@ -1,3 +1,4 @@
+import { billBreakdown } from '@/lib/billBreakdown';
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -522,30 +523,17 @@ export default function OrderDetailScreen() {
                             )}
                             <div className="bg-slate-900 p-6 flex flex-col gap-3">
                                 {order.partialReturn ? (() => {
-                                    // Bill after a partial delivery: original bill - returned items +/- the discount and tax on them = what the customer pays
-                                    const original = Number(order.partialReturn.originalTotal) || 0;
-                                    const returnedValue = Number(order.partialReturn.returnedValue) || 0;
-                                    const adjust = Math.round(((Number(order.total) || 0) - (original - returnedValue)) * 100) / 100;
+                                    // Bill after a partial delivery: subtotal - returned items - discount (kept items' share only) + tax + delivery = total
+                                    const bb = billBreakdown({ ...order, discountAmount: order.discount });
+                                    const line = 'flex items-center justify-between text-[10px] font-black uppercase tracking-widest';
                                     return (
-                                        <>
-                                            <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                                <span>Original bill ({(order.items || []).length} items, subtotal ₹{order.subtotal?.toLocaleString()})</span>
-                                                <span className="tabular-nums">₹{original.toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between text-rose-400 text-[10px] font-black uppercase tracking-widest">
-                                                <span>Returned at the door</span>
-                                                <span className="tabular-nums">−₹{returnedValue.toLocaleString()}</span>
-                                            </div>
-                                            {adjust !== 0 && (
-                                                <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                                    <span>Discount / tax on returned items</span>
-                                                    <span className="tabular-nums">{adjust > 0 ? '+' : '−'}₹{Math.abs(adjust).toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                            <div className="flex items-center justify-between text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                                                <span>Now: discount ₹{(Number(order.discount) || 0).toLocaleString()} · tax ₹{(Number(order.tax) || 0).toLocaleString()} · delivery ₹{(Number(order.deliveryFee) || 0).toLocaleString()}</span>
-                                            </div>
-                                        </>
+                                        <div data-bill-partial className="flex flex-col gap-3">
+                                            <div className={`${line} text-slate-400`}><span>Subtotal ({(order.items || []).length} items)</span><span className="tabular-nums">₹{bb.subtotal.toLocaleString()}</span></div>
+                                            <div className={`${line} text-rose-400`}><span>Returned at delivery{bb.returnedItems.length ? ` (${bb.returnedItems.join(', ')})` : ''}</span><span className="tabular-nums">−₹{bb.returned.toLocaleString()}</span></div>
+                                            {bb.discount > 0 && <div className={`${line} text-emerald-400`}><span>Discount on kept items</span><span className="tabular-nums">−₹{bb.discount.toLocaleString()}</span></div>}
+                                            <div className={`${line} text-slate-400`}><span>Delivery Fee</span><span className="tabular-nums">₹{bb.deliveryFee.toLocaleString()}</span></div>
+                                            {bb.tax > 0 && <div className={`${line} text-slate-400`}><span>Tax</span><span className="tabular-nums">₹{bb.tax.toLocaleString()}</span></div>}
+                                        </div>
                                     );
                                 })() : (
                                     <>

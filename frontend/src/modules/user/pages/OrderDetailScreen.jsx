@@ -1,3 +1,4 @@
+import { billBreakdown } from '@/lib/billBreakdown'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -273,6 +274,18 @@ export default function OrderDetailScreen() {
                                 <span>Subtotal</span>
                                 <span className="text-white">₹{(order.subtotal || 0).toLocaleString()}</span>
                             </div>
+                            {billBreakdown(order).returned > 0 && (
+                                <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest" data-bill-returned>
+                                    <span>Returned at delivery</span>
+                                    <span className="text-rose-300">−₹{billBreakdown(order).returned.toLocaleString()}</span>
+                                </div>
+                            )}
+                            {Number(order.discountAmount) > 0 && (
+                                <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest" data-bill-discount>
+                                    <span>Discount{order.couponCode ? ` (${order.couponCode})` : ''}{billBreakdown(order).returned > 0 ? ' on kept items' : ''}</span>
+                                    <span className="text-emerald-400">−₹{Number(order.discountAmount).toLocaleString()}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest">
                                 <span>Taxes & Charges</span>
                                 <span className="text-white">₹{(order.tax || 0).toLocaleString()}</span>

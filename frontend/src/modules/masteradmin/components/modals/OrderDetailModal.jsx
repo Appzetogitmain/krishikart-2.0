@@ -109,6 +109,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                         <p><strong>Contact:</strong> ${order.userId?.mobile || 'N/A'}</p>
                         <p><strong>Address:</strong> ${order.shippingAddress || 'N/A'}</p>
                         <p><strong>Subtotal:</strong> ₹${(order.subtotal ?? 0).toLocaleString()}</p>
+                        ${Number(order.partialReturn?.returnedValue) > 0 ? `<p><strong>Returned at delivery:</strong> -₹${Number(order.partialReturn.returnedValue).toLocaleString()}</p>` : ''}
                         <p><strong>Delivery:</strong> ₹${(order.deliveryFee ?? 0).toLocaleString()}</p>
                         <p><strong>Tax:</strong> ₹${(order.tax ?? 0).toLocaleString()}</p>
                         ${order.discountAmount > 0 ? `<p><strong>Discount (${order.couponCode}):</strong> -₹${(order.discountAmount ?? 0).toLocaleString()}</p>` : ''}
@@ -368,6 +369,12 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                         <span>Subtotal</span>
                                                         <span className="tabular-nums">₹{(Number(order.subtotal) || 0).toLocaleString()}</span>
                                                     </div>
+                                                    {Number(order.partialReturn?.returnedValue) > 0 && (
+                                                        <div className="flex items-center justify-between text-rose-400 text-[10px] font-black uppercase tracking-widest" data-bill-returned>
+                                                            <span>Returned at delivery</span>
+                                                            <span className="tabular-nums">-₹{(Number(order.partialReturn.returnedValue) || 0).toLocaleString()}</span>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center justify-between text-slate-400 text-[10px] font-black uppercase tracking-widest">
                                                         <span>Delivery Fee</span>
                                                         <span className="tabular-nums">₹{(Number(order.deliveryFee) || 0).toLocaleString()}</span>
@@ -380,7 +387,7 @@ const OrderDetailModal = ({ isOpen, onClose, orderId, onProcure, onAllowPartial 
                                                     )}
                                                     {(Number(order.discountAmount) || 0) > 0 && (
                                                         <div className="flex items-center justify-between text-rose-400 text-[10px] font-black uppercase tracking-widest">
-                                                            <span>Discount ({order.couponCode})</span>
+                                                            <span>Discount ({order.couponCode}){Number(order.partialReturn?.returnedValue) > 0 ? ' on kept items' : ''}</span>
                                                             <span className="tabular-nums">-₹{(Number(order.discountAmount) || 0).toLocaleString()}</span>
                                                         </div>
                                                     )}

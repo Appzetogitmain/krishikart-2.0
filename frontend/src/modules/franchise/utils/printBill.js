@@ -1,3 +1,4 @@
+import { billBreakdown } from '@/lib/billBreakdown';
 /**
  * Bill for a hotel order, printed from the franchise once the order is packed (client, Oct 2026: "after the order
  * is packed we need to have it billed by means of POS from the franchise"). Same 80 mm thermal format as the
@@ -37,6 +38,9 @@ function billHtml(order, franchise) {
     const tax = Number(order.tax) || 0;
     const disc = Number(order.discountAmount) || 0;
     const total = Number(order.total ?? order.totalAmount) || sub + fee + tax - disc;
+    // Items given back at the door: shown so the lines add up (subtotal - returned - discount + tax = total)
+    const bb = billBreakdown(order);
+    const returnedOf = (i) => (order.partialReturn?.items || []).find((r) => String(r.productId) === String(i.productId?._id || i.productId || i.id));
     const cod = String(order.paymentMode || order.paymentMethod || '').toUpperCase() === 'COD';
     const gst = franchise?.kyc?.gstNumber || franchise?.gstNumber;
     const storeAddr = franchise?.formattedAddress || [franchise?.area, franchise?.city].filter(Boolean).join(', ');
@@ -46,7 +50,8 @@ function billHtml(order, franchise) {
         const amount = Number(i.subtotal) || (Number(i.price) || 0) * q;
         return `<div class="item"><div class="name">${esc(i.name)}</div>
             <div class="row"><span>${qty(q)} ${esc(i.unit || '')} x ${money(i.price)}</span><span>${money(amount)}</span></div>
-            ${packed !== null ? `<div class="note">Packed: ${qty(packed)} ${esc(i.unit || '')}</div>` : ''}</div>`;
+            ${packed !== null ? `<div class="note">Packed: ${qty(packed)} ${esc(i.unit || '')}</div>` : ''}
+            ${returnedOf(i) ? `<div class="note">Returned at delivery: ${qty(returnedOf(i).quantity)} ${esc(i.unit || '')}</div>` : ''}</div>`;
     }).join('');
     return `<section class="bill">
         <div class="center head">
@@ -70,9 +75,10 @@ function billHtml(order, franchise) {
         ${rows}
         <div class="sep"></div>
         <div class="row"><span>Subtotal</span><span>${money(sub)}</span></div>
+        ${bb.returned ? `<div class="row"><span>Returned at delivery</span><span>-${money(bb.returned)}</span></div>` : ''}
         ${fee ? `<div class="row"><span>Delivery fee</span><span>${money(fee)}</span></div>` : ''}
         ${tax ? `<div class="row"><span>Tax</span><span>${money(tax)}</span></div>` : ''}
-        ${disc ? `<div class="row"><span>Discount${order.couponCode ? ` (${esc(order.couponCode)})` : ''}</span><span>-${money(disc)}</span></div>` : ''}
+        ${disc ? `<div class="row"><span>Discount${order.couponCode ? ` (${esc(order.couponCode)})` : ''}${bb.returned ? ' on kept items' : ''}</span><span>-${money(disc)}</span></div>` : ''}
         <div class="row total"><span>TOTAL</span><span>${money(total)}</span></div>
         <div class="row"><span>Payment:</span><span>${esc(payText(order.paymentMode || order.paymentMethod))}</span></div>
         ${cod ? `<div class="row due"><span>To collect</span><span>${money(total)}</span></div>` : ''}

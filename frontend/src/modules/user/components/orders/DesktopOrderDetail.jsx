@@ -1,3 +1,4 @@
+import { billBreakdown } from '@/lib/billBreakdown'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Box, CalendarDays, Check, Clock, Copy, CreditCard, Headphones, Home, MapPin, Package, RotateCcw, ShoppingCart, Truck, ArrowRight } from 'lucide-react'
@@ -22,6 +23,8 @@ export default function DesktopOrderDetail({ order, isOrderActive, onReorder }) 
     const fee = Number(order.deliveryFee) || 0
     const tax = Number(order.tax) || 0
     const discount = Number(order.discount || order.discountAmount) || 0
+    // Items given back at the door (partial delivery)
+    const bb = billBreakdown(order)
     const taxRate = subtotal + fee > 0 ? Math.round((tax / (subtotal + fee)) * 100) : 0
     const deliveryDay = order.scheduledDate || order.createdAt
     const copy = () => navigator.clipboard?.writeText(shortId(order._id)).then(() => toast.success('Order ID copied')).catch(() => {})
@@ -127,9 +130,10 @@ export default function DesktopOrderDetail({ order, isOrderActive, onReorder }) 
                     <h2 className="text-[20px] font-bold text-slate-900">Price Details</h2>
                     <div className="mt-3 space-y-2.5 text-[17px] text-slate-700">
                         <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{money(subtotal, 0)}</span></div>
+                        {bb.returned > 0 && <div className="flex justify-between" data-bill-returned><span>Returned at delivery{bb.returnedItems.length ? ` (${bb.returnedItems.join(', ')})` : ''}</span><span className="text-rose-600 tabular-nums">−{money(bb.returned)}</span></div>}
                         <div className="flex justify-between"><span>Taxes &amp; Charges{taxRate ? ` (${taxRate}%)` : ''}</span><span className="tabular-nums">{money(tax, 0)}</span></div>
                         <div className="flex justify-between"><span>Delivery Fee</span>{fee === 0 ? <span className="font-bold text-green-700">FREE</span> : <span className="tabular-nums">{money(fee, 0)}</span>}</div>
-                        {discount > 0 && <div className="flex justify-between"><span>Discount</span><span className="text-green-700 tabular-nums">−{money(discount, 0)}</span></div>}
+                        {discount > 0 && <div className="flex justify-between"><span>Discount{order.couponCode ? ` (${order.couponCode})` : ''}{bb.returned > 0 ? ' on kept items' : ''}</span><span className="text-green-700 tabular-nums">−{money(discount)}</span></div>}
                     </div>
                     <div className="mt-4 rounded-xl bg-green-50 px-5 py-4 flex justify-between items-center">
                         <span className="text-[22px] font-bold text-slate-900">Grand Total</span>
