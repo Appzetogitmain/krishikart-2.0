@@ -87,8 +87,15 @@ export const getAllVendors = async (req, res) => {
       query.products = { $in: [productId] };
     }
 
+    // Admins without the Vendors permission (they only pick a vendor for an order) don't get
+    // documents or bank details
+    const admin = req.masteradmin;
+    const fullAccess = ["superadmin", "masteradmin"].includes(String(admin?.role || "").toLowerCase())
+      || (Array.isArray(admin?.permissions) && admin.permissions.includes("vendors"));
+    const hidden = "-password -resetPasswordToken -resetPasswordExpires -staticOtpHash -fcmTokens"
+      + (fullAccess ? "" : " -aadharCard -panCard -fssaiImage -shopEstablishmentProof -bankDetails");
     const vendors = await Vendor.find(query)
-      .select("-password -resetPasswordToken -resetPasswordExpires")
+      .select(hidden)
       .populate("products", "name category")
       .populate("servedCategories", "name")
       .populate("requestedCategories", "name")

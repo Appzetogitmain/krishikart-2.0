@@ -91,6 +91,7 @@ import {
   protectMasterAdmin,
   requirePermission,
   requireSuperAdmin,
+  requireAnyPermission,
 } from "../middlewares/masteradmin.auth.js";
 import upload from "../middlewares/upload.js";
 
@@ -117,10 +118,13 @@ router.post(
 );
 
 /* 🏪 Vendor Management */
+// Read-only list: also needed by admins who buy stock for orders (Orders / Assign Vendors) without
+// the Vendors page (client, Nov 2026: city admins saw "No active vendors" when ordering stock).
+// Documents and bank details are only sent to admins with the Vendors permission.
 router.get(
   "/vendors",
   protectMasterAdmin,
-  requirePermission("vendors"),
+  requireAnyPermission("vendors", "orders", "assignment"),
   getAllVendors,
 );
 router.post(
