@@ -37,6 +37,7 @@ import {
     requireFranchiseAccountVerified,
 } from "../middlewares/franchise.auth.js";
 import { protectDelivery, requireApproval } from "../middlewares/delivery.auth.js";
+import { createDoorUpiQr, getDoorUpiStatus } from "../utils/doorUpi.js";
 
 const router = express.Router();
 
@@ -132,6 +133,9 @@ router.put(
     confirmRefusedGoodsReturned,
 );
 router.put("/delivery/:id/status", protectDelivery, requireApproval, updateOrderStatus);
+// UPI at the door on a Razorpay QR (verified by Razorpay before the delivery can be completed)
+router.post("/delivery/:id/upi-qr", protectDelivery, requireApproval, createDoorUpiQr);
+router.get("/delivery/:id/upi-qr", protectDelivery, requireApproval, getDoorUpiStatus);
 router.get("/delivery/return-pickups", protectDelivery, requireApproval, getDeliveryReturnPickups);
 router.put("/delivery/return-pickups/:id/:requestIndex/status", protectDelivery, requireApproval, updateReturnPickupStatus);
 

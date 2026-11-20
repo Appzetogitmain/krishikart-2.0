@@ -1,3 +1,4 @@
+import RazorpayUpiPay from '../components/payment/RazorpayUpiPay';
 import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -28,7 +29,8 @@ const ActiveDelivery = () => {
     const submittingRef = useRef(false);
     const [confirm, confirmDialog] = useConfirm();
     const [isDocOpen, setIsDocOpen] = useState(false);
-    // COD payment sheet: null = closed, 'choose' = cash or UPI, 'qr' = showing the franchise QR
+    // COD payment sheet: null = closed, 'choose' = cash or UPI, 'qr' = Razorpay UPI QR (whole amount),
+    // 'split_upi' = Razorpay UPI QR for the UPI part of a split payment
     const [paySheet, setPaySheet] = useState(null);
     // Last step before "delivered": the customer's 4-digit code. pendingMode = how a COD order was paid
     const [otpCode, setOtpCode] = useState('');
@@ -104,6 +106,7 @@ const ActiveDelivery = () => {
         ...(pendingMode === 'split'
             ? { payments: [{ mode: 'cash', amount: cashPart }, { mode: 'credit', amount: creditPart }, { mode: 'upi', amount: upiPart }].filter((p) => p.amount > 0) }
             : pendingMode === 'credit' ? { payments: [{ mode: 'credit', amount: amountDue }] }
+            : pendingMode === 'upi' ? { payments: [{ mode: 'upi', amount: amountDue }] }
                 : pendingMode ? { collectionMode: pendingMode } : {}),
     });
 
@@ -203,7 +206,6 @@ const ActiveDelivery = () => {
     };
 
     const handleCashCollected = () => goToCode('cash');
-    const handleUpiReceived = () => goToCode('upi_franchise_qr');
 
     if (loading && !order) {
         return (
@@ -415,13 +417,14 @@ const ActiveDelivery = () => {
                     <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isUpdating && setPaySheet(null)} />
                     <div className="relative w-full max-w-md bg-white rounded-t-3xl p-6 pb-8 shadow-2xl max-h-[92vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-4">
-                            {paySheet === 'qr' || paySheet === 'split' || (paySheet === 'otp' && (isCodOrder || isPartial)) || (paySheet === 'choose' && isPartial) ? (
+                            {paySheet === 'qr' || paySheet === 'split' || paySheet === 'split_upi' || (paySheet === 'otp' && (isCodOrder || isPartial)) || (paySheet === 'choose' && isPartial) ? (
                                 <button
                                     onClick={() => setPaySheet(
                                         paySheet === 'choose' ? 'items'
                                             : paySheet === 'otp' && !isCodOrder ? 'items'
-                                                : paySheet === 'otp' && pendingMode === 'upi_franchise_qr' ? 'qr'
+                                                : paySheet === 'otp' && pendingMode === 'upi' ? 'qr'
                                                     : paySheet === 'otp' && pendingMode === 'split' ? 'split'
+                                                        : paySheet === 'split_upi' ? 'split'
                                                         : 'choose',
                                     )}
                                     disabled={isUpdating} className="p-2 -ml-2 rounded-full hover:bg-slate-100" aria-label="Back">
@@ -543,23 +546,27 @@ const ActiveDelivery = () => {
                                     <span className="flex items-center gap-2 text-sm font-bold text-indigo-800"><QrCode className="w-5 h-5" /> Rest on UPI (QR)</span>
                                     <span className="text-xl font-black text-slate-900">Rs {upiPart.toFixed(2)}</span>
                                 </div>
-                                {upiPart <= 0 ? null : order?.franchiseQrCode ? (
-                                    <div className="mx-auto w-56 max-w-full bg-white border border-slate-200 rounded-2xl p-3">
-                                        <img src={order.franchiseQrCode} alt={`${franchiseName} payment QR`} className="w-full h-auto rounded-lg" />
-                                    </div>
-                                ) : (
-                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-semibold text-amber-800">
-                                        {franchiseName} has not uploaded a payment QR yet, so UPI is not possible. Please collect cash.
-                                    </div>
-                                )}
+                                {upiPart > 0 && <p className="text-[11px] text-slate-500 text-left">Next, the customer pays the UPI part on the QR shown in this app. It is checked automatically.</p>}
                                 <button
-                                    onClick={() => goToCode('split')}
-                                    disabled={isUpdating || (upiPart > 0 && !order?.franchiseQrCode) || [cashPart, creditPart, upiPart].filter((n) => n > 0).length < 2}
+                                    onClick={() => (upiPart > 0 ? setPaySheet('split_upi') : goToCode('split'))}
+                                    disabled={isUpdating || [cashPart, creditPart, upiPart].filter((n) => n > 0).length < 2}
+                                    data-split-next
                                     className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
                                 >
                                     {[cashPart > 0 && `Cash Rs ${cashPart.toFixed(2)}`, creditPart > 0 && `Credit Rs ${creditPart.toFixed(2)}`, upiPart > 0 && `UPI Rs ${upiPart.toFixed(2)}`].filter(Boolean).join(' + ')} - Next
                                 </button>
                             </div>
+                        )}
+
+                        {paySheet === 'split_upi' && (
+                            <RazorpayUpiPay
+                                key={`split-${upiPart}`}
+                                orderId={order.id}
+                                amount={upiPart}
+                                onPaid={() => goToCode('split')}
+                                onCancel={() => setPaySheet('split')}
+                                cancelLabel="Change the amounts"
+                            />
                         )}
 
                         {paySheet === 'choose' && (
@@ -588,7 +595,7 @@ const ActiveDelivery = () => {
                                     <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0"><QrCode className="w-6 h-6" /></div>
                                     <div>
                                         <p className="text-sm font-black text-slate-900">UPI / QR</p>
-                                        <p className="text-xs text-slate-500">Show the franchise QR. The customer pays {franchiseName} directly.</p>
+                                        <p className="text-xs text-slate-500">Show the UPI QR in this app. The payment is confirmed automatically.</p>
                                     </div>
                                 </button>
                                 <button
@@ -618,39 +625,20 @@ const ActiveDelivery = () => {
                                     <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><Banknote className="w-5 h-5" /><QrCode className="w-4 h-4 -ml-1" /></div>
                                     <div>
                                         <p className="text-sm font-black text-slate-900">Pay in parts</p>
-                                        <p className="text-xs text-slate-500">e.g. Rs 200 cash{credit.usable ? ', some on KK Credit' : ''} and the rest on the franchise QR.</p>
+                                        <p className="text-xs text-slate-500">e.g. Rs 200 cash{credit.usable ? ', some on KK Credit' : ''} and the rest by UPI (QR in this app).</p>
                                     </div>
                                 </button>
                             </div>
                         )}
 
                         {paySheet === 'qr' && (
-                            <div className="space-y-4 text-center">
-                                <div>
-                                    <p className="text-xs font-bold uppercase text-slate-400">Customer pays {franchiseName}</p>
-                                    <p className="text-3xl font-black text-slate-900">Rs {codAmount}</p>
-                                </div>
-                                {order?.franchiseQrCode ? (
-                                    <div className="mx-auto w-64 max-w-full bg-white border border-slate-200 rounded-2xl p-3">
-                                        <img src={order.franchiseQrCode} alt={`${franchiseName} payment QR`} className="w-full h-auto rounded-lg" />
-                                    </div>
-                                ) : (
-                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-semibold text-amber-800">
-                                        {franchiseName} has not uploaded a payment QR yet. Please collect cash instead.
-                                    </div>
-                                )}
-                                <p className="text-[11px] text-slate-500">Ask the customer to pay the exact amount and show you the success screen.</p>
-                                <button
-                                    onClick={handleUpiReceived}
-                                    disabled={isUpdating || !order?.franchiseQrCode}
-                                    className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-xl shadow-primary/30 flex items-center justify-center disabled:opacity-40"
-                                >
-                                    {isUpdating ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Payment received - Next'}
-                                </button>
-                                <button onClick={() => setPaySheet('choose')} disabled={isUpdating} className="text-xs font-bold text-slate-500">
-                                    Customer wants to pay cash instead
-                                </button>
-                            </div>
+                            <RazorpayUpiPay
+                                key={`full-${codAmount}`}
+                                orderId={order.id}
+                                amount={amountDue}
+                                onPaid={() => goToCode('upi')}
+                                onCancel={() => setPaySheet('choose')}
+                            />
                         )}
 
                         {paySheet === 'otp' && (
@@ -659,7 +647,7 @@ const ActiveDelivery = () => {
                                     <p className="text-xs font-bold uppercase text-slate-400">Confirm delivery</p>
                                     <p className="text-sm text-slate-600 mt-1">
                                         {isPartial ? `${returnedLines.length} item${returnedLines.length > 1 ? 's' : ''} given back. ` : ''}
-                                        {pendingMode === 'cash' ? `Cash Rs ${codAmount} collected. ` : pendingMode === 'upi_franchise_qr' ? `Rs ${codAmount} paid on ${franchiseName}'s QR. ` : pendingMode === 'split' ? `${[cashPart > 0 && `Cash Rs ${cashPart.toFixed(2)}`, creditPart > 0 && `KK Credit Rs ${creditPart.toFixed(2)}`, upiPart > 0 && `UPI Rs ${upiPart.toFixed(2)}`].filter(Boolean).join(' + ')} collected. ` : pendingMode === 'credit' ? `Rs ${codAmount} on the customer's KK Credit. ` : ''}
+                                        {pendingMode === 'cash' ? `Cash Rs ${codAmount} collected. ` : pendingMode === 'upi' ? `Rs ${codAmount} paid by UPI (confirmed). ` : pendingMode === 'split' ? `${[cashPart > 0 && `Cash Rs ${cashPart.toFixed(2)}`, creditPart > 0 && `KK Credit Rs ${creditPart.toFixed(2)}`, upiPart > 0 && `UPI Rs ${upiPart.toFixed(2)}`].filter(Boolean).join(' + ')} collected. ` : pendingMode === 'credit' ? `Rs ${codAmount} on the customer's KK Credit. ` : ''}
                                         {needsCode ? 'Ask the customer for their 4-digit delivery code (it is in their app and notifications).' : 'Only continue if you have handed over the order to the customer.'}
                                     </p>
                                 </div>

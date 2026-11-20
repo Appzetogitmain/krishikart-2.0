@@ -44,6 +44,7 @@ async function unitWeightsOf(items = []) {
   const products = await Product.find({ _id: { $in: ids } }).select("unitWeightKg").lean();
   return Object.fromEntries(products.filter((p) => Number(p.unitWeightKg) > 0).map((p) => [String(p._id), Number(p.unitWeightKg)]));
 }
+import { refreshDoorUpi } from "../utils/doorUpi.js";
 import { planPartialDelivery, applyPartialDelivery, refundPartialDelivery, splitPayments, creditProblem, chargeDoorCredit } from "../utils/partialDelivery.js";
 import { recordDeliveredOrder } from "../utils/finance.js";
 
@@ -1412,6 +1413,22 @@ export const updateOrderStatus = async (req, res) => {
         if (order.paymentMethod === "COD") {
           doorPayment = splitPayments(payments, partialPlan ? partialPlan.newTotal : order.totalAmount, collectionMode);
           if (doorPayment.error) return handleResponse(res, 400, doorPayment.error);
+          // UPI at the door must be confirmed by Razorpay (paid on the QR made for this order) before the
+          // code is asked for; a UPI payment received must also be counted as UPI, not as cash
+          const upiPaid = (doorPayment.upi > 0 || order.doorUpi?.status === "paid" || order.doorUpi?.qrId)
+            ? await refreshDoorUpi(order).catch((e) => { console.error("[DoorUpi] check:", e?.error || e); return order.doorUpi; })
+            : null;
+          if (upiPaid?.status === "paid") order.set("doorUpi", upiPaid.toObject ? upiPaid.toObject() : upiPaid);
+          if (doorPayment.upi > 0) {
+            if (upiPaid?.status !== "paid") {
+              return handleResponse(res, 400, `The UPI payment of Rs ${doorPayment.upi} has not been received yet. Ask the customer to scan the QR in the app and pay.`);
+            }
+            if (Math.abs(Number(upiPaid.amount) - doorPayment.upi) > 0.01) {
+              return handleResponse(res, 400, `Rs ${upiPaid.amount} was paid by UPI, but the payment says Rs ${doorPayment.upi} UPI. Please go back and choose the payment again.`);
+            }
+          } else if (upiPaid?.status === "paid") {
+            return handleResponse(res, 400, `The customer already paid Rs ${upiPaid.amount} by UPI for this order. Include it as UPI.`);
+          }
           // KK Credit at the door: check the customer can use it before the code is asked for
           if (doorPayment.credit > 0) {
             const customer = await User.findById(order.userId).select("creditLimit usedCredit creditBlocked creditOverdueDate").lean();
@@ -1495,14 +1512,7 @@ export const updateOrderStatus = async (req, res) => {
       order.numberOfPackages = packages;
     }
 
-    // A COD customer may pay (all or part) by UPI to the franchise's QR instead of giving cash
-    const paidByFranchiseQr = status === "Delivered" && order.paymentMethod === "COD" && (doorPayment?.upi || 0) > 0;
-    if (paidByFranchiseQr) {
-      const store = order.franchiseId ? await Franchise.findById(order.franchiseId).select("storeQRCode") : null;
-      if (!store?.storeQRCode) {
-        return handleResponse(res, 400, "This franchise has not uploaded a payment QR code, so the customer cannot pay by UPI. Please collect cash.");
-      }
-    }
+    // (UPI at the door is checked with Razorpay above, before the delivery code)
 
     // KK Credit at the door: charged atomically, only now that the delivery code has been checked
     if (status === "Delivered" && order.paymentMethod === "COD" && (doorPayment?.credit || 0) > 0) {
@@ -1546,12 +1556,13 @@ export const updateOrderStatus = async (req, res) => {
         order.codTracking.collectedAmount = split.cash > 0 ? split.cash : Number(order.totalAmount || 0);
         order.codTracking.cashAmount = split.cash;
         order.codTracking.upiAmount = split.upi;
+        if (split.upi > 0) order.codTracking.upiPaymentId = order.doorUpi?.paymentId || "";
         order.codTracking.creditAmount = split.credit || 0; // charged to the customer's KK Credit
         order.codTracking.collectedAt = new Date();
         order.codTracking.collectedByDeliveryId = collectorId;
         if (split.cash <= 0) {
           // Paid on the franchise's QR and/or KK Credit, so the delivery partner holds no cash to hand over
-          order.codTracking.collectionMode = split.upi > 0 ? "upi_franchise_qr" : "kk_credit";
+          order.codTracking.collectionMode = split.upi > 0 ? "upi_razorpay" : "kk_credit";
           order.codTracking.remittanceStatus = "verified";
           order.codTracking.verifiedAt = new Date();
         } else {
@@ -2648,6 +2659,10 @@ export const refuseOrderAtDoor = async (req, res) => {
 
     const label = REFUSAL_REASONS[reason];
     const now = new Date();
+    const paidUpi = await Order.findOne({ _id: id, deliveryPartnerId: partnerId, "doorUpi.status": "paid" }).select("doorUpi.amount").lean();
+    if (paidUpi) {
+      return handleResponse(res, 400, `The customer already paid Rs ${paidUpi.doorUpi.amount} by UPI for this order. Complete the delivery (or give back only some items), or call support for a refund.`);
+    }
     // One atomic claim, so a double tap (or a second device) cannot cancel and refund twice
     const order = await Order.findOneAndUpdate(
       { _id: id, deliveryPartnerId: partnerId, orderStatus: { $in: ["Dispatched", "Out for Delivery"] } },

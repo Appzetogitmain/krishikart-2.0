@@ -223,6 +223,18 @@ const orderSchema = new mongoose.Schema({
         handedBackAt: { type: Date, default: null },
         resolvedAt: { type: Date, default: null }
     },
+    // UPI paid at the door on a Razorpay QR made for this order (utils/doorUpi.js). status: created -> paid
+    doorUpi: {
+        qrId: { type: String, default: '' },
+        amount: { type: Number, default: 0 },
+        imageUrl: { type: String, default: '' },
+        status: { type: String, enum: ['created', 'paid', 'closed'], default: undefined },
+        paymentId: { type: String, default: '' },
+        vpa: { type: String, default: '' },
+        paidAt: { type: Date, default: null },
+        closeBy: { type: Date, default: null },
+        createdAt: { type: Date, default: null }
+    },
     // The customer kept only some items at the door (see utils/partialDelivery.js). The rest goes back to
     // the franchise like refused goods; totalAmount/discountAmount/tax already show the smaller order.
     partialReturn: {
@@ -278,15 +290,17 @@ const orderSchema = new mongoose.Schema({
             default: null
         },
         // cash = the delivery partner took cash (to be handed to the franchise);
-        // upi_franchise_qr = the customer paid by UPI straight to the franchise's QR, so there is no cash to hand over
+        // upi_razorpay = paid by UPI on the Razorpay QR shown in the delivery app (verified by Razorpay);
+        // upi_franchise_qr = older orders: paid by UPI straight to the franchise's QR, so there is no cash to hand over
         // Split payment at the door (e.g. ₹200 cash + ₹100 UPI). collectedAmount is the cash part
         // (what the partner hands to the franchise); upiAmount went straight to the franchise's QR.
         cashAmount: { type: Number, default: 0 },
         upiAmount: { type: Number, default: 0 },
         creditAmount: { type: Number, default: 0 }, // charged to the customer's KK Credit at the door
+        upiPaymentId: { type: String, default: '' }, // Razorpay payment of the UPI part
         collectionMode: {
             type: String,
-            enum: ['cash', 'upi_franchise_qr', 'kk_credit'],
+            enum: ['cash', 'upi_razorpay', 'upi_franchise_qr', 'kk_credit'],
             default: 'cash'
         },
         remittanceStatus: {
