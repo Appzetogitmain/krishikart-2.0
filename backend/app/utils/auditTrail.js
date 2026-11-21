@@ -1,3 +1,4 @@
+import { escapeRegex } from "./escapeRegex.js";
 import mongoose from "mongoose";
 import AuditLog from "../models/auditLog.js";
 import { AUDIT_RULES } from "./auditRules.js";
@@ -81,7 +82,7 @@ const actorFromIdentifier = async (type, body = {}, result) => {
         let doc = null;
         if (resultId && mongoose.isValidObjectId(resultId)) doc = await Model.findById(resultId).lean();
         if (!doc && email) doc = await Model.findOne({ email }).lean();
-        if (!doc && mobile) doc = await Model.findOne({ mobile: { $regex: `${mobile}$` } }).lean();
+        if (!doc && mobile) doc = await Model.findOne({ mobile: { $regex: `${escapeRegex(mobile)}$` } }).lean();
         if (!doc) continue;
         const req = { [type === "admin" ? "masteradmin" : type]: doc };
         return actorFromRequest(req);
