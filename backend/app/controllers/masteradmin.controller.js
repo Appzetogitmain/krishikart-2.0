@@ -1,3 +1,4 @@
+import { escapeRegex } from "../utils/escapeRegex.js";
 import Vendor from "../models/vendor.js";
 import mongoose from "mongoose";
 import Franchise from "../models/franchise.js";
@@ -2703,7 +2704,7 @@ export const globalSearch = async (req, res) => {
       });
     }
 
-    const regex = new RegExp(query, "i");
+    const regex = new RegExp(escapeRegex(query), "i"); // typed text, not a pattern
 
     const [products, orders, vendors, franchises] = await Promise.all([
       Product.find({ name: regex })

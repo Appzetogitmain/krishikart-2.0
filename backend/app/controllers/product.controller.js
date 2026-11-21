@@ -1,3 +1,4 @@
+import { escapeRegex } from "../utils/escapeRegex.js";
 import mongoose from "mongoose";
 import Product from "../models/product.js";
 import Category from "../models/category.js";
@@ -201,7 +202,7 @@ export const getProducts = async (req, res) => {
             const keywords = search.trim().split(/\s+/).filter(k => k.length > 0);
             if (keywords.length > 0) {
                 const searchConditions = keywords.map(word => {
-                    const searchRegex = { $regex: word, $options: 'i' };
+                    const searchRegex = { $regex: escapeRegex(word), $options: 'i' }; // typed text, not a pattern
                     return {
                         $or: [
                             { name: searchRegex },

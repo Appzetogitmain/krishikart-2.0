@@ -1,3 +1,4 @@
+import { escapeRegex } from "../utils/escapeRegex.js";
 import Category from "../models/category.js";
 import Subcategory from "../models/subcategory.js";
 import Product from "../models/product.js";
@@ -282,7 +283,7 @@ export const getProductsByFranchise = async (req, res) => {
     if (subcategory) filter.subcategory = subcategory;
 
     if (search) {
-      const searchRegex = { $regex: search, $options: "i" };
+      const searchRegex = { $regex: escapeRegex(search), $options: "i" }; // typed text, not a pattern
       filter.$or = [
         { name: searchRegex },
         { tags: searchRegex },
