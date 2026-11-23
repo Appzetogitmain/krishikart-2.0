@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, History, ArrowUpRight, ArrowDownLeft, RotateCcw, ShieldAlert, UserCog } from 'lucide-react';
+import { X, History, ArrowUpRight, ArrowDownLeft, RotateCcw, ShieldAlert, UserCog, Receipt, CalendarClock } from 'lucide-react';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 
@@ -9,24 +9,37 @@ const when = (d) =>
     d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 const monthLabel = (key) => new Date(`${key}-15T00:00:00Z`).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' });
 
+const day = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
+const STATUS = {
+    due: ['To pay', 'bg-amber-50 text-amber-700 border-amber-200'],
+    part_paid: ['Part paid', 'bg-amber-50 text-amber-700 border-amber-200'],
+    overdue: ['Overdue', 'bg-rose-50 text-rose-700 border-rose-200'],
+    paid: ['Paid', 'bg-emerald-50 text-emerald-700 border-emerald-200'],
+    refunded: ['Credit returned', 'bg-slate-50 text-slate-600 border-slate-200'],
+};
+
 const KIND = {
     used: { label: 'Credit used', icon: ArrowUpRight, tone: 'text-rose-600 bg-rose-50', sign: '+' },
     repaid: { label: 'Repaid', icon: ArrowDownLeft, tone: 'text-emerald-600 bg-emerald-50', sign: '−' },
     refunded: { label: 'Refunded to credit', icon: RotateCcw, tone: 'text-blue-600 bg-blue-50', sign: '−' },
 };
 
-/** Side panel with one customer's KK Credit usage, repayments and admin changes. */
+/**
+ * Side panel with one customer's KK Credit track record (client, Nov 2026): every order bought on credit
+ * with what is paid / still due and by when, every payment made to clear it, all credit transactions and
+ * admin changes. Payments clear the oldest orders first (same as the customer's own credit page).
+ */
 export default function CreditHistoryDrawer({ customer, onClose }) {
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
-    const [tab, setTab] = useState('transactions');
+    const [tab, setTab] = useState('orders');
 
     useEffect(() => {
         if (!customer?._id) return;
         let cancelled = false;
         setData(null);
         setError('');
-        setTab('transactions');
+        setTab('orders');
         api.get(`/masteradmin/customers/${customer._id}/credit-history`)
             .then((res) => { if (!cancelled) setData(res.data?.result || res.data?.results || null); })
             .catch((err) => { if (!cancelled) setError(err.response?.data?.message || 'Could not load credit history'); });
@@ -34,6 +47,11 @@ export default function CreditHistoryDrawer({ customer, onClose }) {
     }, [customer?._id]);
 
     const maxMonth = data ? Math.max(1, ...data.months.map((m) => Math.max(m.used, m.repaid))) : 1;
+    const st = data?.statement || null;
+    const creditOrders = st?.rows || [];
+    // Transactions with the order they belong to (checkout credit entries have no order id on them)
+    const txns = st?.history || data?.transactions || [];
+    const payments = txns.filter((t) => t.kind === 'repaid');
 
     return (
         <AnimatePresence>
@@ -123,37 +141,23 @@ export default function CreditHistoryDrawer({ customer, onClose }) {
                                     Last used: {when(data.summary.lastUsedAt)} · Last repaid: {when(data.summary.lastRepaidAt)}
                                     {data.customer.isOverdue && <span className="text-rose-600"> · Payment overdue</span>}
                                 </p>
-
-                                {/* Last 6 months */}
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Last 6 months</p>
-                                    <div className="flex items-end gap-3 h-28 border-b border-slate-200 pb-1">
-                                        {data.months.map((m) => (
-                                            <div key={m.month} className="flex-1 flex flex-col items-center gap-1 h-full justify-end" title={`${monthLabel(m.month)}: used ${money(m.used)}, repaid ${money(m.repaid)}`}>
-                                                <div className="flex items-end gap-0.5 w-full justify-center h-full">
-                                                    <div className="w-2.5 bg-rose-400 rounded-t-sm" style={{ height: `${(m.used / maxMonth) * 100}%` }} />
-                                                    <div className="w-2.5 bg-emerald-400 rounded-t-sm" style={{ height: `${(m.repaid / maxMonth) * 100}%` }} />
-                                                </div>
-                                            </div>
-                                        ))}
+                                {st && st.used > 0 && (
+                                    <div className={cn('flex items-center gap-2 p-3 rounded-sm border text-[12px] font-bold', st.isOverdue ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-amber-50 border-amber-200 text-amber-800')} data-credit-due>
+                                        <CalendarClock size={16} className="shrink-0" />
+                                        {st.isOverdue
+                                            ? <span>{money(st.overdueAmount)} overdue · {money(st.used)} to pay in total</span>
+                                            : <span>{money(st.used)} to pay · next due {day(st.dueDate)}{st.daysLeft != null ? ` (${st.daysLeft <= 0 ? 'today' : `${st.daysLeft} day${st.daysLeft > 1 ? 's' : ''} left`})` : ''}</span>}
                                     </div>
-                                    <div className="flex gap-3">
-                                        {data.months.map((m) => (
-                                            <span key={m.month} className="flex-1 text-center text-[10px] font-bold text-slate-400 mt-1">{monthLabel(m.month)}</span>
-                                        ))}
-                                    </div>
-                                    <div className="flex gap-4 mt-2 text-[10px] font-bold text-slate-500">
-                                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-rose-400 rounded-sm" /> Used</span>
-                                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-400 rounded-sm" /> Repaid</span>
-                                    </div>
-                                </div>
+                                )}
 
                                 {/* Lists */}
                                 <div>
                                     <div className="flex border-b border-slate-200 mb-3">
                                         {[
-                                            ['transactions', `Transactions (${data.transactions.length})`],
-                                            ['admin', `Admin changes (${data.adminChanges.length})`],
+                                            ['orders', `Orders on credit (${creditOrders.length})`],
+                                            ['payments', `Payments (${payments.length})`],
+                                            ['transactions', `All (${txns.length})`],
+                                            ['admin', `Admin (${data.adminChanges.length})`],
                                         ].map(([key, label]) => (
                                             <button
                                                 key={key}
@@ -168,12 +172,61 @@ export default function CreditHistoryDrawer({ customer, onClose }) {
                                         ))}
                                     </div>
 
+                                    {tab === 'orders' && (
+                                        creditOrders.length === 0 ? (
+                                            <p className="text-[12px] font-bold text-slate-400 py-4">No orders bought on KK Credit yet.</p>
+                                        ) : (
+                                            <ul className="divide-y divide-slate-100" data-credit-orders>
+                                                {creditOrders.map((r, i) => {
+                                                    const [label, tone] = STATUS[r.status] || STATUS.due;
+                                                    return (
+                                                        <li key={r.orderId || `earlier-${i}`} className="flex items-start gap-3 py-3">
+                                                            <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0 bg-slate-100 text-slate-500"><Receipt size={14} /></div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[12px] font-black text-slate-900 flex flex-wrap items-center gap-2">
+                                                                    {r.orderId ? `Order #${r.shortId}` : 'Earlier credit (no order linked)'}
+                                                                    <span className={cn('px-1.5 py-0.5 rounded-sm border text-[10px] font-black', tone)}>{label}</span>
+                                                                </p>
+                                                                <p className="text-[11px] font-bold text-slate-400 truncate">{r.orderId ? `${day(r.placedAt)}${r.items ? ` · ${r.items}` : ''}` : 'Credit used before order-wise tracking'}</p>
+                                                                <p className="text-[11px] font-bold text-slate-600 mt-0.5">
+                                                                    On credit {money(r.net || r.charged)}
+                                                                    {r.restored > 0 ? ` (${money(r.restored)} returned)` : ''}
+                                                                    {r.paid > 0 ? ` · paid ${money(r.paid)}` : ''}
+                                                                    {r.due > 0 ? <span className={r.status === 'overdue' ? 'text-rose-600' : 'text-amber-700'}>{` · due ${money(r.due)} by ${day(r.dueDate)}`}</span> : ''}
+                                                                </p>
+                                                            </div>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        )
+                                    )}
+
+                                    {tab === 'payments' && (
+                                        payments.length === 0 ? (
+                                            <p className="text-[12px] font-bold text-slate-400 py-4">No credit payments made yet.</p>
+                                        ) : (
+                                            <ul className="divide-y divide-slate-100" data-credit-payments>
+                                                {payments.map((t, i) => (
+                                                    <li key={t.txnId || i} className="flex items-center gap-3 py-2.5">
+                                                        <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0 text-emerald-600 bg-emerald-50"><ArrowDownLeft size={14} /></div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[12px] font-black text-slate-900">Payment received</p>
+                                                            <p className="text-[11px] font-bold text-slate-400 truncate">{when(t.createdAt)} · Ref {t.txnId}{t.note ? ` · ${t.note}` : ''}</p>
+                                                        </div>
+                                                        <span className="text-[13px] font-black tabular-nums text-emerald-600">{money(t.amount)}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )
+                                    )}
+
                                     {tab === 'transactions' && (
-                                        data.transactions.length === 0 ? (
+                                        txns.length === 0 ? (
                                             <p className="text-[12px] font-bold text-slate-400 py-4">This customer hasn't used KK Credit yet.</p>
                                         ) : (
                                             <ul className="divide-y divide-slate-100">
-                                                {data.transactions.map((t, i) => {
+                                                {txns.map((t, i) => {
                                                     const k = KIND[t.kind];
                                                     return (
                                                         <li key={t.txnId || i} className="flex items-center gap-3 py-2.5">
@@ -181,7 +234,7 @@ export default function CreditHistoryDrawer({ customer, onClose }) {
                                                                 <k.icon size={14} />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-[12px] font-black text-slate-900">{k.label}</p>
+                                                                <p className="text-[12px] font-black text-slate-900">{k.label}{t.shortId ? ` · Order #${t.shortId}` : ''}</p>
                                                                 <p className="text-[11px] font-bold text-slate-400 truncate">
                                                                     {when(t.createdAt)}{t.note ? ` · ${t.note}` : ''}
                                                                 </p>
@@ -226,6 +279,30 @@ export default function CreditHistoryDrawer({ customer, onClose }) {
                                         )
                                     )}
                                 </div>
+                                {/* Last 6 months */}
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Last 6 months</p>
+                                    <div className="flex items-end gap-3 h-28 border-b border-slate-200 pb-1">
+                                        {data.months.map((m) => (
+                                            <div key={m.month} className="flex-1 flex flex-col items-center gap-1 h-full justify-end" title={`${monthLabel(m.month)}: used ${money(m.used)}, repaid ${money(m.repaid)}`}>
+                                                <div className="flex items-end gap-0.5 w-full justify-center h-full">
+                                                    <div className="w-2.5 bg-rose-400 rounded-t-sm" style={{ height: `${(m.used / maxMonth) * 100}%` }} />
+                                                    <div className="w-2.5 bg-emerald-400 rounded-t-sm" style={{ height: `${(m.repaid / maxMonth) * 100}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-3">
+                                        {data.months.map((m) => (
+                                            <span key={m.month} className="flex-1 text-center text-[10px] font-bold text-slate-400 mt-1">{monthLabel(m.month)}</span>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-4 mt-2 text-[10px] font-bold text-slate-500">
+                                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-rose-400 rounded-sm" /> Used</span>
+                                        <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-400 rounded-sm" /> Repaid</span>
+                                    </div>
+                                </div>
+
                             </div>
                         )}
                     </motion.div>

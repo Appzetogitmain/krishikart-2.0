@@ -123,7 +123,9 @@ export default function CreditManagementScreen() {
             align: 'center',
             render: (val, row) => (
                 <div className="flex flex-col items-center">
-                    <span className="font-black text-slate-900 text-xs tracking-tight">{val || 'Unnamed Customer'}</span>
+                    {/* Click the name for the customer's credit track record */}
+                    <button type="button" onClick={() => setHistoryCustomer(row)} title="See credit history" data-credit-name
+                        className="font-black text-slate-900 text-xs tracking-tight hover:text-emerald-700 hover:underline underline-offset-2">{val || 'Unnamed Customer'}</button>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-0.5">{row.mobile}</span>
                 </div>
             )

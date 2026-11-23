@@ -1,3 +1,4 @@
+import { buildCreditStatement } from "../utils/creditStatement.js";
 import { escapeRegex } from "../utils/escapeRegex.js";
 import Vendor from "../models/vendor.js";
 import mongoose from "mongoose";
@@ -1290,6 +1291,9 @@ export const getCustomerCreditHistory = async (req, res) => {
       .lean();
 
     const isOverdue = customer.usedCredit > 0 && customer.creditOverdueDate && new Date() > new Date(customer.creditOverdueDate);
+    // Order by order (client, Nov 2026: a track record per customer): what each credit order put on
+    // credit, what is paid and what is still due by when, plus every payment - same as the customer sees
+    const statement = await buildCreditStatement(customer._id).catch((e) => { console.error("credit statement for admin:", e); return null; });
 
     return handleResponse(res, 200, "Credit history fetched", {
       customer: {
@@ -1317,6 +1321,7 @@ export const getCustomerCreditHistory = async (req, res) => {
       months,
       transactions,
       adminChanges,
+      statement,
     });
   } catch (err) {
     console.error("Get customer credit history error:", err);
