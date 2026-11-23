@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Banknote, CheckCircle2, XCircle, RefreshCw, Loader2, Clock, Wallet, Phone, CalendarDays, FileText, Info, Search, X } from 'lucide-react';
+import { Banknote, CheckCircle2, XCircle, RefreshCw, Loader2, Clock, Wallet, Phone, CalendarDays, FileText, Info, Search, X, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,8 @@ import { FranchisePageHeader, StatTile, PillTabs } from '../components/layout/Fr
 /*
  * COD cash the delivery partners hand over to this store: the franchise counts it and verifies or rejects
  * each entry. Built to the client's mockup (Hinglish labels).
+ * Client (Nov 2026): the cash to collect shows here as soon as a COD order is delivered ("Partner se lena
+ * hai"), before the partner hands it over; after the partner submits it, the franchise verifies it.
  */
 
 const money = (v) => `₹${Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -21,18 +23,18 @@ const AVATAR = ['bg-blue-50 text-blue-600', 'bg-green-50 text-green-700', 'bg-vi
 
 export default function CashManagementScreen() {
     const [loading, setLoading] = useState(true);
-    const [status, setStatus] = useState('submitted');
+    const [status, setStatus] = useState('to_collect');
     const [rows, setRows] = useState([]);
-    const [totals, setTotals] = useState({ awaitingAmount: 0, awaitingCount: 0, verifiedAmount: 0, rejectedAmount: 0 });
+    const [totals, setTotals] = useState({ toCollectAmount: 0, toCollectCount: 0, awaitingAmount: 0, awaitingCount: 0, verifiedAmount: 0, rejectedAmount: 0 });
     const [busyId, setBusyId] = useState(null);
     const [rejecting, setRejecting] = useState(null);
     const [reason, setReason] = useState('');
     const [query, setQuery] = useState('');
     const [day, setDay] = useState('');
 
-    const load = useCallback(async () => {
+    const load = useCallback(async ({ quiet = false } = {}) => {
         try {
-            setLoading(true);
+            if (!quiet) setLoading(true);
             const res = await api.get('/franchise/cod/remittances', { params: { status } });
             const data = res.data?.result;
             setRows(data?.remittances || []);
@@ -46,6 +48,14 @@ export default function CashManagementScreen() {
 
     useEffect(() => {
         load();
+    }, [load]);
+
+    // New deliveries show up by themselves (every 30 s, and when the tab is opened again)
+    useEffect(() => {
+        const refresh = () => { if (document.visibilityState === 'visible') load({ quiet: true }); };
+        const id = setInterval(refresh, 30000);
+        document.addEventListener('visibilitychange', refresh);
+        return () => { clearInterval(id); document.removeEventListener('visibilitychange', refresh); };
     }, [load]);
 
     const review = async (id, action, why = '') => {
@@ -76,6 +86,7 @@ export default function CashManagementScreen() {
     });
 
     const tabs = [
+        { id: 'to_collect', label: 'पार्टनर से लेना है', count: totals.toCollectCount },
         { id: 'submitted', label: 'चेक करना है', count: totals.awaitingCount },
         { id: 'verified', label: 'Verified', count: totals.verifiedCount },
         { id: 'rejected', label: 'Rejected', count: totals.rejectedCount },
@@ -83,6 +94,14 @@ export default function CashManagementScreen() {
     ];
 
     const renderStatus = (r) => {
+        if (r.status === 'to_collect') {
+            return (
+                <div className="space-y-1" data-to-collect-status>
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-50 text-sky-800 text-[14px] font-bold"><Truck size={18} /> पार्टनर के पास है</span>
+                    <p className="text-[13px] text-slate-500">ऑर्डर डिलीवर हो गया, कैश अभी पार्टनर के पास है। पार्टनर ऐप से जमा करेगा, फिर "चेक करना है" में वेरिफ़ाई करें।</p>
+                </div>
+            );
+        }
         if (r.status === 'verified') {
             return (
                 <div className="space-y-1">
@@ -165,7 +184,8 @@ export default function CashManagementScreen() {
                 }
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 px-4 lg:px-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-3 lg:gap-4 px-4 lg:px-6">
+                <StatTile tone="blue" icon={Truck} label="पार्टनर से लेना है (To collect)" value={money(totals.toCollectAmount)} note={`${totals.toCollectCount || 0} delivered ${totals.toCollectCount === 1 ? 'order' : 'orders'}`} onClick={() => setStatus('to_collect')} active={status === 'to_collect'} />
                 <StatTile tone="orange" icon={Clock} label="चेक करना है" value={money(totals.awaitingAmount)} note={entries(totals.awaitingCount)} onClick={() => setStatus('submitted')} active={status === 'submitted'} />
                 <StatTile tone="green" icon={CheckCircle2} label="Verified (सही पाया गया)" value={money(totals.verifiedAmount)} note={entries(totals.verifiedCount)} onClick={() => setStatus('verified')} active={status === 'verified'} />
                 <StatTile tone="red" icon={XCircle} label="Rejected (गलत / समस्या)" value={money(totals.rejectedAmount)} note={entries(totals.rejectedCount)} onClick={() => setStatus('rejected')} active={status === 'rejected'} />
@@ -210,7 +230,7 @@ export default function CashManagementScreen() {
                 {!loading && shown.length === 0 && (
                     <div className="bg-white rounded-3xl border border-slate-100 py-16 text-center text-slate-500">
                         <Banknote className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                        <p className="text-[15px]">{status === 'submitted' ? 'अभी चेक करने के लिए कोई कैश नहीं है।' : 'यहाँ अभी कुछ नहीं है।'}</p>
+                        <p className="text-[15px]">{status === 'to_collect' ? 'अभी किसी पार्टनर के पास कैश नहीं है।' : status === 'submitted' ? 'अभी चेक करने के लिए कोई कैश नहीं है।' : 'यहाँ अभी कुछ नहीं है।'}</p>
                     </div>
                 )}
                 {!loading && shown.map((r, idx) => {
@@ -230,12 +250,19 @@ export default function CashManagementScreen() {
                                 <p className="flex items-start gap-2"><FileText size={18} className="text-slate-500 shrink-0" />
                                     <span className="min-w-0">{r.orderCount} {r.orderCount === 1 ? 'order' : 'orders'}{ids.length > 0 && <><br /><span className="text-[13px] text-slate-500 break-words">Order IDs: {ids.join(', ')}</span></>}</span>
                                 </p>
+                                {r.status === 'to_collect' && (r.orders || []).length > 0 && (
+                                    <div className="text-[13px] text-slate-600 space-y-0.5" data-to-collect-orders>
+                                        {r.orders.map((o) => (
+                                            <p key={o._id} className="flex justify-between gap-3"><span className="min-w-0 break-words">#{String(o._id).slice(-6).toUpperCase()}{o.customer ? ` · ${o.customer}` : ''} · {timeOf(o.deliveredAt)}</span><span className="font-semibold tabular-nums">{money(o.amount)}</span></p>
+                                        ))}
+                                    </div>
+                                )}
                                 {(r.referenceNo || r.note) && <p className="text-[13px] text-slate-500">{r.referenceNo ? `Ref: ${r.referenceNo}` : ''}{r.referenceNo && r.note ? ' · ' : ''}{r.note ? `Note: ${r.note}` : ''}</p>}
                             </div>
-                            <div className={cn('flex items-center gap-3 rounded-2xl p-4', r.status === 'submitted' ? 'bg-amber-50/70' : r.status === 'rejected' ? 'bg-rose-50/70' : 'bg-green-50/70')}>
-                                <Banknote size={30} className={r.status === 'submitted' ? 'text-amber-500' : r.status === 'rejected' ? 'text-rose-500' : 'text-green-600'} />
+                            <div className={cn('flex items-center gap-3 rounded-2xl p-4', r.status === 'to_collect' ? 'bg-sky-50/70' : r.status === 'submitted' ? 'bg-amber-50/70' : r.status === 'rejected' ? 'bg-rose-50/70' : 'bg-green-50/70')}>
+                                <Banknote size={30} className={r.status === 'to_collect' ? 'text-sky-600' : r.status === 'submitted' ? 'text-amber-500' : r.status === 'rejected' ? 'text-rose-500' : 'text-green-600'} />
                                 <div>
-                                    <p className="text-[13px] text-slate-600">{String(r.paymentMethod || 'cash') === 'cash' ? 'Cash Amount' : `${String(r.paymentMethod).replace('_', ' ').toUpperCase()} Amount`}</p>
+                                    <p className="text-[13px] text-slate-600">{r.status === 'to_collect' ? 'Cash to collect' : String(r.paymentMethod || 'cash') === 'cash' ? 'Cash Amount' : `${String(r.paymentMethod).replace('_', ' ').toUpperCase()} Amount`}</p>
                                     <p className="text-[22px] font-bold text-slate-900 tabular-nums">{money(r.amount)}</p>
                                 </div>
                             </div>

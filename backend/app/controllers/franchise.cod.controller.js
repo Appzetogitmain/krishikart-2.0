@@ -26,12 +26,47 @@ export const getFranchiseCodRemittances = async (req, res) => {
       DeliveryCodRemittance.find({ franchiseId }).select("amount status").lean(),
     ]);
 
+    // Cash still with the delivery partners: COD orders already delivered whose cash has not been handed
+    // over yet (client, Nov 2026: show it the moment the order is delivered). Same rule as the partner app.
+    const pendingOrders = await Order.find({
+      franchiseId,
+      paymentMethod: "COD",
+      "codTracking.isCollected": true,
+      "codTracking.remittanceStatus": "pending",
+    })
+      .select("_id totalAmount codTracking deliveredAt createdAt userId deliveryPartnerId")
+      .populate("codTracking.collectedByDeliveryId", "fullName mobile vehicleNumber")
+      .populate("userId", "fullName")
+      .sort({ "codTracking.collectedAt": -1 })
+      .lean();
+    const byPartner = new Map();
+    for (const o of pendingOrders) {
+      const amount = Number(o.codTracking?.collectedAmount || o.totalAmount || 0);
+      if (!(amount > 0)) continue;
+      const partner = o.codTracking?.collectedByDeliveryId || null;
+      const key = partner?._id ? String(partner._id) : "unknown";
+      if (!byPartner.has(key)) {
+        byPartner.set(key, { _id: `to_collect_${key}`, status: "to_collect", deliveryPartnerId: partner, amount: 0, orderIds: [], orders: [], createdAt: null });
+      }
+      const row = byPartner.get(key);
+      const at = o.codTracking?.collectedAt || o.deliveredAt || o.createdAt;
+      row.amount = Number((row.amount + amount).toFixed(2));
+      row.orderIds.push(o._id);
+      row.orders.push({ _id: o._id, amount, deliveredAt: at, customer: o.userId?.fullName || "" });
+      if (!row.createdAt || new Date(at) > new Date(row.createdAt)) row.createdAt = at;
+    }
+    const toCollect = [...byPartner.values()].map((r) => ({ ...r, orderCount: r.orderIds.length }));
+
     const awaiting = all.filter((r) => r.status === "submitted");
     const verified = all.filter((r) => r.status === "verified");
     const rejected = all.filter((r) => r.status === "rejected");
     return handleResponse(res, 200, "COD cash fetched", {
-      remittances: rows.map((r) => ({ ...r, orderCount: (r.orderIds || []).length })),
+      remittances: status === "to_collect"
+        ? toCollect
+        : rows.map((r) => ({ ...r, orderCount: (r.orderIds || []).length })),
       totals: {
+        toCollectAmount: sumAmount(toCollect),
+        toCollectCount: toCollect.reduce((s, r) => s + r.orderCount, 0),
         awaitingAmount: sumAmount(awaiting),
         awaitingCount: awaiting.length,
         verifiedAmount: sumAmount(verified),
