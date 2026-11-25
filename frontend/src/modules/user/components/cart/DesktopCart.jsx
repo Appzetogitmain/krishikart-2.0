@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { ArrowLeft, ArrowRight, ChevronRight, Info, Leaf, Minus, PackageCheck, Plus, ShieldCheck, ShoppingBag, ShoppingCart, Trash2, Truck } from 'lucide-react'
 import { useCart } from '../../contexts/CartContext'
 import { optimizedImage } from '../../utils/optimizedImage'
+import { askConfirm } from '@/lib/confirmDialog';
 
 /*
  * Desktop cart (client mockup, Oct 2026): item table, "you may also like" and a sticky order summary.
@@ -43,8 +44,8 @@ export default function DesktopCart({ deliveryFee, tax, taxRateString, total, re
     const shortBy = Math.max(0, Math.ceil(freeAbove - cartTotal))
     const itemCount = cartItems.length
 
-    const clearCart = () => {
-        if (!window.confirm('Remove all items from your cart?')) return
+    const clearCart = async () => {
+        if (!await askConfirm('Remove all items from your cart?')) return
         cartItems.forEach((item) => removeFromCart(item.id))
     }
 

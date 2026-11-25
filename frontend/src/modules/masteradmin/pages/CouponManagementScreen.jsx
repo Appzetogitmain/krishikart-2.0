@@ -23,6 +23,7 @@ import {
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function CouponManagementScreen() {
     const [coupons, setCoupons] = useState([]);
@@ -155,7 +156,7 @@ export default function CouponManagementScreen() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this coupon?")) return;
+        if (!await askConfirm("Are you sure you want to delete this coupon?")) return;
         try {
             await api.delete(`/coupons/admin/${id}`);
             toast.success("Coupon deleted");

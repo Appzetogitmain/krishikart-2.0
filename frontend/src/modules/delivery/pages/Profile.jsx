@@ -17,20 +17,22 @@ import {
 import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/axios';
+import { askConfirm } from '@/lib/confirmDialog';
+import { toast } from 'sonner';
 
 const Profile = () => {
     const { delivery, logout } = useDeliveryAuth();
     const navigate = useNavigate();
 
     const handleDeleteAccount = async () => {
-        if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
+        if (await askConfirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
             try {
                 await api.delete('/delivery/delete-account');
-                alert("Account deleted successfully.");
+                toast.success("Account deleted successfully.");
                 logout();
             } catch (error) {
                 console.error("Failed to delete account", error);
-                alert(error.response?.data?.message || "Failed to delete account. Please try again.");
+                toast.error(error.response?.data?.message || "Failed to delete account. Please try again.");
             }
         }
     };

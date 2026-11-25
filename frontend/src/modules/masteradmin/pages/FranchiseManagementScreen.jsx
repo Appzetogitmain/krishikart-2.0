@@ -37,6 +37,7 @@ import { toast } from 'sonner';
 import FranchiseOnboardingDrawer from '../components/drawers/FranchiseOnboardingDrawer';
 import FranchiseServiceAreaDrawer from '../components/drawers/FranchiseServiceAreaDrawer';
 import FranchiseCategoryDrawer from '../components/drawers/FranchiseCategoryDrawer';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function FranchiseManagementScreen() {
     const { createFranchiseByAdmin, updateFranchise, deleteFranchise } = useAdmin();
@@ -71,7 +72,7 @@ export default function FranchiseManagementScreen() {
     }, []);
 
     const handleDeleteFranchise = async (id) => {
-        if (!window.confirm("Are you sure you want to remove this franchise? It will stop receiving orders.")) return;
+        if (!await askConfirm("Are you sure you want to remove this franchise? It will stop receiving orders.")) return;
         
         const success = await deleteFranchise(id);
         if (success) fetchFranchises();
@@ -79,7 +80,7 @@ export default function FranchiseManagementScreen() {
 
     const handleStatusChange = async (id, newStatus) => {
         const action = newStatus === 'blocked' ? 'decommission' : 'reactivate';
-        if (!window.confirm(`Are you sure you want to ${action} this franchise?`)) return;
+        if (!await askConfirm(`Are you sure you want to ${action} this franchise?`)) return;
 
         try {
             const response = await api.put(`/masteradmin/franchises/${id}/status`, { status: newStatus });
@@ -100,7 +101,7 @@ export default function FranchiseManagementScreen() {
         const msg = makeMother
             ? `Make ${franchise.franchiseName} a mother franchise? Other franchises can then get stock from it, through you.`
             : `Stop ${franchise.franchiseName} being a mother franchise?`;
-        if (!window.confirm(msg)) return;
+        if (!await askConfirm(msg)) return;
         try {
             const response = await api.put(`/masteradmin/franchises/${franchise._id}/mother`, { isMotherFranchise: makeMother });
             toast.success(response.data?.message || 'Updated');

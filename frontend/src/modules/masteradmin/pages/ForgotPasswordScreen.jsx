@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Mail, Lock, Loader2, ArrowRight, KeyRound, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import api from '../../../lib/axios';
+import { toast } from 'sonner';
 
 export default function ForgotPasswordScreen() {
     const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function ForgotPasswordScreen() {
             setStep(2);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Failed to send OTP');
+            toast.error(error.response?.data?.message || 'Failed to send OTP');
         } finally {
             setIsLoading(false);
         }
@@ -33,11 +34,11 @@ export default function ForgotPasswordScreen() {
         setIsLoading(true);
         try {
             await api.post('/masteradmin/reset-password', { email, otp, newPassword });
-            alert('Password reset successful! Please login.');
+            toast.success('Password reset successful! Please login.');
             navigate('/masteradmin/login');
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Failed to reset password');
+            toast.error(error.response?.data?.message || 'Failed to reset password');
         } finally {
             setIsLoading(false);
         }

@@ -4,6 +4,7 @@ import { Tags, Home, ChevronRight, Layers, Plus, X, Pencil, Trash2, Info, Upload
 import { useCatalog } from '../contexts/CatalogContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function CategoryManagementScreen() {
     const { categories, addCategory, deleteCategory, updateCategory, isLoading: contextLoading } = useCatalog();
@@ -364,8 +365,8 @@ export default function CategoryManagementScreen() {
                                                 <Pencil size={14} />
                                             </button>
                                             <button
-                                                onClick={() => {
-                                                    if (window.confirm('Delete this category?')) {
+                                                onClick={async () => {
+                                                    if (await askConfirm('Delete this category?')) {
                                                         deleteCategory(cat._id);
                                                     }
                                                 }}

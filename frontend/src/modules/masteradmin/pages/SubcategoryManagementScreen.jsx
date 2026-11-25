@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GitBranch, Home, ChevronRight, ListTree, Plus, X, Pencil, Trash2, LayoutGrid, Upload, Image as ImageIcon } from 'lucide-react';
 import { useCatalog } from '../contexts/CatalogContext';
 import { cn } from '@/lib/utils';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function SubcategoryManagementScreen() {
     const { categories, subcategories, addSubcategory, updateSubcategory, deleteSubcategory } = useCatalog();
@@ -339,8 +340,8 @@ export default function SubcategoryManagementScreen() {
                                             Modify
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                if (window.confirm('Delete this subcategory?')) {
+                                            onClick={async () => {
+                                                if (await askConfirm('Delete this subcategory?')) {
                                                     deleteSubcategory(sub._id);
                                                 }
                                             }}

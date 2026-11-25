@@ -35,6 +35,7 @@ import VendorProductDrawer from '../components/drawers/VendorProductDrawer';
 import MetricRow from '../components/cards/MetricRow';
 import DataGrid from '../components/tables/DataGrid';
 import FilterBar from '../components/tables/FilterBar';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function VendorManagementScreen() {
     const { vendors, fetchVendors, isLoading: adminLoading, updateVendorStatus, createVendorByAdmin } = useAdmin();
@@ -79,7 +80,7 @@ export default function VendorManagementScreen() {
 
     const handleDeleteVendor = async (id, e) => {
         e.stopPropagation();
-        if (!window.confirm("Are you sure you want to permanently delete this vendor? This action cannot be undone.")) return;
+        if (!await askConfirm("Are you sure you want to permanently delete this vendor? This action cannot be undone.")) return;
         try {
             await api.delete(`/masteradmin/vendors/${id}`);
             toast.success("Vendor deleted successfully");

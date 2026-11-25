@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ChevronRight, Eye, EyeOff, Home, ImagePlus, Images,
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
+import { askConfirm } from '@/lib/confirmDialog';
 
 /*
  * Offer Banners (client, Nov 2026): the admin uploads offer images that slide by on their own
@@ -314,7 +315,7 @@ export default function OfferBannersScreen() {
     };
 
     const remove = async (b) => {
-        if (!window.confirm(`Delete the banner "${b.title || 'Untitled offer'}"? It will stop showing to customers.`)) return;
+        if (!await askConfirm(`Delete the banner "${b.title || 'Untitled offer'}"? It will stop showing to customers.`)) return;
         try {
             setBusy(true);
             await api.delete(`/banners/admin/${b._id}`);

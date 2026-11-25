@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 // Enterprise Components
 import DataGrid from '../components/tables/DataGrid';
 import TablePagination from '../components/tables/TablePagination';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function CustomerManagementScreen() {
     const [isLoading, setIsLoading] = useState(true);
@@ -72,7 +73,7 @@ export default function CustomerManagementScreen() {
     const filteredCustomers = customers;
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
+        if (!await askConfirm("Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
         try {
             await api.delete(`/masteradmin/customers/${id}`);
             toast.success("Customer deleted successfully");

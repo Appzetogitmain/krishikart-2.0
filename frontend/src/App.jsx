@@ -86,6 +86,7 @@ import { WalletProvider } from './modules/user/contexts/WalletContext'
 import { DeliveryAuthProvider } from './modules/delivery/contexts/DeliveryAuthContext'
 import { DeliveryOrderProvider } from './modules/delivery/contexts/DeliveryOrderContext'
 import { Toaster } from 'sonner'
+import { ConfirmHost } from '@/lib/confirmDialog'
 
 const UserProviders = ({ children }) => (
   <UserAuthProvider>
@@ -158,6 +159,7 @@ function App() {
     >
       <HashRouter>
         <Toaster position="top-center" richColors />
+        <ConfirmHost />
         <VersionWatcher />
         <PanelMarker />
         <Suspense fallback={

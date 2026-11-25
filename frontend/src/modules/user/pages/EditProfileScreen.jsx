@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import api from '../../../lib/axios'
+import { toast } from 'sonner';
 
 export default function EditProfileScreen() {
     const navigate = useNavigate()
@@ -80,7 +81,7 @@ export default function EditProfileScreen() {
         // Email Validation (Strict)
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
         if (editData.email && !emailRegex.test(editData.email)) {
-            alert('Please enter a valid email address (e.g., user@example.com)');
+            toast.error('Please enter a valid email address (e.g., user@example.com)');
             return;
         }
         setIsSaving(true)
@@ -94,9 +95,9 @@ export default function EditProfileScreen() {
             localStorage.setItem('userData', JSON.stringify(updatedUser))
             window.dispatchEvent(new Event('userDataUpdated'));
             setIsEditDrawerOpen(false)
-            alert('Profile updated successfully')
+            toast.success('Profile updated successfully')
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to update profile')
+            toast.error(error.response?.data?.message || 'Failed to update profile')
         } finally {
             setIsSaving(false)
         }
@@ -104,7 +105,7 @@ export default function EditProfileScreen() {
 
     const handleChangePassword = async () => {
         if (passwordData.new !== passwordData.confirm) {
-            alert('Passwords do not match')
+            toast.error('Passwords do not match')
             return
         }
         setIsSaving(true)
@@ -115,9 +116,9 @@ export default function EditProfileScreen() {
             })
             setIsPasswordDrawerOpen(false)
             setPasswordData({ old: '', new: '', confirm: '' })
-            alert('Password changed successfully')
+            toast.success('Password changed successfully')
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to change password')
+            toast.error(error.response?.data?.message || 'Failed to change password')
         } finally {
             setIsSaving(false)
         }

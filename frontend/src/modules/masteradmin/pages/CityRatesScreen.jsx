@@ -5,6 +5,7 @@ import {
 import { toast } from 'sonner';
 import api from '@/lib/axios';
 import { cn } from '@/lib/utils';
+import { askConfirm } from '@/lib/confirmDialog';
 
 /**
  * City Rates: enter a city code (e.g. JPR for Jaipur) to open that city's rate sheet. Rates saved
@@ -68,7 +69,7 @@ function ZoneManager({ zones, uncoveredCities, onChanged }) {
     };
 
     const remove = async (z) => {
-        if (!window.confirm(`Delete city code ${z.code}? Its ${z.cityRateCount} city rates will be removed and its franchises will use the main rates.`)) return;
+        if (!await askConfirm(`Delete city code ${z.code}? Its ${z.cityRateCount} city rates will be removed and its franchises will use the main rates.`)) return;
         try {
             await api.delete(`/masteradmin/city-rates/zones/${z.code}`);
             toast.success(`City code ${z.code} deleted`);
@@ -189,7 +190,7 @@ export default function CityRatesScreen() {
     const openCode = async (raw) => {
         const c = String(raw || '').trim().toUpperCase();
         if (!c) return;
-        if (Object.keys(edits).length && !window.confirm('You have unsaved changes. Open another city anyway?')) return;
+        if (Object.keys(edits).length && !await askConfirm('You have unsaved changes. Open another city anyway?')) return;
         setLoadingSheet(true);
         try {
             const res = await api.get(`/masteradmin/city-rates/zones/${encodeURIComponent(c)}/rates`);

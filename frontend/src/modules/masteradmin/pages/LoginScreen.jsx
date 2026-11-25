@@ -5,6 +5,7 @@ import { ShieldCheck, Mail, Lock, Loader2, ArrowRight, Eye, EyeOff } from 'lucid
 
 import api from '../../../lib/axios';
 import { useMasterAdminAuth } from '../contexts/MasterAdminAuthContext';
+import { toast } from 'sonner';
 
 export default function LoginScreen() {
     const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function LoginScreen() {
             navigate('/masteradmin/dashboard');
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Login failed');
+            toast.error(error.response?.data?.message || 'Login failed');
         } finally {
             setIsLoading(false);
         }

@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import TablePagination from '../components/tables/TablePagination';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function ManageProductScreen() {
     const {
@@ -72,7 +73,7 @@ export default function ManageProductScreen() {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to permanently delete this product?')) {
+        if (await askConfirm('Are you sure you want to permanently delete this product?')) {
             await deleteProduct(id);
         }
     };

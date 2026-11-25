@@ -31,6 +31,7 @@ import { keepPage, peekPage } from '../lib/pageCache';
 import { useVendorAuth } from '../contexts/VendorAuthContext';
 import { PORTAL_LANGUAGES, useVendorLanguage } from '../contexts/VendorLanguageContext';
 import LanguagePickerModal from '../components/modals/LanguagePickerModal';
+import { askConfirm } from '@/lib/confirmDialog';
 
 const SettingItem = ({ icon: Icon, label, value, color, onClick }) => (
     <button
@@ -380,7 +381,7 @@ export default function ProfileScreen() {
     const navigate = useNavigate();
 
     const handleDeleteAccount = async () => {
-        if (window.confirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
+        if (await askConfirm("Are you sure you want to delete your account? This action is permanent and cannot be undone.")) {
             try {
                 await api.delete('/vendor/delete-account');
                 toast.success("Account deleted successfully.");

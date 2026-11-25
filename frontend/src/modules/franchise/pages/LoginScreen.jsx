@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, ShieldCheck, Zap, ChevronRight, Home, Smartphone, Loader2, Mail, Eye, EyeOff, Pencil } from 'lucide-react';
 import { useFranchiseAuth } from '../contexts/FranchiseAuthContext';
 import api from '../../../lib/axios';
+import { toast } from 'sonner';
 
 export default function LoginScreen() {
     const navigate = useNavigate();
@@ -62,7 +63,7 @@ export default function LoginScreen() {
             setOtpMode('otp');
             setTimer(120);
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to send OTP');
+            toast.error(err.response?.data?.message || 'Failed to send OTP');
         } finally {
             setIsLoading(false);
         }
@@ -76,7 +77,7 @@ export default function LoginScreen() {
             setTimer(120);
             setOtp(['', '', '', '', '', '']);
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to resend OTP');
+            toast.error(err.response?.data?.message || 'Failed to resend OTP');
         } finally {
             setIsLoading(false);
         }
@@ -91,7 +92,7 @@ export default function LoginScreen() {
             const res = await api.post('/franchise/verify-otp', { mobile, otp: otpValue });
             handleLoginSuccess(res.data.result);
         } catch (err) {
-            alert(err.response?.data?.message || 'Login failed');
+            toast.error(err.response?.data?.message || 'Login failed');
         } finally {
             setIsLoading(false);
         }
@@ -119,7 +120,7 @@ export default function LoginScreen() {
             const res = await api.post('/franchise/login', { email, password });
             handleLoginSuccess(res.data.result);
         } catch (err) {
-            alert(err.response?.data?.message || 'Login failed');
+            toast.error(err.response?.data?.message || 'Login failed');
         } finally {
             setIsLoading(false);
         }

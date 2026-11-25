@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useCatalog } from '../contexts/CatalogContext';
 import { toast } from 'sonner';
+import { askConfirm } from '@/lib/confirmDialog';
 
 const INITIAL_FORM_DATA = {
     name: '',
@@ -178,7 +179,7 @@ export default function AddProductScreen() {
 
     const handleSave = async () => {
         if (!formData.name || !formData.category || !formData.price || !formData.primaryFile) {
-            alert('Please fill at least Name, Category, Price and Primary Image.');
+            toast.error('Please fill at least Name, Category, Price and Primary Image.');
             return;
         }
 
@@ -220,8 +221,8 @@ export default function AddProductScreen() {
 
     const hasFormData = formData.name || formData.skuCode || formData.description || formData.price || formData.primaryImage || formData.tags?.length > 0 || formData.bulkPricing?.length > 0;
 
-    const handleDiscard = () => {
-        if (hasFormData && !window.confirm('Discard all changes and go back to product list?')) return;
+    const handleDiscard = async () => {
+        if (hasFormData && !await askConfirm('Discard all changes and go back to product list?')) return;
         setFormData(INITIAL_FORM_DATA);
         setCurrentTag('');
         setShowQuickAddCat(false);
@@ -966,7 +967,7 @@ export default function AddProductScreen() {
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-0.5">Subcategory</label>
                                         <button
                                             onClick={() => {
-                                                if (!formData.category) return alert('Select a primary category first.');
+                                                if (!formData.category) return toast.error('Select a primary category first.');
                                                 setShowQuickAddSub(true);
                                             }}
                                             className="text-[10px] font-black text-emerald-600 uppercase tracking-tighter hover:text-emerald-700 transition-colors flex items-center gap-0.5 disabled:opacity-50"

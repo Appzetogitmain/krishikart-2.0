@@ -4,6 +4,7 @@ import { HelpCircle, Home, ChevronRight, Plus, X, Pencil, Trash2, Info, MessageS
 import { cn } from '@/lib/utils';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function FAQManagementScreen() {
     const [faqs, setFaqs] = useState([]);
@@ -86,7 +87,7 @@ export default function FAQManagementScreen() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this FAQ?')) return;
+        if (!await askConfirm('Are you sure you want to delete this FAQ?')) return;
         try {
             const { data } = await api.delete(`/masteradmin/faqs/${id}`);
             if (data.success) {

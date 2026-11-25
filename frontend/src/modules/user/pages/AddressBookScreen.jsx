@@ -17,6 +17,7 @@ import {
     saveSavedAddresses,
     upsertAddressByTag,
 } from '../utils/savedAddresses'
+import { askConfirm } from '@/lib/confirmDialog';
 
 const TAG_ICONS = {
     home: Home,
@@ -79,9 +80,9 @@ export default function AddressBookScreen() {
         setIsDrawerOpen(true)
     }
 
-    const handleDelete = (saved) => {
+    const handleDelete = async (saved) => {
         const label = saved.label || 'this address'
-        if (!window.confirm(`Delete ${label}?`)) return
+        if (!await askConfirm(`Delete ${label}?`)) return
         const next = deleteSavedAddress(savedAddresses, saved.id || saved.tag)
         persistAddresses(next)
         toast.success('Address removed')

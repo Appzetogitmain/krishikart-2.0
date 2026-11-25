@@ -32,6 +32,7 @@ import {
 } from "../utils/gstin";
 import LocationPickerModal from "../components/LocationPickerModal";
 import LocationSummary from "../components/LocationSummary";
+import { toast } from 'sonner';
 
 export default function SignupScreen() {
   const navigate = useNavigate();
@@ -107,7 +108,7 @@ export default function SignupScreen() {
       setOtp(["", "", "", "", "", ""]);
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to resend OTP");
+      toast.error(error.response?.data?.message || "Failed to resend OTP");
     } finally {
       setIsLoading(false);
     }
@@ -141,20 +142,20 @@ export default function SignupScreen() {
       formData.location
     ) {
       if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        alert("Please enter a valid email address");
+        toast.error("Please enter a valid email address");
         return;
       }
       if (!formData.password || formData.password.length < 6) {
-        alert("Password must be at least 6 characters");
+        toast.error("Password must be at least 6 characters");
         return;
       }
       // FSSAI/GST optional — validate only if filled
       if (formData.fssaiNumber && !isValidFssai(formData.fssaiNumber)) {
-        alert("Please enter a valid 14-digit FSSAI number");
+        toast.error("Please enter a valid 14-digit FSSAI number");
         return;
       }
       if (formData.gstNumber && !isValidGst(formData.gstNumber)) {
-        alert("Please enter a valid 15-digit GSTIN (e.g. 22AAAAA0000A1Z5)");
+        toast.error("Please enter a valid 15-digit GSTIN (e.g. 22AAAAA0000A1Z5)");
         return;
       }
       setIsLoading(true);
@@ -178,7 +179,7 @@ export default function SignupScreen() {
         setTimer(120);
       } catch (error) {
         console.error(error);
-        alert(error.response?.data?.message || "Registration failed");
+        toast.error(error.response?.data?.message || "Registration failed");
       } finally {
         setIsLoading(false);
       }
@@ -229,7 +230,7 @@ export default function SignupScreen() {
       );
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Verification failed");
+      toast.error(error.response?.data?.message || "Verification failed");
     } finally {
       setIsLoading(false);
     }

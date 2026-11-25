@@ -20,6 +20,7 @@ import {
 import { useCatalog } from '../contexts/CatalogContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { askConfirm } from '@/lib/confirmDialog';
 
 export default function RecommendationScreen() {
     const {
@@ -57,7 +58,7 @@ export default function RecommendationScreen() {
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Remove this recommendation? The products themselves will not be deleted.')) {
+        if (await askConfirm('Remove this recommendation? The products themselves will not be deleted.')) {
             await deleteRecommendationMapping(id);
         }
     };

@@ -21,6 +21,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '@/lib/axios';
 import { useMasterAdminAuth } from '../contexts/MasterAdminAuthContext';
+import { askConfirm } from '@/lib/confirmDialog';
+import { toast } from 'sonner';
 
 const PERMISSION_GROUPS = [
     {
@@ -182,7 +184,7 @@ export default function TeamManagementScreen() {
         e.preventDefault();
         const mobile = (formData.mobile || '').trim();
         if (mobile && (mobile.length !== 10 || !/^\d{10}$/.test(mobile))) {
-            alert('Phone number must be exactly 10 digits. No letters or symbols allowed.');
+            toast.error('Phone number must be exactly 10 digits. No letters or symbols allowed.');
             return;
         }
         setIsSubmitting(true);
@@ -195,19 +197,19 @@ export default function TeamManagementScreen() {
             setIsDrawerOpen(false);
             fetchSubAdmins();
         } catch (error) {
-            alert(error.response?.data?.message || 'Something went wrong');
+            toast.error(error.response?.data?.message || 'Something went wrong');
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this account?')) return;
+        if (!await askConfirm('Are you sure you want to delete this account?')) return;
         try {
             await api.delete(`/masteradmin/subadmins/${id}`);
             fetchSubAdmins();
         } catch (error) {
-            alert('Failed to delete');
+            toast.error('Failed to delete');
         }
     };
 

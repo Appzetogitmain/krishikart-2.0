@@ -5,6 +5,7 @@ import { ROUTES } from '../utils/constants';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../lib/axios';
 import { useDeliveryAuth } from '../contexts/DeliveryAuthContext';
+import { toast } from 'sonner';
 
 const DeliveryPartnerLogin = () => {
     const [step, setStep] = useState('phone'); // 'phone' or 'otp'
@@ -46,7 +47,7 @@ const DeliveryPartnerLogin = () => {
             setOtp(['', '', '', '', '', '']);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Failed to resend OTP');
+            toast.error(error.response?.data?.message || 'Failed to resend OTP');
         } finally {
             setLoading(false);
         }
@@ -62,7 +63,7 @@ const DeliveryPartnerLogin = () => {
             setTimer(120);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Login failed');
+            toast.error(error.response?.data?.message || 'Login failed');
         } finally {
             setLoading(false);
         }
@@ -82,7 +83,7 @@ const DeliveryPartnerLogin = () => {
             navigate(ROUTES.DASHBOARD);
         } catch (error) {
             console.error(error);
-            alert(error.response?.data?.message || 'Verification failed');
+            toast.error(error.response?.data?.message || 'Verification failed');
         } finally {
             setLoading(false);
         }

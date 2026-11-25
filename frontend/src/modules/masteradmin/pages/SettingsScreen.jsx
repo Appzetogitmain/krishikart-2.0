@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import api from '@/lib/axios';
+import { toast } from 'sonner';
 
 export default function SettingsScreen() {
     const location = useLocation();
@@ -62,7 +63,7 @@ export default function SettingsScreen() {
     const handleUpdateProfile = async () => {
         try {
             const { data } = await api.put('/masteradmin/update', formData);
-            alert("Profile Updated Successfully");
+            toast.success("Profile Updated Successfully");
             if (data.result) {
                 setAdminData(data.result);
                 setFormData({
@@ -73,13 +74,13 @@ export default function SettingsScreen() {
             }
         } catch (error) {
             console.error("Update failed", error);
-            alert(error.response?.data?.message || "Failed to update profile");
+            toast.error(error.response?.data?.message || "Failed to update profile");
         }
     };
 
     const handleChangePassword = async () => {
         if (passwordData.newPassword !== passwordData.confirmPassword) {
-            alert("New passwords do not match");
+            toast.error("New passwords do not match");
             return;
         }
         try {
@@ -87,11 +88,11 @@ export default function SettingsScreen() {
                 oldPassword: passwordData.oldPassword,
                 newPassword: passwordData.newPassword
             });
-            alert("Password Changed Successfully");
+            toast.success("Password Changed Successfully");
             setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
         } catch (error) {
             console.error("Password change failed", error);
-            alert(error.response?.data?.message || "Failed to change password");
+            toast.error(error.response?.data?.message || "Failed to change password");
         }
     };
 
