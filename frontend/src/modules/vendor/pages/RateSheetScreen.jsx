@@ -241,9 +241,11 @@ export default function RateSheetScreen() {
     ));
 
     /* ---------- desktop ---------- */
+    // Columns shrink with the screen; below ~800px the list scrolls inside its card (never over the side panel)
+    const COLS = 'grid-cols-[28px_minmax(150px,1.6fr)_minmax(72px,0.6fr)_minmax(120px,1fr)_minmax(100px,0.9fr)_minmax(112px,0.8fr)_minmax(100px,0.7fr)]';
     const desktop = (
         <div className="hidden lg:grid 2xl:grid-cols-[minmax(0,1fr)_300px] gap-5 items-start">
-            <div className="bg-white rounded-3xl border border-slate-100 p-5">
+            <div className="bg-white rounded-3xl border border-slate-100 p-5 min-w-0">
                 <div className="flex items-center gap-5 mb-5">
                     <span className="w-20 h-20 rounded-2xl bg-green-50 text-green-700 flex items-center justify-center shrink-0"><Package size={40} /></span>
                     <div>
@@ -268,7 +270,8 @@ export default function RateSheetScreen() {
 
                 <div className="w-80 mb-4">{tabs}</div>
 
-                <div className="grid grid-cols-[32px_minmax(180px,1.4fr)_100px_150px_140px_130px_110px] gap-3 items-center px-4 h-14 rounded-xl bg-slate-100 text-sm font-semibold text-slate-600">
+                <div className="overflow-x-auto" data-rate-table><div className="min-w-[800px]">
+                <div className={cn('grid gap-3 items-center px-4 h-14 rounded-xl bg-slate-100 text-sm font-semibold text-slate-600', COLS)}>
                     {tab === 'open' ? (
                         <>
                             <span>#</span><span>{t('Item')}</span><span>{t('Required Qty')}</span>
@@ -281,7 +284,7 @@ export default function RateSheetScreen() {
                 </div>
                 <div className="divide-y divide-slate-100">
                     {tab === 'open' ? (items.length ? items.map((row, k) => (
-                        <div key={row.key} className={cn('grid grid-cols-[32px_minmax(180px,1.4fr)_100px_150px_140px_130px_110px] gap-3 items-center px-4 py-3', row.status === 'countered' && 'bg-orange-50/40')}>
+                        <div key={row.key} className={cn('grid gap-3 items-center px-4 py-3', COLS, row.status === 'countered' && 'bg-orange-50/40')} data-rate-row>
                             <span className="text-base text-slate-600">{k + 1}</span>
                             <span className="flex items-center gap-3 min-w-0">
                                 <Thumb src={row.image} />
@@ -298,6 +301,7 @@ export default function RateSheetScreen() {
                         </div>
                     )) : empty) : (final.length ? finalRows : empty)}
                 </div>
+                </div></div>
 
                 {tab === 'open' && items.length > 0 && (
                     <div className="flex items-center gap-4 mt-5">
