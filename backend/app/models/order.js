@@ -225,6 +225,8 @@ const orderSchema = new mongoose.Schema({
     },
     // UPI paid at the door on a Razorpay QR made for this order (utils/doorUpi.js). status: created -> paid
     doorUpi: {
+        kind: { type: String, enum: ['qr', 'checkout'], default: undefined }, // checkout = Razorpay payment window (no QR Codes on the account)
+        rzpOrderId: { type: String, default: '' },
         qrId: { type: String, default: '' },
         amount: { type: Number, default: 0 },
         imageUrl: { type: String, default: '' },

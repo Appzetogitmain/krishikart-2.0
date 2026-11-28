@@ -1415,7 +1415,7 @@ export const updateOrderStatus = async (req, res) => {
           if (doorPayment.error) return handleResponse(res, 400, doorPayment.error);
           // UPI at the door must be confirmed by Razorpay (paid on the QR made for this order) before the
           // code is asked for; a UPI payment received must also be counted as UPI, not as cash
-          const upiPaid = (doorPayment.upi > 0 || order.doorUpi?.status === "paid" || order.doorUpi?.qrId)
+          const upiPaid = (doorPayment.upi > 0 || order.doorUpi?.status === "paid" || order.doorUpi?.qrId || order.doorUpi?.rzpOrderId)
             ? await refreshDoorUpi(order).catch((e) => { console.error("[DoorUpi] check:", e?.error || e); return order.doorUpi; })
             : null;
           if (upiPaid?.status === "paid") order.set("doorUpi", upiPaid.toObject ? upiPaid.toObject() : upiPaid);
